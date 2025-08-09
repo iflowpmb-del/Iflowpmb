@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>iFlow: Gestión Pro</title>
+
+    <!-- PWA Manifest and Theme Color -->
+    <link rel="manifest" href="/manifest.json" />
+    <link
+      rel="apple-touch-icon"
+      href="https://firebasestorage.googleapis.com/v0/b/iflow-b0d16.firebasestorage.app/o/icon-192x192.png?alt=media&token=a3c3b21d-649d-4493-a24c-5cc2f9a77567"
+    />
+    <meta name="theme-color" content="#16a34a" />
+
+    <!-- Styles and Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f8f9fa;
+        color: #111827;
+      }
+      .tab-active {
+        border-color: #16a34a;
+        color: #16a34a;
+        font-weight: 700;
+      }
+      .form-input,
+      .form-select,
+      .form-textarea {
+        background-color: #ffffff;
+        border: 1px solid #d1d5db;
+        color: #111827;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease-in-out;
+      }
+      .form-input:focus,
+      .form-select:focus,
+      .form-textarea:focus {
+        outline: none;
+        border-color: #16a34a;
+        box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
+      }
+      .btn-primary {
+        background-color: #16a34a;
+        color: #ffffff;
+        font-weight: 600;
+        transition: background-color 0.3s;
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      }
+      .btn-primary:hover {
+        background-color: #15803d;
+      }
+      .btn-primary:disabled {
+        background-color: #16a34a;
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+      .btn-secondary {
+        background-color: #e5e7eb;
+        color: #374151;
+        font-weight: 500;
+        border-radius: 0.75rem;
+        transition: background-color 0.3s;
+      }
+      .btn-secondary:hover {
+        background-color: #d1d5db;
+      }
+      .btn-danger {
+        background-color: #ef4444;
+        color: #ffffff;
+        font-weight: 600;
+        border-radius: 0.75rem;
+        transition: background-color 0.3s;
+      }
+      .btn-danger:hover {
+        background-color: #dc2626;
+      }
+      .card {
+        background-color: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 1rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
+      .profit-positive,
+      .asset {
+        color: #16a34a;
+      }
+      .profit-negative,
+      .liability {
+        color: #ef4444;
+      }
+      .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 1rem;
+      }
+
+      .modal-content {
+        background-color: #ffffff;
+        border-radius: 1rem;
+        max-width: 500px;
+        width: 100%;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        max-height: 90vh;
+        overflow: hidden;
+      }
+      .modal-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+      }
+      .modal-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #111827;
+      }
+      .modal-header .close-modal-btn {
+        background: none;
+        border: none;
+        font-size: 1.75rem;
+        line-height: 1;
+        cursor: pointer;
+        color: #9ca3af;
+        padding: 0.5rem;
+        margin: -0.5rem;
+      }
+      .modal-header .close-modal-btn:hover {
+        color: #1f2937;
+      }
+
+      .modal-body {
+        padding: 1.5rem;
+        overflow-y: auto;
+        flex-grow: 1;
+      }
+
+      .modal-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #e5e7eb;
+        background-color: #f9fafb;
+        flex-shrink: 0;
+      }
+      .modal-footer .flex {
+        justify-content: flex-end;
+        gap: 1rem;
+      }
+
+      .sub-tab-btn-active {
+        background-color: #16a34a;
+        color: white;
+      }
+      .filter-btn-active {
+        background-color: #16a34a;
+        color: white;
+      }
+
+      .spinner {
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* <<<--- ESTILOS AÑADIDOS PARA LAS FLECHAS DE SCROLL --- */
+      .tabs-container {
+        position: relative;
+      }
+      .scroll-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background-color: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(4px);
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        z-index: 10;
+        transition: opacity 0.2s, transform 0.2s;
+        border: 1px solid #e5e7eb;
+      }
+      .scroll-arrow:hover {
+        background-color: white;
+        transform: translateY(-50%) scale(1.1);
+      }
+      .scroll-arrow.left {
+        left: -18px;
+      }
+      .scroll-arrow.right {
+        right: -18px;
+      }
+      .scroll-arrow.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      /* Ocultar scrollbar horizontal */
+      .hide-scrollbar {
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none; /* Firefox */
+      }
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+      }
+
+      /* ESTILOS PARA EL BOTÓN DE WHATSAPP AÑADIDOS */
+      #whatsapp-support-button {
+        position: fixed; /* Lo mantiene fijo en la pantalla */
+        bottom: 25px; /* Distancia desde abajo */
+        right: 25px; /* Distancia desde la derecha */
+        width: 60px; /* Ancho del botón */
+        height: 60px; /* Alto del botón */
+        background-color: #25d366; /* Color de WhatsApp */
+        color: #ffffff; /* Color del ícono (blanco) */
+        border-radius: 50%; /* Lo hace circular */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px; /* Tamaño del ícono */
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* Sombra para efecto flotante */
+        z-index: 1000; /* Se asegura que esté por encima de todo */
+        transition: transform 0.2s ease-in-out; /* Animación suave */
+      }
+
+      #whatsapp-support-button:hover {
+        transform: scale(1.1); /* Agranda el botón al pasar el mouse */
+      }
+      /* FIN ESTILOS BOTÓN WHATSAPP */
+    </style>
+  </head>
+  <body class="antialiased">
+    <!-- BOTÓN DE WHATSAPP AÑADIDO -->
+    <a
+      id="whatsapp-support-button"
+      href="https://wa.me/5492241576696"
+      target="_blank"
+      title="Contactar por WhatsApp"
+    >
+      <i class="fab fa-whatsapp"></i>
+    </a>
+    <!-- FIN BOTÓN DE WHATSAPP -->
+
+    <!-- Initial Loading Spinner -->
+    <div
+      id="initial-loading-container"
+      class="fixed inset-0 bg-gray-100 flex flex-col items-center justify-center z-50"
+    >
+      <i class="fas fa-spinner fa-spin fa-3x text-green-500"></i>
+      <p class="mt-4 text-lg text-gray-600">Iniciando iFlow...</p>
+    </div>
+
+    <!-- Authentication Container -->
+    <div
+      id="auth-container"
+      class="hidden fixed inset-0 bg-gray-100 flex items-center justify-center z-40"
+    >
+      <div class="card p-8 w-full max-w-sm">
+        <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">iFlow Pro</h2>
+        <p class="text-center text-gray-500 mb-6">Inicia sesión para gestionar tu negocio.</p>
+        <form id="login-form" class="space-y-4">
+          <input
+            type="email"
+            id="login-email"
+            class="form-input w-full p-3"
+            placeholder="Correo electrónico"
+            required
+          />
+          <input
+            type="password"
+            id="login-password"
+            class="form-input w-full p-3"
+            placeholder="Contraseña"
+            required
+          />
+          <button type="submit" class="btn-primary w-full py-3">Iniciar Sesión</button>
+          <button
+            type="button"
+            id="show-register"
+            class="text-center w-full text-sm text-green-600 hover:underline mt-4"
+          >
+            No tengo cuenta
+          </button>
+        </form>
+        <form id="register-form" class="hidden space-y-4">
+          <input
+            type="email"
+            id="register-email"
+            class="form-input w-full p-3"
+            placeholder="Correo electrónico"
+            required
+          />
+          <input
+            type="password"
+            id="register-password"
+            class="form-input w-full p-3"
+            placeholder="Contraseña (mín. 6 caracteres)"
+            required
+          />
+          <button type="submit" class="btn-primary w-full py-3">Registrarme</button>
+          <button
+            type="button"
+            id="show-login"
+            class="text-center w-full text-sm text-green-600 hover:underline mt-4"
+          >
+            Ya tengo cuenta
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Main App Containers -->
+    <div id="app-container" class="hidden"></div>
+    <div id="modal-container"></div>
+
+    <!-- App Content Template -->
+    <template id="all-app-content-template">
+      <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <!-- Header -->
+        <header
+          class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4"
+        >
+          <div id="business-name-header" class="group">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 flex items-center gap-3">
+              <i class="fas fa-dollar-sign text-green-600"></i>
+              <span id="business-name-display">iFlow</span>
+              <input
+                type="text"
+                id="business-name-input"
+                class="hidden text-3xl md:text-4xl font-extrabold text-gray-900 bg-transparent border-b-2 border-green-500 focus:outline-none w-auto"
+              />
+              <i
+                id="edit-business-name-icon"
+                class="fas fa-pencil-alt text-gray-400 text-xl cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+              ></i>
+            </h1>
+          </div>
+          <div
+            class="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-4 sm:gap-6"
+          >
+            <div>
+             <object type="text/html" data="dolar.html" style="width: 100%; max-width: 300px;"></object>
+            </div>
+            <div class="relative">
+              <button
+                id="user-menu-button"
+                class="flex items-center gap-2 text-right p-2 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <p
+                  id="user-email-display"
+                  class="text-sm text-gray-600 truncate max-w-[150px]"
+                  title="Usuario conectado"
+                ></p>
+                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+              </button>
+              <div
+                id="user-menu-dropdown"
+                class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border z-10"
+              >
+                <a
+                  href="#"
+                  id="manage-subscription-btn"
+                  class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100"
+                  ><i class="fas fa-credit-card w-6 text-center mr-2"></i>Gestionar Suscripción</a
+                >
+                <a
+                  href="#"
+                  id="change-password-btn"
+                  class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100"
+                  ><i class="fas fa-key w-6 text-center mr-2"></i>Cambiar Contraseña</a
+                >
+                <a
+                  href="#"
+                  id="logout-button"
+                  class="block px-4 py-3 text-sm text-red-600 hover:bg-red-50"
+                  ><i class="fas fa-sign-out-alt w-6 text-center mr-2"></i>Cerrar Sesión</a
+                >
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Main Tabs Navigation -->
+        <!-- <<<--- MODIFICADO: Se añade el div contenedor para las flechas --- -->
+        <div class="mb-8 border-b border-gray-200 tabs-container">
+          <div id="scroll-arrow-left" class="scroll-arrow left hidden">
+            <i class="fas fa-chevron-left"></i>
+          </div>
+          <nav
+            id="main-tabs-nav"
+            class="-mb-px flex space-x-6 overflow-x-auto hide-scrollbar"
+            aria-label="Tabs"
+          >
+            <button
+              class="main-tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg"
+              data-section="capital"
+            >
+              <i class="fas fa-wallet mr-2"></i>Billeteras
+            </button>
+            <button
+              class="main-tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg"
+              data-section="ventas"
+            >
+              <i class="fas fa-cash-register mr-2"></i>Ventas
+            </button>
+            <button
+              class="main-tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg"
+              data-section="inventario"
+            >
+              <i class="fas fa-boxes-stacked mr-2"></i>Inventario
+            </button>
+            <button
+              class="main-tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg"
+              data-section="clientes"
+            >
+              <i class="fas fa-users mr-2"></i>Clientes
+            </button>
+            <button
+              class="main-tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg"
+              data-section="operaciones"
+            >
+              <i class="fas fa-tasks mr-2"></i>Operaciones
+            </button>
+            <button
+              class="main-tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg"
+              data-section="reportes"
+            >
+              <i class="fas fa-chart-line mr-2"></i>Reportes
+            </button>
+            <button
+              class="main-tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg"
+              data-section="providers"
+            >
+              <i class="fas fa-store mr-2"></i>Proveedores
+            </button>
+          </nav>
+          <div id="scroll-arrow-right" class="scroll-arrow right hidden">
+            <i class="fas fa-chevron-right"></i>
+          </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <main>
+          <div id="loading-container" class="hidden text-center py-20">
+            <i class="fas fa-spinner fa-spin fa-3x text-green-500"></i>
+            <p class="mt-4 text-lg text-gray-500">Cargando datos...</p>
+          </div>
+          <div id="main-content-wrapper">
+            <!-- Content will be injected here by ui.js -->
+          </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 text-gray-500 text-xs">
+          <p>iFlow App | ID de Usuario: <span id="user-id-display">Cargando...</span></p>
+        </footer>
+      </div>
+    </template>
+
+    <!-- Main JS Module -->
+    <script type="module" src="./js/main.js"></script>
+
+    <!-- <<<--- SCRIPT AÑADIDO PARA MANEJAR LA LÓGICA DE LAS FLECHAS --- -->
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        // Usamos un MutationObserver para asegurarnos de que el script se ejecute
+        // solo cuando el template de la app se haya cargado en el DOM.
+        const observer = new MutationObserver((mutationsList, observer) => {
+          const nav = document.getElementById('main-tabs-nav');
+          if (nav) {
+            setupTabScrolling();
+            observer.disconnect(); // Dejamos de observar una vez que lo encontramos
+          }
+        });
+
+        observer.observe(document.getElementById('app-container'), {
+          childList: true,
+          subtree: true,
+        });
+      });
+
+      function setupTabScrolling() {
+        const nav = document.getElementById('main-tabs-nav');
+        const leftArrow = document.getElementById('scroll-arrow-left');
+        const rightArrow = document.getElementById('scroll-arrow-right');
+
+        if (!nav || !leftArrow || !rightArrow) return;
+
+        const updateArrows = () => {
+          const { scrollLeft, scrollWidth, clientWidth } = nav;
+          // Muestra la flecha izquierda si no estamos al principio
+          leftArrow.classList.toggle('hidden', scrollLeft <= 0);
+          // Muestra la flecha derecha si hay más contenido para scrollear
+          rightArrow.classList.toggle('hidden', scrollLeft + clientWidth >= scrollWidth - 1);
+        };
+
+        // Event listeners para actualizar las flechas
+        nav.addEventListener('scroll', updateArrows);
+        window.addEventListener('resize', updateArrows);
+
+        // Event listeners para los clics en las flechas
+        leftArrow.addEventListener('click', () => {
+          nav.scrollBy({ left: -200, behavior: 'smooth' });
+        });
+        rightArrow.addEventListener('click', () => {
+          nav.scrollBy({ left: 200, behavior: 'smooth' });
+        });
+
+        // Llamada inicial para establecer el estado correcto de las flechas
+        // Usamos un pequeño timeout para darle tiempo al navegador a calcular las dimensiones
+        setTimeout(updateArrows, 100);
+      }
+    </script>
+  </body>
+</html>

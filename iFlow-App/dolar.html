@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dólar en Tiempo Real</title>
+
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#16a34a" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+  />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #111827; }
+    .form-input {
+      background-color: #ffffff;
+      border: 1px solid #d1d5db;
+      color: #111827;
+      border-radius: 0.5rem;
+      padding: 0.5rem;
+      transition: all 0.2s ease-in-out;
+    }
+  </style>
+</head>
+<body class="antialiased">
+
+  <div id="app-container" class="p-4 md:p-8 max-w-7xl mx-auto">
+    <p>Cargando aplicación...</p>
+  </div>
+  <div id="modal-container"></div>
+
+  <template id="all-app-content-template">
+          <div>
+            <p>Precio de Compra: <span id="buy-rate-display">Cargando...</span></p>
+            <p>Precio de Venta: <span id="sell-rate-display">Cargando...</span></p>
+            <p style="margin-top: 10px;">Valor editable:</p>
+            <input
+              type="number"
+              id="exchange-rate-input"
+              class="form-input"
+              placeholder="Cargando..."
+            />
+          </div>
+        </div>
+      </header>
+    </div>
+  </template>
+
+  <script>
+    // Esta función se encarga de inyectar el contenido del template en la página.
+    function renderAppContent() {
+      const appContainer = document.getElementById('app-container');
+      const template = document.getElementById('all-app-content-template');
+
+      if (appContainer && template) {
+        const appContent = template.content.cloneNode(true);
+        appContainer.innerHTML = ''; // Limpiamos el mensaje de "Cargando..."
+        appContainer.appendChild(appContent);
+      }
+    }
+
+    // Esta función obtiene y renderiza los precios del dólar.
+    async function renderDolarRates() {
+      const buyRateElement = document.getElementById('buy-rate-display');
+      const sellRateElement = document.getElementById('sell-rate-display');
+      const inputElement = document.getElementById('exchange-rate-input');
+
+      // Solo ejecuta si los elementos ya están en la página
+      if (!buyRateElement || !sellRateElement || !inputElement) {
+        console.warn('Elements to display dollar rates not found in the DOM.');
+        return;
+      }
+
+      try {
+        const response = await fetch('https://dolarapi.com/v1/dolares/blue');
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        const data = await response.json();
+        const buyPrice = data.compra;
+        const sellPrice = data.venta;
+
+        buyRateElement.textContent = `ARS ${buyPrice}`;
+        sellRateElement.textContent = `ARS ${sellPrice}`;
+        inputElement.value = sellPrice;
+        inputElement.removeAttribute('placeholder');
+
+      } catch (error) {
+        console.error('Error fetching dollar rates:', error);
+        buyRateElement.textContent = 'Error';
+        sellRateElement.textContent = 'Error';
+        inputElement.value = 'Error';
+      }
+    }
+
+    // La lógica principal se ejecuta cuando la página está completamente cargada
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Primero, renderizamos el contenido del template.
+      renderAppContent();
+      
+      // 2. Luego, obtenemos y mostramos los precios del dólar.
+      renderDolarRates();
+    });
+  </script>
+</body>
+</html>

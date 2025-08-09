@@ -1,0 +1,23 @@
+{
+  "name": "iFlow: Gestión Pro",
+  "short_name": "iFlow",
+  "description": "Gestión de capital, stock, ventas y finanzas para tu negocio.",
+  "start_url": "./app.html",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#16a34a",
+  "icons": [
+    {
+      "src": "https://firebasestorage.googleapis.com/v0/b/iflow-b0d16.firebasestorage.app/o/icon-192x192.png?alt=media&token=42bb47ce-bc39-4885-8c82-25837c7585da",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://firebasestorage.googleapis.com/v0/b/iflow-b0d16.firebasestorage.app/o/icon-512x512.png?alt=media&token=92550968-dc94-43f9-9404-9f44e27d0def",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
