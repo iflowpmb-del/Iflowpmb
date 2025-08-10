@@ -1,248 +1,130 @@
 import { charts, WALLET_CONFIG, setState, appState } from './state.js';
 import { setData } from './api.js';
-import { Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { Timestamp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 // =================================================================================
-// SECCIÓN 0: LÓGICA Y VISTAS DE SUSCRIPCIÓN
+// SECCIÓN 0: LÓGICA Y VISTAS DE SUSCRIPCIÓN (MODIFICADO)
 // =================================================================================
 
-function getPaywallHTML(status) {
-    // <<<--- INICIO DE LA MODIFICACIÓN #1 ---
-    // Se cambia el mensaje para el estado 'expired'
-    if (status === 'expired') {
-        return `
-        <div class="main-section flex items-center justify-center" style="min-height: 60vh;">
-            <div class="card p-8 text-center max-w-lg mx-auto">
-                <i class="fas fa-exclamation-triangle fa-3x text-yellow-500 mb-4"></i>
-                <h2 class="text-3xl font-bold mb-3">Acceso Suspendido</h2>
-                <p class="text-gray-600 mb-6">Hemos detectado un problema con el pago de tu suscripción.</p>
-                <p class="text-gray-600 mb-6">Por favor, comunícate con nosotros para regularizar tu situación y reactivar tu cuenta de iFlow Pro de inmediato.</p>
-                <div class="border-t pt-6">
-                    <a href="https://wa.me/5492241576696" target="_blank" class="btn-primary w-full py-3 text-lg flex items-center justify-center">
-                        <i class="fab fa-whatsapp mr-2"></i>Contactar por WhatsApp
-                    </a>
-                    <p class="text-xs text-gray-400 mt-4">Serás redirigido a WhatsApp para iniciar una conversación.</p>
-                </div>
-            </div>
-        </div>
-    `;
-    }
-    // --- FIN DE LA MODIFICACIÓN #1 ---
-
-    const title = 'Suscripción Requerida';
-    const message = 'Necesitas una suscripción activa para acceder a iFlow.';
-
-    return `
-        <div class="main-section flex items-center justify-center" style="min-height: 60vh;">
-            <div class="card p-8 text-center max-w-lg mx-auto">
-                <i class="fas fa-gem fa-3x text-green-500 mb-4"></i>
-                <h2 class="text-3xl font-bold mb-3">${title}</h2>
-                <p class="text-gray-600 mb-6">${message}</p>
-                <div class="border-t pt-6">
-                    <h3 class="text-xl font-semibold">Plan iFlow Pro</h3>
-                    <p class="text-4xl font-bold my-4">$15 <span class="text-lg font-normal text-gray-500">/ mes</span></p>
-                    <ul class="text-left space-y-2 mb-6">
-                        <li><i class="fas fa-check-circle text-green-500 mr-2"></i>Gestión ilimitada de ventas y stock.</li>
-                        <li><i class="fas fa-check-circle text-green-500 mr-2"></i>Dashboard financiero completo.</li>
-                        <li><i class="fas fa-check-circle text-green-500 mr-2"></i>Soporte prioritario.</li>
-                    </ul>
-                    <button id="subscribe-now-btn" class="btn-primary w-full py-3 text-lg">
-                        <i class="fas fa-rocket mr-2"></i>Suscribirme Ahora
-                    </button>
-                    <p class="text-xs text-gray-400 mt-4">Serás redirigido a nuestra pasarela de pago segura.</p>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-
-function getStartTrialHTML(profile) {
-    if (profile.subscriptionStatus === 'pending_payment_validation') {
-        return `
-            <div class="main-section flex items-center justify-center" style="min-height: 60vh;">
-                <div class="card p-8 text-center max-w-lg mx-auto">
-                    <i class="fas fa-spinner fa-spin fa-3x text-green-500 mb-4"></i>
-                    <h2 class="text-3xl font-bold mb-3">Procesando tu suscripción...</h2>
-                    <p class="text-gray-600 mb-6">Si ya has completado los datos, la aplicación se actualizará automáticamente en unos momentos. No es necesario que hagas nada más.</p>
-                    <p class="text-gray-600 mb-6">Si no completaste el proceso o te arrepentiste, puedes volver atrás.</p>
-                    <div class="border-t pt-6">
-                        <button id="cancel-validation-btn" class="btn-secondary w-full py-3 text-lg">
-                            <i class="fas fa-arrow-left mr-2"></i>Cancelar y Volver
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    return `
-        <div class="main-section flex items-center justify-center" style="min-height: 60vh;">
-            <div class="w-full max-w-lg mx-auto">
-                <div class="card p-8 text-center">
-                    <i class="fas fa-rocket fa-3x text-green-500 mb-4"></i>
-                    <h2 class="text-3xl font-bold mb-3">Estás a un paso de iFlow Pro</h2>
-                    <p class="text-gray-600 mb-6">Inicia tu prueba gratuita de 7 días. Cancela en cualquier momento. Se requiere un método de pago, pero no se te cobrará nada hoy.</p>
-                    <div class="border-t pt-6">
-                        <h3 class="text-xl font-semibold">Plan iFlow Pro</h3>
-                        <p class="text-4xl font-bold my-4">$15 <span class="text-lg font-normal text-gray-500">/ mes</span></p>
-                        <p class="text-sm text-gray-500 mb-6">Después de tu prueba de 7 días.</p>
-                        <button id="start-trial-btn" class="btn-primary w-full py-3 text-lg">
-                            <i class="fas fa-credit-card mr-2"></i>Iniciar Prueba Gratuita
-                        </button>
-                        <p class="text-xs text-gray-400 mt-4">Se guardará tu método de pago de forma segura.</p>
-                    </div>
-                </div>
-                <p class="text-center mt-6 text-sm text-gray-500">
-                    ¿No es tu cuenta? 
-                    <a href="#" id="logout-from-trial-screen" class="font-semibold text-green-600 hover:underline">Volver al Inicio</a>
-                </p>
-            </div>
-        </div>
-    `;
-}
+// MODIFICACIÓN: Se eliminan las funciones getPaywallHTML y getStartTrialHTML
+// ya que no son necesarias sin el sistema de suscripción.
 
 // =================================================================================
 // SECCIÓN 1: RENDERIZADO PRINCIPAL
 // =================================================================================
 
 export function renderApp(state) {
-    const { user, profile, isDataLoading } = state;
-    if (!user || !profile) return;
+  const { user, profile, isDataLoading } = state;
+  if (!user || !profile) return;
 
-    const mainContentWrapper = document.getElementById('main-content-wrapper');
-    const loadingContainer = document.getElementById('loading-container');
-    const header = document.querySelector('header');
-    const nav = document.querySelector('.mb-8.border-b');
+  const mainContentWrapper = document.getElementById('main-content-wrapper');
+  const loadingContainer = document.getElementById('loading-container');
+  const header = document.querySelector('header');
+  const nav = document.querySelector('.mb-8.border-b');
 
-    if (isDataLoading) {
-        if(loadingContainer) loadingContainer.classList.remove('hidden');
-        if(mainContentWrapper) mainContentWrapper.classList.add('hidden');
-        return;
-    } else {
-        if(loadingContainer) loadingContainer.classList.add('hidden');
-        if(mainContentWrapper) mainContentWrapper.classList.remove('hidden');
-    }
-    
-    if (!mainContentWrapper || !header || !nav) return;
+  if (isDataLoading) {
+    if (loadingContainer) loadingContainer.classList.remove('hidden');
+    if (mainContentWrapper) mainContentWrapper.classList.add('hidden');
+    return;
+  } else {
+    if (loadingContainer) loadingContainer.classList.add('hidden');
+    if (mainContentWrapper) mainContentWrapper.classList.remove('hidden');
+  }
 
-    let subscriptionStatus = profile.subscriptionStatus || 'none';
-    const trialEndDate = profile.trialEndDate?.toDate();
+  if (!mainContentWrapper || !header || !nav) return;
 
-    const userIdDisplay = document.getElementById('user-id-display');
-    if(userIdDisplay) userIdDisplay.textContent = user.uid;
+  // MODIFICACIÓN: Se elimina toda la lógica de comprobación de 'subscriptionStatus'.
+  // Ahora se asume que todos los usuarios están 'active'.
 
-    if (subscriptionStatus === 'pending_trial_setup' || subscriptionStatus === 'pending_payment_validation') {
-        mainContentWrapper.innerHTML = getStartTrialHTML(profile);
-        header.style.display = 'none';
-        nav.style.display = 'none';
-        return;
-    }
-    
-    // <<<--- INICIO DE LA MODIFICACIÓN #2 ---
-    // Se comenta el bloque que cambia el estado de 'trial' a 'expired' automáticamente.
-    /*
-    if (subscriptionStatus === 'trial' && trialEndDate && new Date() > trialEndDate) {
-        subscriptionStatus = 'expired';
-        setData('profile', 'main', { subscriptionStatus: 'expired' }, true).catch(console.error);
-    }
-    */
-    // --- FIN DE LA MODIFICACIÓN #2 ---
-    
-    if (subscriptionStatus === 'trial' || subscriptionStatus === 'active') {
-        header.style.display = 'flex';
-        nav.style.display = 'block';
+  const userIdDisplay = document.getElementById('user-id-display');
+  if (userIdDisplay) userIdDisplay.textContent = user.uid;
 
-        const sectionsAreMissing = !document.getElementById('section-capital');
-        if (sectionsAreMissing) {
-            mainContentWrapper.innerHTML = getAppSectionsHTML();
-        }
-        
-        const existingBanner = document.getElementById('trial-banner-container');
-        if (existingBanner) existingBanner.remove();
+  header.style.display = 'flex';
+  nav.style.display = 'block';
 
-        renderAllSections(state);
-    } else {
-        mainContentWrapper.innerHTML = getPaywallHTML(subscriptionStatus);
-        header.style.display = 'none';
-        nav.style.display = 'none';
-    }
+  const sectionsAreMissing = !document.getElementById('section-capital');
+  if (sectionsAreMissing) {
+    mainContentWrapper.innerHTML = getAppSectionsHTML();
+  }
 
-    renderHeader(state);
+  const existingBanner = document.getElementById('trial-banner-container');
+  if (existingBanner) existingBanner.remove();
+
+  renderAllSections(state);
+  renderHeader(state);
 }
 
 function renderHeader(state) {
-    const { user, profile } = state;
+  const { user, profile } = state;
 
-    const businessNameDisplay = document.getElementById('business-name-display');
-    if (businessNameDisplay && profile) {
-        businessNameDisplay.textContent = profile.businessName || 'Mi Negocio';
+  const businessNameDisplay = document.getElementById('business-name-display');
+  if (businessNameDisplay && profile) {
+    businessNameDisplay.textContent = profile.businessName || 'Mi Negocio';
+  }
+
+  const userEmailDisplay = document.getElementById('user-email-display');
+  if (userEmailDisplay && user) {
+    userEmailDisplay.textContent = user.email;
+  }
+
+  const exchangeRateInput = document.getElementById('exchange-rate-input');
+  if (exchangeRateInput && profile) {
+    const currentRate = profile.exchangeRate || 1000;
+
+    if (parseFloat(exchangeRateInput.value) !== currentRate) {
+      exchangeRateInput.value = currentRate;
     }
-    
-    const userEmailDisplay = document.getElementById('user-email-display');
-    if(userEmailDisplay && user) {
-        userEmailDisplay.textContent = user.email;
+
+    if (state.exchangeRate !== currentRate) {
+      setState({ exchangeRate: currentRate });
     }
-    
-    const exchangeRateInput = document.getElementById('exchange-rate-input');
-    if (exchangeRateInput && profile) {
-        const currentRate = profile.exchangeRate || 1000;
-        
-        if (parseFloat(exchangeRateInput.value) !== currentRate) {
-            exchangeRateInput.value = currentRate;
-        }
-        
-        if (state.exchangeRate !== currentRate) {
-            setState({ exchangeRate: currentRate });
-        }
-    }
+  }
 }
 
-function renderAllSections(state){
-    const { isInitialRender, isDataLoading } = state;
+function renderAllSections(state) {
+  const { isInitialRender, isDataLoading } = state;
 
-    renderCapitalSection(state);
-    renderSalesSection(state);
-    renderSalesHistory(state);
-    renderInventorySections(state);
-    renderClientsSection(state);
-    renderOperationsSections(state);
-    renderReportsSections(state);
-    renderProvidersSection(state);
-    
-    updateSaleBalance(state);
+  renderCapitalSection(state);
+  renderSalesSection(state);
+  renderSalesHistory(state);
+  renderInventorySections(state);
+  renderClientsSection(state);
+  renderOperationsSections(state);
+  renderReportsSections(state);
+  renderProvidersSection(state);
 
-    if (isInitialRender && !isDataLoading) {
-        setState({ isInitialRender: false });
-        switchTab('capital');
-    }
+  updateSaleBalance(state);
+
+  if (isInitialRender && !isDataLoading) {
+    setState({ isInitialRender: false });
+    switchTab('capital');
+  }
 }
 
 function renderInventorySections(state) {
-    renderStockSection(state);
-    renderAddStockForm(state);
-    renderCategoryManagerSection(state);
+  renderStockSection(state);
+  renderAddStockForm(state);
+  renderCategoryManagerSection(state);
 }
 
 function renderOperationsSections(state) {
-    renderExpensesSection(state);
-    renderDebtsList(state);
-    renderNotesSection(state);
-    renderCollapsibleSections(state);
+  renderExpensesSection(state);
+  renderDebtsList(state);
+  renderNotesSection(state);
+  renderCollapsibleSections(state);
 }
 
 function renderReportsSections(state) {
-    renderDashboardSection(state);
-    renderSalesAnalysis(state);
+  renderDashboardSection(state);
+  renderSalesAnalysis(state);
 }
-
 
 // =================================================================================
 // SECCIÓN 2: ESTRUCTURA HTML INTERNA
 // =================================================================================
 
 function getAppSectionsHTML() {
-    return ` 
+  return ` 
     <!-- ======================= SECCIÓN BILLETERAS ======================= -->
     <div id="section-capital" class="main-section"> 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"> 
@@ -614,50 +496,55 @@ function getAppSectionsHTML() {
 // =================================================================================
 
 function formatDateTime(timestamp) {
-    if (!timestamp || !timestamp.toDate) {
-        return 'Fecha no disponible';
-    }
-    return timestamp.toDate().toLocaleString('es-AR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+  if (!timestamp || !timestamp.toDate) {
+    return 'Fecha no disponible';
+  }
+  return timestamp.toDate().toLocaleString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function renderNotesSection(state) {
-    if (!state.notes) return;
+  if (!state.notes) return;
 
-    const container = document.getElementById('notes-list-container');
-    const noNotesMessage = document.getElementById('no-notes-message');
-    const searchInput = document.getElementById('notes-search-input');
+  const container = document.getElementById('notes-list-container');
+  const noNotesMessage = document.getElementById('no-notes-message');
+  const searchInput = document.getElementById('notes-search-input');
 
-    if (!container || !noNotesMessage || !searchInput) return;
+  if (!container || !noNotesMessage || !searchInput) return;
 
-    if (searchInput.value !== state.notesSearchTerm) {
-        searchInput.value = state.notesSearchTerm;
+  if (searchInput.value !== state.notesSearchTerm) {
+    searchInput.value = state.notesSearchTerm;
+  }
+
+  const searchTerm = (state.notesSearchTerm || '').toLowerCase();
+  const filteredNotes = state.notes.filter(
+    (note) =>
+      (note.title || '').toLowerCase().includes(searchTerm) ||
+      (note.content || '').toLowerCase().includes(searchTerm)
+  );
+
+  noNotesMessage.classList.toggle('hidden', state.notes.length > 0);
+  container.classList.toggle('hidden', filteredNotes.length === 0 && !searchTerm);
+
+  if (filteredNotes.length === 0) {
+    if (searchTerm) {
+      container.innerHTML = `<p class="text-center text-gray-500 py-8 col-span-full">No se encontraron notas para "${escapeHTML(
+        searchTerm
+      )}".</p>`;
+    } else {
+      container.innerHTML = '';
     }
+    return;
+  }
 
-    const searchTerm = (state.notesSearchTerm || '').toLowerCase();
-    const filteredNotes = state.notes.filter(note =>
-        (note.title || '').toLowerCase().includes(searchTerm) ||
-        (note.content || '').toLowerCase().includes(searchTerm)
-    );
-
-    noNotesMessage.classList.toggle('hidden', state.notes.length > 0);
-    container.classList.toggle('hidden', filteredNotes.length === 0 && !searchTerm);
-
-    if (filteredNotes.length === 0) {
-        if (searchTerm) {
-            container.innerHTML = `<p class="text-center text-gray-500 py-8 col-span-full">No se encontraron notas para "${escapeHTML(searchTerm)}".</p>`;
-        } else {
-            container.innerHTML = '';
-        }
-        return;
-    }
-
-    container.innerHTML = filteredNotes.map(note => `
+  container.innerHTML = filteredNotes
+    .map(
+      (note) => `
         <div class="card p-5 flex flex-col justify-between bg-yellow-50 border-yellow-200">
             <div>
                 <h4 class="font-bold text-lg text-gray-800 mb-2">${escapeHTML(note.title)}</h4>
@@ -670,143 +557,169 @@ function renderNotesSection(state) {
                         <p>Editado: ${formatDateTime(note.updatedAt)}</p>
                     </div>
                     <div class="flex gap-2">
-                        <button class="edit-note-btn text-blue-600 hover:text-blue-800" data-note-id="${note.id}"><i class="fas fa-edit fa-lg"></i></button>
-                        <button class="delete-note-btn text-red-600 hover:text-red-800" data-note-id="${note.id}"><i class="fas fa-trash fa-lg"></i></button>
+                        <button class="edit-note-btn text-blue-600 hover:text-blue-800" data-note-id="${
+                          note.id
+                        }"><i class="fas fa-edit fa-lg"></i></button>
+                        <button class="delete-note-btn text-red-600 hover:text-red-800" data-note-id="${
+                          note.id
+                        }"><i class="fas fa-trash fa-lg"></i></button>
                     </div>
                 </div>
             </div>
         </div>
-    `).join('');
+    `
+    )
+    .join('');
 }
-
 
 function renderCollapsibleSections(state) {
-    if (!state.ui || !state.ui.collapsedSections) return;
+  if (!state.ui || !state.ui.collapsedSections) return;
 
-    const { collapsedSections } = state.ui;
+  const { collapsedSections } = state.ui;
 
-    for (const sectionName in collapsedSections) {
-        const isCollapsed = collapsedSections[sectionName];
-        const content = document.getElementById(`collapsible-content-${sectionName}`);
-        const button = document.querySelector(`.toggle-section-btn[data-section="${sectionName}"]`);
-        
-        if (content && button) {
-            content.classList.toggle('hidden', isCollapsed);
-            const icon = button.querySelector('i');
-            if (icon) {
-                icon.classList.toggle('fa-chevron-up', !isCollapsed);
-                icon.classList.toggle('fa-chevron-down', isCollapsed);
-            }
-        }
+  for (const sectionName in collapsedSections) {
+    const isCollapsed = collapsedSections[sectionName];
+    const content = document.getElementById(`collapsible-content-${sectionName}`);
+    const button = document.querySelector(`.toggle-section-btn[data-section="${sectionName}"]`);
+
+    if (content && button) {
+      content.classList.toggle('hidden', isCollapsed);
+      const icon = button.querySelector('i');
+      if (icon) {
+        icon.classList.toggle('fa-chevron-up', !isCollapsed);
+        icon.classList.toggle('fa-chevron-down', isCollapsed);
+      }
     }
+  }
 }
 
-
 function formatTimeAgo(timestamp) {
-    if (!timestamp || !timestamp.toDate) {
-        return null;
-    }
-    const now = new Date();
-    const date = timestamp.toDate();
-    const seconds = Math.floor((now - date) / 1000);
+  if (!timestamp || !timestamp.toDate) {
+    return null;
+  }
+  const now = new Date();
+  const date = timestamp.toDate();
+  const seconds = Math.floor((now - date) / 1000);
 
-    let interval = seconds / 31536000;
-    if (interval > 1) return `hace ${Math.floor(interval)} años`;
-    interval = seconds / 2592000;
-    if (interval > 1) return `hace ${Math.floor(interval)} meses`;
-    interval = seconds / 86400;
-    if (interval > 1) return `hace ${Math.floor(interval)} días`;
-    interval = seconds / 3600;
-    if (interval > 1) return `hace ${Math.floor(interval)} horas`;
-    interval = seconds / 60;
-    if (interval > 1) return `hace ${Math.floor(interval)} minutos`;
-    return "hace unos segundos";
+  let interval = seconds / 31536000;
+  if (interval > 1) return `hace ${Math.floor(interval)} años`;
+  interval = seconds / 2592000;
+  if (interval > 1) return `hace ${Math.floor(interval)} meses`;
+  interval = seconds / 86400;
+  if (interval > 1) return `hace ${Math.floor(interval)} días`;
+  interval = seconds / 3600;
+  if (interval > 1) return `hace ${Math.floor(interval)} horas`;
+  interval = seconds / 60;
+  if (interval > 1) return `hace ${Math.floor(interval)} minutos`;
+  return 'hace unos segundos';
 }
 
 function renderProvidersSection(state) {
-    if (!state.providers) return;
+  if (!state.providers) return;
 
-    const container = document.getElementById('providers-list-container');
-    const noProvidersMessage = document.getElementById('no-providers-message');
-    const searchInput = document.getElementById('providers-search-input');
+  const container = document.getElementById('providers-list-container');
+  const noProvidersMessage = document.getElementById('no-providers-message');
+  const searchInput = document.getElementById('providers-search-input');
 
-    if (!container || !noProvidersMessage || !searchInput) return;
+  if (!container || !noProvidersMessage || !searchInput) return;
 
-    if(searchInput.value !== state.providersSearchTerm) {
-        searchInput.value = state.providersSearchTerm;
+  if (searchInput.value !== state.providersSearchTerm) {
+    searchInput.value = state.providersSearchTerm;
+  }
+
+  const searchTerm = (state.providersSearchTerm || '').toLowerCase();
+  const filteredProviders = state.providers.filter(
+    (p) =>
+      p.name.toLowerCase().includes(searchTerm) ||
+      (p.tagline && p.tagline.toLowerCase().includes(searchTerm))
+  );
+
+  noProvidersMessage.classList.toggle('hidden', state.providers.length > 0);
+  container.innerHTML = '';
+
+  if (filteredProviders.length === 0) {
+    if (searchTerm) {
+      container.innerHTML = `<p class="text-center text-gray-500 py-8 col-span-full">No se encontraron proveedores para "${escapeHTML(
+        searchTerm
+      )}".</p>`;
     }
-    
-    const searchTerm = (state.providersSearchTerm || '').toLowerCase();
-    const filteredProviders = state.providers.filter(p => 
-        p.name.toLowerCase().includes(searchTerm) || 
-        (p.tagline && p.tagline.toLowerCase().includes(searchTerm))
-    );
+    return;
+  }
 
-    noProvidersMessage.classList.toggle('hidden', state.providers.length > 0);
-    container.innerHTML = ''; 
+  filteredProviders.forEach((provider) => {
+    const providerCard = document.createElement('div');
+    providerCard.className = 'card flex flex-col';
 
-    if (filteredProviders.length === 0) {
-        if (searchTerm) {
-            container.innerHTML = `<p class="text-center text-gray-500 py-8 col-span-full">No se encontraron proveedores para "${escapeHTML(searchTerm)}".</p>`;
+    const whatsappLink = `https://wa.me/${provider.whatsapp.replace(/\D/g, '')}`;
+    const instagramLink = `https://instagram.com/${provider.instagram.replace('@', '')}`;
+
+    const verifiedBadge = provider.isVerified
+      ? `<i class="fas fa-check-circle text-blue-500 ml-2" title="Proveedor Verificado"></i>`
+      : '';
+
+    const lastUpdated = formatTimeAgo(provider.lastUpdatedAt);
+
+    const priceList = provider.priceList || [];
+    let priceListHtml = '';
+
+    if (priceList.length > 0) {
+      const groupedByCategory = priceList.reduce((acc, item) => {
+        const category = item.category || 'General';
+        if (!acc[category]) {
+          acc[category] = [];
         }
-        return;
-    }
+        acc[category].push(item);
+        return acc;
+      }, {});
 
-    filteredProviders.forEach(provider => {
-        const providerCard = document.createElement('div');
-        providerCard.className = 'card flex flex-col';
-        
-        const whatsappLink = `https://wa.me/${provider.whatsapp.replace(/\D/g, '')}`;
-        const instagramLink = `https://instagram.com/${provider.instagram.replace('@', '')}`;
-        
-        const verifiedBadge = provider.isVerified 
-            ? `<i class="fas fa-check-circle text-blue-500 ml-2" title="Proveedor Verificado"></i>` 
-            : '';
-        
-        const lastUpdated = formatTimeAgo(provider.lastUpdatedAt);
+      const sortedCategories = Object.keys(groupedByCategory).sort();
 
-        const priceList = provider.priceList || [];
-        let priceListHtml = '';
-
-        if (priceList.length > 0) {
-            const groupedByCategory = priceList.reduce((acc, item) => {
-                const category = item.category || 'General';
-                if (!acc[category]) {
-                    acc[category] = [];
-                }
-                acc[category].push(item);
-                return acc;
-            }, {});
-
-            const sortedCategories = Object.keys(groupedByCategory).sort();
-
-            priceListHtml = sortedCategories.map(category => `
+      priceListHtml = sortedCategories
+        .map(
+          (category) => `
                 <div class="mb-4 price-list-category">
-                    <h5 class="font-semibold text-md text-gray-700 bg-gray-100 p-2 rounded-t-md sticky top-0">${escapeHTML(category)}</h5>
+                    <h5 class="font-semibold text-md text-gray-700 bg-gray-100 p-2 rounded-t-md sticky top-0">${escapeHTML(
+                      category
+                    )}</h5>
                     <table class="min-w-full text-sm">
                         <tbody>
-                            ${groupedByCategory[category].map(item => `
+                            ${groupedByCategory[category]
+                              .map(
+                                (item) => `
                                 <tr class="border-b price-list-item">
                                     <td class="p-2 item-name">${escapeHTML(item.name)}</td>
-                                    <td class="p-2 text-right font-mono">${formatCurrency(item.price, 'USD')}</td>
+                                    <td class="p-2 text-right font-mono">${formatCurrency(
+                                      item.price,
+                                      'USD'
+                                    )}</td>
                                 </tr>
-                            `).join('')}
+                            `
+                              )
+                              .join('')}
                         </tbody>
                     </table>
                 </div>
-            `).join('');
-        } else {
-            priceListHtml = '<p class="text-center text-gray-400 py-4">No hay productos en la lista.</p>';
-        }
+            `
+        )
+        .join('');
+    } else {
+      priceListHtml = '<p class="text-center text-gray-400 py-4">No hay productos en la lista.</p>';
+    }
 
-        // <<<--- MODIFICADO: Se añade el input de búsqueda a cada tarjeta ---
-        providerCard.innerHTML = `
+    // <<<--- MODIFICADO: Se añade el input de búsqueda a cada tarjeta ---
+    providerCard.innerHTML = `
             <div class="p-6">
                 <div class="flex items-start mb-4">
-                    <img src="${provider.logoUrl || 'https://placehold.co/64x64/e2e8f0/64748b?text=Logo'}" alt="Logo de ${escapeHTML(provider.name)}" class="w-16 h-16 rounded-full mr-4 border">
+                    <img src="${
+                      provider.logoUrl || 'https://placehold.co/64x64/e2e8f0/64748b?text=Logo'
+                    }" alt="Logo de ${escapeHTML(
+      provider.name
+    )}" class="w-16 h-16 rounded-full mr-4 border">
                     <div class="flex-1">
                         <div class="flex items-center">
-                            <h3 class="text-2xl font-bold text-gray-800">${escapeHTML(provider.name)}</h3>
+                            <h3 class="text-2xl font-bold text-gray-800">${escapeHTML(
+                              provider.name
+                            )}</h3>
                             ${verifiedBadge}
                         </div>
                         <p class="text-gray-500">${escapeHTML(provider.tagline || '')}</p>
@@ -824,10 +737,18 @@ function renderProvidersSection(state) {
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-3 gap-4">
                     <div class="flex items-center">
                         <h4 class="font-semibold text-lg">Lista de Precios</h4>
-                        ${lastUpdated ? `<span class="text-xs text-gray-400 ml-2" title="${provider.lastUpdatedAt?.toDate().toLocaleString()}">Actualizado ${lastUpdated}</span>` : ''}
+                        ${
+                          lastUpdated
+                            ? `<span class="text-xs text-gray-400 ml-2" title="${provider.lastUpdatedAt
+                                ?.toDate()
+                                .toLocaleString()}">Actualizado ${lastUpdated}</span>`
+                            : ''
+                        }
                     </div>
                     <div class="relative w-full sm:w-auto">
-                        <input type="text" class="form-input w-full sm:w-48 p-2 pl-8 text-sm provider-price-list-search" placeholder="Buscar en lista..." data-provider-id="${provider.id}">
+                        <input type="text" class="form-input w-full sm:w-48 p-2 pl-8 text-sm provider-price-list-search" placeholder="Buscar en lista..." data-provider-id="${
+                          provider.id
+                        }">
                         <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
                     </div>
                 </div>
@@ -836,178 +757,247 @@ function renderProvidersSection(state) {
                 </div>
             </div>
         `;
-        container.appendChild(providerCard);
-    });
+    container.appendChild(providerCard);
+  });
 }
 
 function renderSalesHistory(state) {
-    if (!state.sales) return;
-    const container = document.getElementById('sales-list-container');
-    const noSalesMessage = document.getElementById('no-sales-message');
-    const searchInput = document.getElementById('sales-search-input');
-    if (!container || !noSalesMessage || !searchInput) return;
-    if (searchInput.value !== state.salesSearchTerm) {
-        searchInput.value = state.salesSearchTerm;
+  if (!state.sales) return;
+  const container = document.getElementById('sales-list-container');
+  const noSalesMessage = document.getElementById('no-sales-message');
+  const searchInput = document.getElementById('sales-search-input');
+  if (!container || !noSalesMessage || !searchInput) return;
+  if (searchInput.value !== state.salesSearchTerm) {
+    searchInput.value = state.salesSearchTerm;
+  }
+  const searchTerm = (state.salesSearchTerm || '').toLowerCase();
+  const filteredSales = state.sales.filter((sale) => {
+    if (!searchTerm) return true;
+    const searchInClient = (sale.customerName || '').toLowerCase().includes(searchTerm);
+    const searchInItems = (sale.items || []).some(
+      (item) =>
+        (item.model || '').toLowerCase().includes(searchTerm) ||
+        (item.serialNumber && item.serialNumber.toLowerCase().includes(searchTerm))
+    );
+    return searchInClient || searchInItems;
+  });
+  noSalesMessage.classList.toggle('hidden', state.sales.length > 0);
+  container.classList.toggle('hidden', filteredSales.length === 0 && !searchTerm);
+  if (filteredSales.length === 0) {
+    if (searchTerm) {
+      container.innerHTML = `<p class="text-center text-gray-500 py-8">No se encontraron ventas para "${escapeHTML(
+        state.salesSearchTerm
+      )}".</p>`;
+    } else {
+      container.innerHTML = '';
     }
-    const searchTerm = (state.salesSearchTerm || '').toLowerCase();
-    const filteredSales = state.sales.filter(sale => {
-        if (!searchTerm) return true;
-        const searchInClient = (sale.customerName || '').toLowerCase().includes(searchTerm);
-        const searchInItems = (sale.items || []).some(item =>
-            (item.model || '').toLowerCase().includes(searchTerm) ||
-            (item.serialNumber && item.serialNumber.toLowerCase().includes(searchTerm))
-        );
-        return searchInClient || searchInItems;
-    });
-    noSalesMessage.classList.toggle('hidden', state.sales.length > 0);
-    container.classList.toggle('hidden', filteredSales.length === 0 && !searchTerm);
-    if (filteredSales.length === 0) {
-        if (searchTerm) {
-            container.innerHTML = `<p class="text-center text-gray-500 py-8">No se encontraron ventas para "${escapeHTML(state.salesSearchTerm)}".</p>`;
-        } else {
-            container.innerHTML = '';
-        }
-        return;
+    return;
+  }
+  const salesByDay = filteredSales.reduce((acc, sale) => {
+    const date =
+      sale.saleDate ||
+      (sale.soldAt ? new Date(sale.soldAt.seconds * 1000).toISOString().split('T')[0] : 'nodate');
+    if (!acc[date]) {
+      acc[date] = [];
     }
-    const salesByDay = filteredSales.reduce((acc, sale) => {
-        const date = sale.saleDate || (sale.soldAt ? new Date(sale.soldAt.seconds * 1000).toISOString().split('T')[0] : 'nodate');
-        if (!acc[date]) {
-            acc[date] = [];
-        }
-        acc[date].push(sale);
-        return acc;
-    }, {});
-    const sortedDays = Object.keys(salesByDay).sort((a, b) => new Date(b) - new Date(a));
-    container.innerHTML = sortedDays.map(day => {
-        const salesOfTheDay = salesByDay[day];
-        const dayTotal = salesOfTheDay.reduce((sum, s) => sum + s.total, 0);
-        const dayProfit = salesOfTheDay.reduce((sum, s) => {
-            const itemsCost = (s.items || []).reduce((itemSum, i) => itemSum + (i.phoneCost || 0), 0);
-            return sum + (s.total - itemsCost);
-        }, 0);
-        return `
+    acc[date].push(sale);
+    return acc;
+  }, {});
+  const sortedDays = Object.keys(salesByDay).sort((a, b) => new Date(b) - new Date(a));
+  container.innerHTML = sortedDays
+    .map((day) => {
+      const salesOfTheDay = salesByDay[day];
+      const dayTotal = salesOfTheDay.reduce((sum, s) => sum + s.total, 0);
+      const dayProfit = salesOfTheDay.reduce((sum, s) => {
+        const itemsCost = (s.items || []).reduce((itemSum, i) => itemSum + (i.phoneCost || 0), 0);
+        return sum + (s.total - itemsCost);
+      }, 0);
+      return `
             <div class="day-group mt-8">
                 <div class="flex justify-between items-center bg-gray-100 p-3 rounded-t-lg border-b">
                     <h3 class="text-xl font-bold text-gray-700">${formatDate(day)}</h3>
                     <div class="text-right">
-                        <p class="text-sm text-gray-600">Total Día: <span class="font-semibold">${formatCurrency(dayTotal, 'USD')}</span></p>
-                        <p class="text-sm text-gray-600">Ganancia Día: <span class="font-semibold ${dayProfit >= 0 ? 'text-green-600' : 'text-red-600'}">${formatCurrency(dayProfit, 'USD')}</span></p>
+                        <p class="text-sm text-gray-600">Total Día: <span class="font-semibold">${formatCurrency(
+                          dayTotal,
+                          'USD'
+                        )}</span></p>
+                        <p class="text-sm text-gray-600">Ganancia Día: <span class="font-semibold ${
+                          dayProfit >= 0 ? 'text-green-600' : 'text-red-600'
+                        }">${formatCurrency(dayProfit, 'USD')}</span></p>
                     </div>
                 </div>
                 <div class="space-y-4 p-4 bg-white rounded-b-lg shadow-sm">
-                    ${salesOfTheDay.map(sale => renderSaleCard(sale)).join('')}
+                    ${salesOfTheDay.map((sale) => renderSaleCard(sale)).join('')}
                 </div>
             </div>
         `;
-    }).join('');
+    })
+    .join('');
 }
 
-function renderSaleCard(sale) { 
-    const profit = (sale.items || []).reduce((sum, i) => sum + (i.salePrice - (i.phoneCost || 0)), 0); 
-    
-    let daysSinceSaleHtml = '';
-    const saleDate = sale.soldAt?.toDate() || (sale.saleDate ? new Date(sale.saleDate + 'T12:00:00Z') : null);
-    if (saleDate) {
-        const today = new Date();
-        const diffTime = Math.abs(today - saleDate);
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        daysSinceSaleHtml = `<span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full" title="Días desde la venta">${diffDays} día(s) (Garantía)</span>`;
-    }
+function renderSaleCard(sale) {
+  const profit = (sale.items || []).reduce((sum, i) => sum + (i.salePrice - (i.phoneCost || 0)), 0);
 
-    return ` 
-        <div class="sale-card border p-4 rounded-lg hover:shadow-md transition-shadow" data-sale-id="${sale.id}"> 
+  let daysSinceSaleHtml = '';
+  const saleDate =
+    sale.soldAt?.toDate() || (sale.saleDate ? new Date(sale.saleDate + 'T12:00:00Z') : null);
+  if (saleDate) {
+    const today = new Date();
+    const diffTime = Math.abs(today - saleDate);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    daysSinceSaleHtml = `<span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full" title="Días desde la venta">${diffDays} día(s) (Garantía)</span>`;
+  }
+
+  return ` 
+        <div class="sale-card border p-4 rounded-lg hover:shadow-md transition-shadow" data-sale-id="${
+          sale.id
+        }"> 
             <div class="flex justify-between items-start cursor-pointer" data-action="open-details"> 
                 <div> 
                     <p class="font-bold text-lg">${escapeHTML(sale.customerName)}</p> 
-                    <p class="text-sm text-gray-500">${(sale.items || []).map(i => escapeHTML(i.model)).join(', ')}</p> 
+                    <p class="text-sm text-gray-500">${(sale.items || [])
+                      .map((i) => escapeHTML(i.model))
+                      .join(', ')}</p> 
                 </div> 
                 <div class="text-right flex-shrink-0 ml-4"> 
                     <p class="text-xl font-bold">${formatCurrency(sale.total, 'USD')}</p> 
-                    <p class="text-sm ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">Ganancia: ${formatCurrency(profit, 'USD')}</p> 
+                    <p class="text-sm ${
+                      profit >= 0 ? 'text-green-600' : 'text-red-600'
+                    }">Ganancia: ${formatCurrency(profit, 'USD')}</p> 
                 </div> 
             </div> 
             <div class="mt-3 pt-3 border-t flex justify-between items-center"> 
                 ${daysSinceSaleHtml}
                 <div class="flex gap-2"> 
-                    <button class="delete-sale-btn btn-danger text-xs py-1 px-2 rounded" data-sale-id="${sale.id}">Anular</button> 
+                    <button class="delete-sale-btn btn-danger text-xs py-1 px-2 rounded" data-sale-id="${
+                      sale.id
+                    }">Anular</button> 
                 </div> 
             </div> 
         </div> 
-    `; 
-} 
+    `;
+}
 
-function renderCapitalSection(state) { 
-    const { stock, capital, debts, exchangeRate } = state; 
-    if (!stock || !capital || !debts ) return; 
-    
-    const stockValueUSD = stock.reduce((sum, item) => sum + ((item.phoneCost || 0) * (item.quantity || 1)), 0); 
-    
-    const totalDebtUSD = debts.reduce((sum, debt) => sum + (debt.amount || 0), 0); 
-    const arsWalletsUSD = ((capital.ars || 0) + (capital.mp || 0)) / exchangeRate; 
-    const usdWallets = (capital.usd || 0) + (capital.usdt || 0); 
-    const totalCapital = arsWalletsUSD + usdWallets + stockValueUSD + (capital.clientDebt || 0) - totalDebtUSD; 
-    
-    const liquidCapitalUSD = arsWalletsUSD + usdWallets;
-    const liquidCapitalEl = document.getElementById('capital-liquid');
-    if (liquidCapitalEl) {
-        liquidCapitalEl.textContent = formatCurrency(liquidCapitalUSD, 'USD');
-    }
+function renderCapitalSection(state) {
+  const { stock, capital, debts, exchangeRate } = state;
+  if (!stock || !capital || !debts) return;
 
-    const capitalTotalEl = document.getElementById('capital-total');
-    if(capitalTotalEl) capitalTotalEl.textContent = formatCurrency(totalCapital, 'USD'); 
+  const stockValueUSD = stock.reduce(
+    (sum, item) => sum + (item.phoneCost || 0) * (item.quantity || 1),
+    0
+  );
 
-    const stockValueEl = document.getElementById('capital-stock-value');
-    if(stockValueEl) stockValueEl.textContent = formatCurrency(stockValueUSD, 'USD'); 
+  const totalDebtUSD = debts.reduce((sum, debt) => sum + (debt.amount || 0), 0);
+  const arsWalletsUSD = ((capital.ars || 0) + (capital.mp || 0)) / exchangeRate;
+  const usdWallets = (capital.usd || 0) + (capital.usdt || 0);
+  const totalCapital =
+    arsWalletsUSD + usdWallets + stockValueUSD + (capital.clientDebt || 0) - totalDebtUSD;
 
-    const walletsGridEl = document.getElementById('wallets-grid');
-    if(walletsGridEl) walletsGridEl.innerHTML = Object.entries(WALLET_CONFIG).filter(([k, c]) => !c.type).map(([key, config]) => `<div class="bg-gray-50 p-4 rounded-lg border"><p class="text-sm text-gray-500 flex items-center"><i class="${config.icon} mr-2"></i>${config.name}</p><p class="text-2xl font-semibold mt-1">${formatCurrency(capital[key] || 0, config.currency)} <span class="text-lg text-gray-500">${config.currency === 'ARS' ? `(${formatCurrency((capital[key] || 0) / exchangeRate, 'USD')})` : ''}</span></p></div>`).join(''); 
-    
-    const debtData = { clientDebt: capital.clientDebt, debt: totalDebtUSD }; 
-    const debtsGridEl = document.getElementById('debts-grid');
-    if(debtsGridEl) debtsGridEl.innerHTML = Object.entries(WALLET_CONFIG).filter(([k, c]) => c.type).map(([key, config]) => `<div class="bg-gray-50 p-4 rounded-lg border"><p class="text-sm text-gray-500 flex items-center"><i class="${config.icon} mr-2"></i>${config.name}</p><p class="text-2xl font-semibold mt-1 ${config.type === 'asset' ? 'asset' : 'liability'}">${formatCurrency(debtData[key] || 0, config.currency)}</p></div>`).join(''); 
-    
-    renderClientDebtsList(state); 
-    renderOurDebtsList(state); 
-} 
+  const liquidCapitalUSD = arsWalletsUSD + usdWallets;
+  const liquidCapitalEl = document.getElementById('capital-liquid');
+  if (liquidCapitalEl) {
+    liquidCapitalEl.textContent = formatCurrency(liquidCapitalUSD, 'USD');
+  }
 
-function renderClientDebtsList(state) { 
-    if (!state.sales) return; 
-    const clientDebts = state.sales.map(sale => { 
-        const payments = sale.paymentBreakdownUSD || {}; 
-        let totalPaidExcludingDebt = 0; 
-        for (const method in payments) { 
-            if (method !== 'clientDebt' && method !== 'debtSettled') { 
-                totalPaidExcludingDebt += payments[method]; 
-            } 
-        } 
-        totalPaidExcludingDebt += (sale.tradeInValueUSD || 0); 
-        const balanceUSD = sale.total - totalPaidExcludingDebt; 
-        const settledAmount = payments.debtSettled || 0; 
-        const outstandingBalance = balanceUSD - settledAmount; 
-        return { ...sale, balanceUSD: outstandingBalance }; 
-    }).filter(sale => sale.balanceUSD > 0.01); 
-    const clientDebtsListEl = document.getElementById('client-debts-list'); 
-    if (!clientDebtsListEl) return; 
-    clientDebtsListEl.innerHTML = clientDebts.length === 0 
-        ? `<p class="text-gray-500 text-center py-4">No hay deudas de clientes.</p>` 
-        : clientDebts.map(debt => ` 
+  const capitalTotalEl = document.getElementById('capital-total');
+  if (capitalTotalEl) capitalTotalEl.textContent = formatCurrency(totalCapital, 'USD');
+
+  const stockValueEl = document.getElementById('capital-stock-value');
+  if (stockValueEl) stockValueEl.textContent = formatCurrency(stockValueUSD, 'USD');
+
+  const walletsGridEl = document.getElementById('wallets-grid');
+  if (walletsGridEl)
+    walletsGridEl.innerHTML = Object.entries(WALLET_CONFIG)
+      .filter(([k, c]) => !c.type)
+      .map(
+        ([key, config]) =>
+          `<div class="bg-gray-50 p-4 rounded-lg border"><p class="text-sm text-gray-500 flex items-center"><i class="${
+            config.icon
+          } mr-2"></i>${config.name}</p><p class="text-2xl font-semibold mt-1">${formatCurrency(
+            capital[key] || 0,
+            config.currency
+          )} <span class="text-lg text-gray-500">${
+            config.currency === 'ARS'
+              ? `(${formatCurrency((capital[key] || 0) / exchangeRate, 'USD')})`
+              : ''
+          }</span></p></div>`
+      )
+      .join('');
+
+  const debtData = { clientDebt: capital.clientDebt, debt: totalDebtUSD };
+  const debtsGridEl = document.getElementById('debts-grid');
+  if (debtsGridEl)
+    debtsGridEl.innerHTML = Object.entries(WALLET_CONFIG)
+      .filter(([k, c]) => c.type)
+      .map(
+        ([key, config]) =>
+          `<div class="bg-gray-50 p-4 rounded-lg border"><p class="text-sm text-gray-500 flex items-center"><i class="${
+            config.icon
+          } mr-2"></i>${config.name}</p><p class="text-2xl font-semibold mt-1 ${
+            config.type === 'asset' ? 'asset' : 'liability'
+          }">${formatCurrency(debtData[key] || 0, config.currency)}</p></div>`
+      )
+      .join('');
+
+  renderClientDebtsList(state);
+  renderOurDebtsList(state);
+}
+
+function renderClientDebtsList(state) {
+  if (!state.sales) return;
+  const clientDebts = state.sales
+    .map((sale) => {
+      const payments = sale.paymentBreakdownUSD || {};
+      let totalPaidExcludingDebt = 0;
+      for (const method in payments) {
+        if (method !== 'clientDebt' && method !== 'debtSettled') {
+          totalPaidExcludingDebt += payments[method];
+        }
+      }
+      totalPaidExcludingDebt += sale.tradeInValueUSD || 0;
+      const balanceUSD = sale.total - totalPaidExcludingDebt;
+      const settledAmount = payments.debtSettled || 0;
+      const outstandingBalance = balanceUSD - settledAmount;
+      return { ...sale, balanceUSD: outstandingBalance };
+    })
+    .filter((sale) => sale.balanceUSD > 0.01);
+  const clientDebtsListEl = document.getElementById('client-debts-list');
+  if (!clientDebtsListEl) return;
+  clientDebtsListEl.innerHTML =
+    clientDebts.length === 0
+      ? `<p class="text-gray-500 text-center py-4">No hay deudas de clientes.</p>`
+      : clientDebts
+          .map(
+            (debt) => ` 
             <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center border"> 
                 <div> 
                     <p class="font-semibold">${escapeHTML(debt.customerName)}</p> 
-                    <p class="text-xs text-gray-500">${(debt.items || []).map(i => i.model).join(', ')}</p> 
+                    <p class="text-xs text-gray-500">${(debt.items || [])
+                      .map((i) => i.model)
+                      .join(', ')}</p> 
                 </div> 
                 <div class="flex items-center gap-2"> 
-                    <p class="font-bold text-yellow-500">${formatCurrency(debt.balanceUSD, 'USD')}</p> 
-                    <button class="settle-client-debt-btn btn-primary text-xs py-1 px-2" data-sale-id="${debt.id}" data-balance="${debt.balanceUSD}">Saldar</button> 
+                    <p class="font-bold text-yellow-500">${formatCurrency(
+                      debt.balanceUSD,
+                      'USD'
+                    )}</p> 
+                    <button class="settle-client-debt-btn btn-primary text-xs py-1 px-2" data-sale-id="${
+                      debt.id
+                    }" data-balance="${debt.balanceUSD}">Saldar</button> 
                 </div> 
-            </div>`).join(''); 
-} 
-function renderOurDebtsList(state) { 
-    const ourDebtsListEl = document.getElementById('our-debts-list'); 
-    if (!ourDebtsListEl || !state.debts) return; 
-    ourDebtsListEl.innerHTML = state.debts.length === 0 
-        ? `<p class="text-gray-500 text-center py-4">No hay deudas a proveedores.</p>` 
-        : state.debts.map(debt => ` 
+            </div>`
+          )
+          .join('');
+}
+function renderOurDebtsList(state) {
+  const ourDebtsListEl = document.getElementById('our-debts-list');
+  if (!ourDebtsListEl || !state.debts) return;
+  ourDebtsListEl.innerHTML =
+    state.debts.length === 0
+      ? `<p class="text-gray-500 text-center py-4">No hay deudas a proveedores.</p>`
+      : state.debts
+          .map(
+            (debt) => ` 
             <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center border"> 
                 <div> 
                     <p class="font-semibold">${escapeHTML(debt.debtorName)}</p> 
@@ -1015,48 +1005,74 @@ function renderOurDebtsList(state) {
                 </div> 
                 <div class="flex items-center gap-2"> 
                     <p class="font-bold text-red-500">${formatCurrency(debt.amount, 'USD')}</p> 
-                    <button class="settle-our-debt-btn btn-primary text-xs py-1 px-2" data-debt-id="${debt.id}">Saldar</button> 
+                    <button class="settle-our-debt-btn btn-primary text-xs py-1 px-2" data-debt-id="${
+                      debt.id
+                    }">Saldar</button> 
                 </div> 
-            </div>`).join(''); 
-} 
-function renderDebtsList(state) { 
-    const debtsListEl = document.getElementById('debts-list-consultas'); 
-    if (!debtsListEl || !state.debts) return; 
-    debtsListEl.innerHTML = state.debts.length === 0 
-        ? `<p class="text-gray-500 text-center py-4">No hay deudas registradas.</p>` 
-        : state.debts.map(debt => `<div class="bg-white p-3 rounded-lg flex justify-between items-center border shadow-sm"><div><p class="font-semibold">${escapeHTML(debt.debtorName)}</p><p class="text-xs text-gray-500">${escapeHTML(debt.description)}</p></div><div class="flex items-center gap-4"><p class="font-bold text-red-500">${formatCurrency(debt.amount, 'USD')}</p><button class="edit-debt-btn text-gray-400 hover:text-blue-500" data-debt='${JSON.stringify(debt)}'><i class="fas fa-edit"></i></button><button class="delete-debt-btn text-gray-400 hover:text-red-500" data-id="${debt.id}"><i class="fas fa-trash"></i></button></div></div>`).join(''); 
-} 
-function getFixedExpenseStatus(expense) { 
-    const now = new Date(); 
-    const currentYear = now.getFullYear(); 
-    const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0'); 
-    const currentMonthID = `${currentYear}-${currentMonth}`; 
-    const paymentDay = expense.paymentDay || 1; 
-    if (expense.lastPaidMonth === currentMonthID) { 
-        return { text: 'Pagado este mes', color: 'text-green-500', isPayable: false }; 
-    } 
-    const dueDate = new Date(currentYear, now.getMonth(), paymentDay); 
-    const timeDiff = dueDate.getTime() - now.getTime(); 
-    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)); 
-    if (daysDiff >= 0) { 
-        return { text: `Faltan ${daysDiff} días`, color: 'text-yellow-600', isPayable: true }; 
-    } else { 
-        return { text: `Vencido hace ${Math.abs(daysDiff)} días`, color: 'text-red-500', isPayable: true }; 
-    } 
-} 
+            </div>`
+          )
+          .join('');
+}
+function renderDebtsList(state) {
+  const debtsListEl = document.getElementById('debts-list-consultas');
+  if (!debtsListEl || !state.debts) return;
+  debtsListEl.innerHTML =
+    state.debts.length === 0
+      ? `<p class="text-gray-500 text-center py-4">No hay deudas registradas.</p>`
+      : state.debts
+          .map(
+            (debt) =>
+              `<div class="bg-white p-3 rounded-lg flex justify-between items-center border shadow-sm"><div><p class="font-semibold">${escapeHTML(
+                debt.debtorName
+              )}</p><p class="text-xs text-gray-500">${escapeHTML(
+                debt.description
+              )}</p></div><div class="flex items-center gap-4"><p class="font-bold text-red-500">${formatCurrency(
+                debt.amount,
+                'USD'
+              )}</p><button class="edit-debt-btn text-gray-400 hover:text-blue-500" data-debt='${JSON.stringify(
+                debt
+              )}'><i class="fas fa-edit"></i></button><button class="delete-debt-btn text-gray-400 hover:text-red-500" data-id="${
+                debt.id
+              }"><i class="fas fa-trash"></i></button></div></div>`
+          )
+          .join('');
+}
+function getFixedExpenseStatus(expense) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
+  const currentMonthID = `${currentYear}-${currentMonth}`;
+  const paymentDay = expense.paymentDay || 1;
+  if (expense.lastPaidMonth === currentMonthID) {
+    return { text: 'Pagado este mes', color: 'text-green-500', isPayable: false };
+  }
+  const dueDate = new Date(currentYear, now.getMonth(), paymentDay);
+  const timeDiff = dueDate.getTime() - now.getTime();
+  const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+  if (daysDiff >= 0) {
+    return { text: `Faltan ${daysDiff} días`, color: 'text-yellow-600', isPayable: true };
+  } else {
+    return {
+      text: `Vencido hace ${Math.abs(daysDiff)} días`,
+      color: 'text-red-500',
+      isPayable: true,
+    };
+  }
+}
 function renderExpensesSection(state) {
-    if (!state.fixedExpenses || !state.dailyExpenses) return;
-    const { fixedExpenses, dailyExpenses, expensesSearchTerm } = state;
-    const searchInput = document.getElementById('expenses-search-input');
-    if (searchInput && searchInput.value !== expensesSearchTerm) {
-        searchInput.value = expensesSearchTerm;
-    }
-    const fixedList = document.getElementById('fixed-expenses-list-consultas');
-    if (fixedList) {
-        if (fixedExpenses.length > 0) {
-            fixedList.innerHTML = fixedExpenses.map(exp => {
-                const status = getFixedExpenseStatus(exp);
-                return `
+  if (!state.fixedExpenses || !state.dailyExpenses) return;
+  const { fixedExpenses, dailyExpenses, expensesSearchTerm } = state;
+  const searchInput = document.getElementById('expenses-search-input');
+  if (searchInput && searchInput.value !== expensesSearchTerm) {
+    searchInput.value = expensesSearchTerm;
+  }
+  const fixedList = document.getElementById('fixed-expenses-list-consultas');
+  if (fixedList) {
+    if (fixedExpenses.length > 0) {
+      fixedList.innerHTML = fixedExpenses
+        .map((exp) => {
+          const status = getFixedExpenseStatus(exp);
+          return `
                     <div class="bg-white p-3 rounded-lg flex justify-between items-center border shadow-sm">
                         <div>
                             <p class="font-semibold">${escapeHTML(exp.description)}</p>
@@ -1064,49 +1080,60 @@ function renderExpensesSection(state) {
                             <p class="text-xs ${status.color} mt-1">${status.text}</p>
                         </div>
                         <div class="flex items-center gap-2">
-                            ${status.isPayable ? `<button class="btn-primary px-3 py-1 text-sm pay-fixed-expense-btn" data-id="${exp.id}">Pagar</button>` : ''}
-                            <button class="edit-fixed-expense-btn p-2 text-gray-400 hover:text-blue-500" data-expense='${JSON.stringify(exp)}'><i class="fas fa-edit"></i></button>
-                            <button class="delete-fixed-expense-btn p-2 text-gray-400 hover:text-red-500" data-id="${exp.id}"><i class="fas fa-trash"></i></button>
+                            ${
+                              status.isPayable
+                                ? `<button class="btn-primary px-3 py-1 text-sm pay-fixed-expense-btn" data-id="${exp.id}">Pagar</button>`
+                                : ''
+                            }
+                            <button class="edit-fixed-expense-btn p-2 text-gray-400 hover:text-blue-500" data-expense='${JSON.stringify(
+                              exp
+                            )}'><i class="fas fa-edit"></i></button>
+                            <button class="delete-fixed-expense-btn p-2 text-gray-400 hover:text-red-500" data-id="${
+                              exp.id
+                            }"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 `;
-            }).join('');
-        } else {
-            fixedList.innerHTML = `<p class="text-gray-500 text-center py-4">No has añadido gastos fijos.</p>`;
-        }
+        })
+        .join('');
+    } else {
+      fixedList.innerHTML = `<p class="text-gray-500 text-center py-4">No has añadido gastos fijos.</p>`;
     }
-    const historyList = document.getElementById('payment-history-list');
-    if (historyList) {
-        const searchTerm = (expensesSearchTerm || '').toLowerCase();
-        const filteredExpenses = dailyExpenses.filter(exp =>
-            !searchTerm || (exp.description || '').toLowerCase().includes(searchTerm)
-        );
-        if (filteredExpenses.length > 0) {
-            const fixedPayments = filteredExpenses.filter(e => e.isFixedPayment);
-            const otherPayments = filteredExpenses.filter(e => !e.isFixedPayment);
-            let historyHTML = '';
-            if (otherPayments.length > 0) {
-                historyHTML += `<h4 class="text-md font-semibold text-gray-600 mt-4 mb-2">Gastos Diarios</h4>`;
-                historyHTML += otherPayments.map(exp => renderPaymentHistoryItem(exp)).join('');
-            }
-            if (fixedPayments.length > 0) {
-                historyHTML += `<h4 class="text-md font-semibold text-gray-600 mt-4 mb-2">Pagos de Gastos Fijos</h4>`;
-                historyHTML += fixedPayments.map(exp => renderPaymentHistoryItem(exp)).join('');
-            }
-            historyList.innerHTML = historyHTML;
-        } else {
-            if (searchTerm) {
-                historyList.innerHTML = `<p class="text-center text-gray-500 py-4">No se encontraron gastos para "${escapeHTML(expensesSearchTerm)}".</p>`;
-            } else {
-                historyList.innerHTML = `<p class="text-center text-gray-500 text-center py-4">No hay pagos registrados.</p>`;
-            }
-        }
+  }
+  const historyList = document.getElementById('payment-history-list');
+  if (historyList) {
+    const searchTerm = (expensesSearchTerm || '').toLowerCase();
+    const filteredExpenses = dailyExpenses.filter(
+      (exp) => !searchTerm || (exp.description || '').toLowerCase().includes(searchTerm)
+    );
+    if (filteredExpenses.length > 0) {
+      const fixedPayments = filteredExpenses.filter((e) => e.isFixedPayment);
+      const otherPayments = filteredExpenses.filter((e) => !e.isFixedPayment);
+      let historyHTML = '';
+      if (otherPayments.length > 0) {
+        historyHTML += `<h4 class="text-md font-semibold text-gray-600 mt-4 mb-2">Gastos Diarios</h4>`;
+        historyHTML += otherPayments.map((exp) => renderPaymentHistoryItem(exp)).join('');
+      }
+      if (fixedPayments.length > 0) {
+        historyHTML += `<h4 class="text-md font-semibold text-gray-600 mt-4 mb-2">Pagos de Gastos Fijos</h4>`;
+        historyHTML += fixedPayments.map((exp) => renderPaymentHistoryItem(exp)).join('');
+      }
+      historyList.innerHTML = historyHTML;
+    } else {
+      if (searchTerm) {
+        historyList.innerHTML = `<p class="text-center text-gray-500 py-4">No se encontraron gastos para "${escapeHTML(
+          expensesSearchTerm
+        )}".</p>`;
+      } else {
+        historyList.innerHTML = `<p class="text-center text-gray-500 text-center py-4">No hay pagos registrados.</p>`;
+      }
     }
+  }
 }
-function renderPaymentHistoryItem(expense) { 
-    const walletInfo = WALLET_CONFIG[expense.paidFrom] || {}; 
-    const walletIcon = walletInfo.icon || 'fa-solid fa-question-circle'; 
-    return ` 
+function renderPaymentHistoryItem(expense) {
+  const walletInfo = WALLET_CONFIG[expense.paidFrom] || {};
+  const walletIcon = walletInfo.icon || 'fa-solid fa-question-circle';
+  return ` 
         <div class="bg-white p-3 rounded-lg flex justify-between items-center border shadow-sm"> 
             <div> 
                 <p>${escapeHTML(expense.description)}</p> 
@@ -1117,28 +1144,38 @@ function renderPaymentHistoryItem(expense) {
             </div> 
             <div class="flex items-center gap-4"> 
                 <p class="font-semibold">${formatCurrency(expense.amount, 'USD')}</p> 
-                <button class="delete-daily-expense-btn p-2 text-gray-400 hover:text-red-500" data-id="${expense.id}"><i class="fas fa-trash"></i></button> 
+                <button class="delete-daily-expense-btn p-2 text-gray-400 hover:text-red-500" data-id="${
+                  expense.id
+                }"><i class="fas fa-trash"></i></button> 
             </div> 
         </div> 
-    `; 
-} 
+    `;
+}
 
 export function renderAddStockForm(state) {
-    const { categories } = state;
-    const form = document.getElementById('stock-form-register');
+  const { categories } = state;
+  const form = document.getElementById('stock-form-register');
 
-    if (!form) return;
+  if (!form) return;
 
-    const allCategories = categories || [];
-    const selectedCategoryName = form.querySelector('#stock-category-reg')?.value || allCategories[0]?.name || '';
-    const selectedCategory = allCategories.find(c => c.name === selectedCategoryName);
+  const allCategories = categories || [];
+  const selectedCategoryName =
+    form.querySelector('#stock-category-reg')?.value || allCategories[0]?.name || '';
+  const selectedCategory = allCategories.find((c) => c.name === selectedCategoryName);
 
-    let formHTML = `
+  let formHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm">Categoría</label>
                 <select id="stock-category-reg" class="form-select w-full" required>
-                    ${allCategories.map(cat => `<option value="${escapeHTML(cat.name)}" ${cat.name === selectedCategoryName ? 'selected' : ''}>${escapeHTML(cat.name)}</option>`).join('')}
+                    ${allCategories
+                      .map(
+                        (cat) =>
+                          `<option value="${escapeHTML(cat.name)}" ${
+                            cat.name === selectedCategoryName ? 'selected' : ''
+                          }>${escapeHTML(cat.name)}</option>`
+                      )
+                      .join('')}
                 </select>
             </div>
             <div>
@@ -1152,7 +1189,11 @@ export function renderAddStockForm(state) {
         </div>
         <div class="border-t my-4"></div>
         <div id="dynamic-attributes-container" class="space-y-4">
-            ${selectedCategory?.attributes?.map(attr => generateAttributeInputHTML(attr)).join('') || ''}
+            ${
+              selectedCategory?.attributes
+                ?.map((attr) => generateAttributeInputHTML(attr))
+                .join('') || ''
+            }
         </div>
         <div class="border-t my-4"></div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1163,72 +1204,95 @@ export function renderAddStockForm(state) {
         <button type="submit" class="btn-primary py-2 px-6">Añadir a Stock</button>
     `;
 
-    form.innerHTML = formHTML;
+  form.innerHTML = formHTML;
 }
 
 function generateAttributeInputHTML(attribute, value = '') {
-    const { id, name, type, options, unit, required } = attribute;
-    const inputId = `attr_${id}`;
-    let inputHTML = '';
+  const { id, name, type, options, unit, required } = attribute;
+  const inputId = `attr_${id}`;
+  let inputHTML = '';
 
-    const label = `<label for="${inputId}" class="block text-sm">${escapeHTML(name)} ${unit ? `(${unit})` : ''}</label>`;
-    const requiredAttr = required ? 'required' : '';
+  const label = `<label for="${inputId}" class="block text-sm">${escapeHTML(name)} ${
+    unit ? `(${unit})` : ''
+  }</label>`;
+  const requiredAttr = required ? 'required' : '';
 
-    switch (type) {
-        case 'text':
-            inputHTML = `<input type="text" id="${inputId}" data-attr-name="${escapeHTML(name)}" class="form-input w-full" value="${escapeHTML(value)}" ${requiredAttr}>`;
-            break;
-        case 'number':
-            inputHTML = `<input type="number" id="${inputId}" data-attr-name="${escapeHTML(name)}" class="form-input w-full" value="${escapeHTML(value)}" ${requiredAttr}>`;
-            break;
-        case 'select':
-            const optionsHTML = options.map(opt => `<option value="${escapeHTML(opt)}" ${opt === value ? 'selected' : ''}>${escapeHTML(opt)}</option>`).join('');
-            inputHTML = `<select id="${inputId}" data-attr-name="${escapeHTML(name)}" class="form-select w-full" ${requiredAttr}>${optionsHTML}</select>`;
-            break;
-        case 'checkbox':
-            const checked = value ? 'checked' : '';
-            inputHTML = `<div class="flex items-center h-full mt-2"><input type="checkbox" id="${inputId}" data-attr-name="${escapeHTML(name)}" class="form-checkbox h-5 w-5" ${checked}></div>`;
-            return `<div class="flex items-center gap-x-3"><div>${label}</div>${inputHTML}</div>`;
-    }
+  switch (type) {
+    case 'text':
+      inputHTML = `<input type="text" id="${inputId}" data-attr-name="${escapeHTML(
+        name
+      )}" class="form-input w-full" value="${escapeHTML(value)}" ${requiredAttr}>`;
+      break;
+    case 'number':
+      inputHTML = `<input type="number" id="${inputId}" data-attr-name="${escapeHTML(
+        name
+      )}" class="form-input w-full" value="${escapeHTML(value)}" ${requiredAttr}>`;
+      break;
+    case 'select':
+      const optionsHTML = options
+        .map(
+          (opt) =>
+            `<option value="${escapeHTML(opt)}" ${opt === value ? 'selected' : ''}>${escapeHTML(
+              opt
+            )}</option>`
+        )
+        .join('');
+      inputHTML = `<select id="${inputId}" data-attr-name="${escapeHTML(
+        name
+      )}" class="form-select w-full" ${requiredAttr}>${optionsHTML}</select>`;
+      break;
+    case 'checkbox':
+      const checked = value ? 'checked' : '';
+      inputHTML = `<div class="flex items-center h-full mt-2"><input type="checkbox" id="${inputId}" data-attr-name="${escapeHTML(
+        name
+      )}" class="form-checkbox h-5 w-5" ${checked}></div>`;
+      return `<div class="flex items-center gap-x-3"><div>${label}</div>${inputHTML}</div>`;
+  }
 
-    return `<div>${label}${inputHTML}</div>`;
+  return `<div>${label}${inputHTML}</div>`;
 }
 
 function renderStockSection(state) {
-    if (!state.stock) return;
-    const stockListContainer = document.getElementById('stock-list-container-consultas');
-    const noStockMessage = document.getElementById('no-stock-message-consultas');
-    const searchInput = document.getElementById('stock-search-input');
-    if (!stockListContainer || !noStockMessage || !searchInput) return;
-    if (searchInput.value !== state.stockSearchTerm) {
-        searchInput.value = state.stockSearchTerm;
+  if (!state.stock) return;
+  const stockListContainer = document.getElementById('stock-list-container-consultas');
+  const noStockMessage = document.getElementById('no-stock-message-consultas');
+  const searchInput = document.getElementById('stock-search-input');
+  if (!stockListContainer || !noStockMessage || !searchInput) return;
+  if (searchInput.value !== state.stockSearchTerm) {
+    searchInput.value = state.stockSearchTerm;
+  }
+  const searchTerm = (state.stockSearchTerm || '').toLowerCase();
+  const filteredStock = state.stock.filter((item) => {
+    return (
+      (item.model || '').toLowerCase().includes(searchTerm) ||
+      (item.serialNumber || '').toLowerCase().includes(searchTerm) ||
+      (item.category || '').toLowerCase().includes(searchTerm)
+    );
+  });
+  const groupedStock = filteredStock.reduce((acc, item) => {
+    const category = item.category || 'Sin Categoría';
+    if (!acc[category]) {
+      acc[category] = [];
     }
-    const searchTerm = (state.stockSearchTerm || '').toLowerCase();
-    const filteredStock = state.stock.filter(item => {
-        return (
-            (item.model || '').toLowerCase().includes(searchTerm) ||
-            (item.serialNumber || '').toLowerCase().includes(searchTerm) ||
-            (item.category || '').toLowerCase().includes(searchTerm)
-        );
-    });
-    const groupedStock = filteredStock.reduce((acc, item) => {
-        const category = item.category || 'Sin Categoría';
-        if (!acc[category]) {
-            acc[category] = [];
-        }
-        acc[category].push(item);
-        return acc;
-    }, {});
-    const sortedCategories = Object.keys(groupedStock).sort();
-    noStockMessage.classList.toggle('hidden', state.stock.length > 0);
-    if (filteredStock.length === 0 && searchTerm) {
-        stockListContainer.innerHTML = `<p class="text-center text-gray-500 py-8">No se encontraron productos para "${escapeHTML(state.stockSearchTerm)}".</p>`;
-        return;
-    }
-    if (sortedCategories.length > 0) {
-        stockListContainer.innerHTML = sortedCategories.map(category => `
+    acc[category].push(item);
+    return acc;
+  }, {});
+  const sortedCategories = Object.keys(groupedStock).sort();
+  noStockMessage.classList.toggle('hidden', state.stock.length > 0);
+  if (filteredStock.length === 0 && searchTerm) {
+    stockListContainer.innerHTML = `<p class="text-center text-gray-500 py-8">No se encontraron productos para "${escapeHTML(
+      state.stockSearchTerm
+    )}".</p>`;
+    return;
+  }
+  if (sortedCategories.length > 0) {
+    stockListContainer.innerHTML = sortedCategories
+      .map(
+        (category) => `
             <div class="category-group">
-                <h4 class="text-xl font-bold text-gray-700 mb-3 pb-2 border-b">${escapeHTML(category)}</h4>
+                <h4 class="text-xl font-bold text-gray-700 mb-3 pb-2 border-b">${escapeHTML(
+                  category
+                )}</h4>
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-left">
                         <thead class="border-b border-gray-200">
@@ -1243,100 +1307,167 @@ function renderStockSection(state) {
                             </tr>
                         </thead>
                         <tbody>
-                            ${groupedStock[category].map(item => {
-                                const attributesPreview = (item.attributes && Object.keys(item.attributes).length > 0)
-                                    ? Object.entries(item.attributes).slice(0, 2).map(([key, value]) => `<strong>${escapeHTML(key)}:</strong> ${escapeHTML(value)}`).join(', ') + (Object.keys(item.attributes).length > 2 ? '...' : '')
+                            ${groupedStock[category]
+                              .map((item) => {
+                                const attributesPreview =
+                                  item.attributes && Object.keys(item.attributes).length > 0
+                                    ? Object.entries(item.attributes)
+                                        .slice(0, 2)
+                                        .map(
+                                          ([key, value]) =>
+                                            `<strong>${escapeHTML(key)}:</strong> ${escapeHTML(
+                                              value
+                                            )}`
+                                        )
+                                        .join(', ') +
+                                      (Object.keys(item.attributes).length > 2 ? '...' : '')
                                     : 'Sin atributos';
                                 return `
                                 <tr class="border-b border-gray-200 hover:bg-gray-50">
                                     <td class="p-2 font-semibold">${escapeHTML(item.model)}</td>
-                                    <td class="p-2 font-mono text-sm">${escapeHTML(item.serialNumber)}</td>
-                                    <td class="p-2 text-center font-bold text-lg">${item.quantity || 1}</td>
-                                    <td class="p-2 text-xs max-w-xs truncate" title="${escapeHTML(Object.entries(item.attributes || {}).map(([k, v]) => `${k}: ${v}`).join('\n'))}">${attributesPreview}</td>
-                                    <td class="p-2 text-right font-medium">${formatCurrency(item.phoneCost, 'USD')}</td>
-                                    <td class="p-2 text-right font-medium text-green-600">${formatCurrency(item.suggestedSalePrice || 0, 'USD')}</td>
+                                    <td class="p-2 font-mono text-sm">${escapeHTML(
+                                      item.serialNumber
+                                    )}</td>
+                                    <td class="p-2 text-center font-bold text-lg">${
+                                      item.quantity || 1
+                                    }</td>
+                                    <td class="p-2 text-xs max-w-xs truncate" title="${escapeHTML(
+                                      Object.entries(item.attributes || {})
+                                        .map(([k, v]) => `${k}: ${v}`)
+                                        .join('\n')
+                                    )}">${attributesPreview}</td>
+                                    <td class="p-2 text-right font-medium">${formatCurrency(
+                                      item.phoneCost,
+                                      'USD'
+                                    )}</td>
+                                    <td class="p-2 text-right font-medium text-green-600">${formatCurrency(
+                                      item.suggestedSalePrice || 0,
+                                      'USD'
+                                    )}</td>
                                     <td class="p-2 text-right">
-                                        <button class="edit-stock-btn text-blue-500 hover:text-blue-400 mr-2" data-id="${item.id}"><i class="fas fa-edit"></i></button>
-                                        <button class="delete-stock-btn text-red-500 hover:text-red-400" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button>
+                                        <button class="edit-stock-btn text-blue-500 hover:text-blue-400 mr-2" data-id="${
+                                          item.id
+                                        }"><i class="fas fa-edit"></i></button>
+                                        <button class="delete-stock-btn text-red-500 hover:text-red-400" data-id="${
+                                          item.id
+                                        }"><i class="fas fa-trash-alt"></i></button>
                                     </td>
-                                </tr>`
-                            }).join('')}
+                                </tr>`;
+                              })
+                              .join('')}
                         </tbody>
                     </table>
                 </div>
             </div>
-        `).join('');
-    } else if (state.stock.length > 0) {
-        stockListContainer.innerHTML = `<p class="text-center text-gray-500 py-8">No se encontraron productos que coincidan con la búsqueda.</p>`;
-    } else {
-        stockListContainer.innerHTML = '';
-    }
+        `
+      )
+      .join('');
+  } else if (state.stock.length > 0) {
+    stockListContainer.innerHTML = `<p class="text-center text-gray-500 py-8">No se encontraron productos que coincidan con la búsqueda.</p>`;
+  } else {
+    stockListContainer.innerHTML = '';
+  }
 }
 
-function renderSalesSection(state) { 
-    if (!state.clients || !state.stock) return; 
-    const { clients, stock, sale } = state; 
-    const clientSearchInput = document.getElementById('client-search-input-sale'); 
-    const clientSearchResults = document.getElementById('client-search-results'); 
-    const selectedClientDisplay = document.getElementById('selected-client-display'); 
-    if (!clientSearchInput || !clientSearchResults || !selectedClientDisplay) return; 
-    if (clientSearchInput.value !== sale.clientSearchTerm) { 
-        clientSearchInput.value = sale.clientSearchTerm; 
-    } 
-    if (sale.selectedClient) { 
-        selectedClientDisplay.innerHTML = `<div class="p-3 bg-green-100 border border-green-300 rounded-md flex justify-between items-center"><div><p class="font-bold">${escapeHTML(sale.selectedClient.name)}</p><p class="text-sm text-gray-600">${escapeHTML(sale.selectedClient.phone || 'Sin teléfono')}</p></div><button type="button" id="remove-selected-client-btn" class="text-red-500 hover:text-red-700"><i class="fas fa-times-circle fa-lg"></i></button></div>`; 
-        clientSearchInput.parentElement.classList.add('hidden'); 
-        clientSearchResults.classList.add('hidden'); 
-    } else { 
-        selectedClientDisplay.innerHTML = ''; 
-        clientSearchInput.parentElement.classList.remove('hidden'); 
-        if (sale.clientSearchTerm && sale.clientSearchTerm.length > 0) { 
-            const filteredClients = clients.filter(c => (c.name || '').toLowerCase().includes(sale.clientSearchTerm.toLowerCase()) || (c.phone && c.phone.includes(sale.clientSearchTerm))); 
-            clientSearchResults.innerHTML = filteredClients.length > 0 ? filteredClients.map(c => `<div class="p-3 hover:bg-gray-100 cursor-pointer client-result-item" data-client='${JSON.stringify(c)}'>${escapeHTML(c.name)}</div>`).join('') : `<div class="p-3 text-gray-500">No se encontraron clientes.</div>`; 
-            clientSearchResults.classList.remove('hidden'); 
-        } else { 
-            clientSearchResults.classList.add('hidden'); 
-        } 
-    } 
-    const stockSearchInput = document.getElementById('stock-search-input-sale'); 
-    const stockSearchResults = document.getElementById('stock-search-results-sale'); 
-    if (!stockSearchInput || !stockSearchResults) return; 
-    if (stockSearchInput.value !== sale.stockSearchTerm) { 
-        stockSearchInput.value = sale.stockSearchTerm; 
-    } 
-    if (sale.stockSearchTerm && sale.stockSearchTerm.length > 0) { 
-        const itemsInCartIds = (sale.items || []).map(i => i.id); 
-        const filteredStock = stock.filter(item => 
-            (item.quantity || 0) > 0 && 
-            !itemsInCartIds.includes(item.id) && 
-            ((item.model || '').toLowerCase().includes(sale.stockSearchTerm.toLowerCase()) || (item.serialNumber || '').toLowerCase().includes(sale.stockSearchTerm.toLowerCase()))
-        ); 
-        stockSearchResults.innerHTML = filteredStock.length > 0 
-            ? filteredStock.map(item => `
-                <div class="p-3 hover:bg-gray-100 cursor-pointer stock-result-item" data-stock='${JSON.stringify(item)}'>
+function renderSalesSection(state) {
+  if (!state.clients || !state.stock) return;
+  const { clients, stock, sale } = state;
+  const clientSearchInput = document.getElementById('client-search-input-sale');
+  const clientSearchResults = document.getElementById('client-search-results');
+  const selectedClientDisplay = document.getElementById('selected-client-display');
+  if (!clientSearchInput || !clientSearchResults || !selectedClientDisplay) return;
+  if (clientSearchInput.value !== sale.clientSearchTerm) {
+    clientSearchInput.value = sale.clientSearchTerm;
+  }
+  if (sale.selectedClient) {
+    selectedClientDisplay.innerHTML = `<div class="p-3 bg-green-100 border border-green-300 rounded-md flex justify-between items-center"><div><p class="font-bold">${escapeHTML(
+      sale.selectedClient.name
+    )}</p><p class="text-sm text-gray-600">${escapeHTML(
+      sale.selectedClient.phone || 'Sin teléfono'
+    )}</p></div><button type="button" id="remove-selected-client-btn" class="text-red-500 hover:text-red-700"><i class="fas fa-times-circle fa-lg"></i></button></div>`;
+    clientSearchInput.parentElement.classList.add('hidden');
+    clientSearchResults.classList.add('hidden');
+  } else {
+    selectedClientDisplay.innerHTML = '';
+    clientSearchInput.parentElement.classList.remove('hidden');
+    if (sale.clientSearchTerm && sale.clientSearchTerm.length > 0) {
+      const filteredClients = clients.filter(
+        (c) =>
+          (c.name || '').toLowerCase().includes(sale.clientSearchTerm.toLowerCase()) ||
+          (c.phone && c.phone.includes(sale.clientSearchTerm))
+      );
+      clientSearchResults.innerHTML =
+        filteredClients.length > 0
+          ? filteredClients
+              .map(
+                (c) =>
+                  `<div class="p-3 hover:bg-gray-100 cursor-pointer client-result-item" data-client='${JSON.stringify(
+                    c
+                  )}'>${escapeHTML(c.name)}</div>`
+              )
+              .join('')
+          : `<div class="p-3 text-gray-500">No se encontraron clientes.</div>`;
+      clientSearchResults.classList.remove('hidden');
+    } else {
+      clientSearchResults.classList.add('hidden');
+    }
+  }
+  const stockSearchInput = document.getElementById('stock-search-input-sale');
+  const stockSearchResults = document.getElementById('stock-search-results-sale');
+  if (!stockSearchInput || !stockSearchResults) return;
+  if (stockSearchInput.value !== sale.stockSearchTerm) {
+    stockSearchInput.value = sale.stockSearchTerm;
+  }
+  if (sale.stockSearchTerm && sale.stockSearchTerm.length > 0) {
+    const itemsInCartIds = (sale.items || []).map((i) => i.id);
+    const filteredStock = stock.filter(
+      (item) =>
+        (item.quantity || 0) > 0 &&
+        !itemsInCartIds.includes(item.id) &&
+        ((item.model || '').toLowerCase().includes(sale.stockSearchTerm.toLowerCase()) ||
+          (item.serialNumber || '').toLowerCase().includes(sale.stockSearchTerm.toLowerCase()))
+    );
+    stockSearchResults.innerHTML =
+      filteredStock.length > 0
+        ? filteredStock
+            .map(
+              (item) => `
+                <div class="p-3 hover:bg-gray-100 cursor-pointer stock-result-item" data-stock='${JSON.stringify(
+                  item
+                )}'>
                     <div class="flex justify-between items-center">
                         <div>
-                            <p class="font-bold">${escapeHTML(item.model)} <span class="font-normal text-gray-500">(${escapeHTML(item.category)})</span></p>
+                            <p class="font-bold">${escapeHTML(
+                              item.model
+                            )} <span class="font-normal text-gray-500">(${escapeHTML(
+                item.category
+              )})</span></p>
                             <p class="text-xs text-gray-500">${escapeHTML(item.serialNumber)}</p>
                         </div>
                         <div class="text-right">
                             <p class="text-sm font-bold">Stock: ${item.quantity || 0}</p>
-                            <p class="text-xs text-green-600">P. Sug: ${formatCurrency(item.suggestedSalePrice, 'USD')}</p>
+                            <p class="text-xs text-green-600">P. Sug: ${formatCurrency(
+                              item.suggestedSalePrice,
+                              'USD'
+                            )}</p>
                         </div>
                     </div>
                 </div>
-            `).join('') 
-            : `<div class="p-3 text-gray-500">No se encontraron productos en stock.</div>`;
-        stockSearchResults.classList.remove('hidden'); 
-    } else { 
-        stockSearchResults.classList.add('hidden'); 
-    } 
-    const saleItemsList = document.getElementById('sale-items-list'); 
-    if (!saleItemsList) return; 
-    if (sale.items && sale.items.length > 0) { 
-        saleItemsList.innerHTML = sale.items.map((item, index) => { 
-            const profit = (item.salePrice || 0) - (item.phoneCost || 0); 
-            return ` 
+            `
+            )
+            .join('')
+        : `<div class="p-3 text-gray-500">No se encontraron productos en stock.</div>`;
+    stockSearchResults.classList.remove('hidden');
+  } else {
+    stockSearchResults.classList.add('hidden');
+  }
+  const saleItemsList = document.getElementById('sale-items-list');
+  if (!saleItemsList) return;
+  if (sale.items && sale.items.length > 0) {
+    saleItemsList.innerHTML = sale.items
+      .map((item, index) => {
+        const profit = (item.salePrice || 0) - (item.phoneCost || 0);
+        return ` 
             <div class="p-3 bg-white border rounded-lg flex flex-col gap-2"> 
                 <div class="flex items-center justify-between gap-4"> 
                     <div class="flex-grow flex items-center gap-2">
@@ -1348,188 +1479,240 @@ function renderSalesSection(state) {
                     </div> 
                     <div class="flex items-center gap-2"> 
                         <label class="text-sm">Precio:</label> 
-                        <input type="number" value="${item.salePrice || item.suggestedSalePrice || 0}" class="form-input p-1 w-24 text-right sale-item-price" data-index="${index}"> 
+                        <input type="number" value="${
+                          item.salePrice || item.suggestedSalePrice || 0
+                        }" class="form-input p-1 w-24 text-right sale-item-price" data-index="${index}"> 
                     </div> 
                     <button type="button" class="remove-sale-item-btn text-red-500 hover:text-red-700" data-index="${index}"><i class="fas fa-trash"></i></button> 
                 </div> 
                 <div class="flex justify-between items-center text-xs text-gray-600 border-t pt-2 mt-2"> 
                     <span>Costo: ${formatCurrency(item.phoneCost || 0, 'USD')}</span> 
-                    <span class="font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">Ganancia: ${formatCurrency(profit, 'USD')}</span> 
+                    <span class="font-bold ${
+                      profit >= 0 ? 'text-green-600' : 'text-red-600'
+                    }">Ganancia: ${formatCurrency(profit, 'USD')}</span> 
                 </div> 
             </div> 
-            `; 
-        }).join(''); 
-    } else { 
-        saleItemsList.innerHTML = `<p class="text-center text-gray-500 py-4">Añade productos a la venta buscándolos arriba.</p>`; 
-    } 
-} 
-function renderClientsSection(state) { 
-    if (!state.clients) return; 
-    const searchTerm = state.clientSearchTerm || ''; 
-    let filteredClients = state.clients; 
-    if (searchTerm) { 
-        filteredClients = state.clients.filter(client => 
-            (client.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-            (client.phone && client.phone.includes(searchTerm)) 
-        ); 
-    } 
-    const clientsList = document.getElementById('clients-list-consultas'); 
-    const noClientsMessage = document.getElementById('no-clients-message-consultas'); 
-    if (!clientsList || !noClientsMessage) return; 
-    noClientsMessage.classList.toggle('hidden', state.clients.length > 0); 
-    if(filteredClients.length > 0) {
-        clientsList.innerHTML = filteredClients.map(client => `<div class="card p-4 rounded-lg flex flex-col justify-between hover:border-green-500 transition-colors"><div><p class="font-bold text-lg">${escapeHTML(client.name)}</p><p class="text-sm text-gray-500">${escapeHTML(client.phone || 'Sin teléfono')}</p><p class="text-xs text-gray-400 mt-2">${escapeHTML(client.details || 'Sin detalles')}</p></div><div class="flex items-center justify-between mt-4"><button class="view-client-history-btn btn-secondary text-xs py-1 px-2" data-client-id="${client.id}">Ver Historial</button><div class="flex items-center"><button class="edit-client-btn" data-client='${JSON.stringify(client)}'><i class="fas fa-edit text-gray-400 hover:text-blue-500"></i></button><button class="delete-client-btn ml-2" data-id="${client.id}" data-name="${escapeHTML(client.name)}"><i class="fas fa-trash text-gray-400 hover:text-red-500"></i></button></div></div></div>`).join(''); 
+            `;
+      })
+      .join('');
+  } else {
+    saleItemsList.innerHTML = `<p class="text-center text-gray-500 py-4">Añade productos a la venta buscándolos arriba.</p>`;
+  }
+}
+function renderClientsSection(state) {
+  if (!state.clients) return;
+  const searchTerm = state.clientSearchTerm || '';
+  let filteredClients = state.clients;
+  if (searchTerm) {
+    filteredClients = state.clients.filter(
+      (client) =>
+        (client.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (client.phone && client.phone.includes(searchTerm))
+    );
+  }
+  const clientsList = document.getElementById('clients-list-consultas');
+  const noClientsMessage = document.getElementById('no-clients-message-consultas');
+  if (!clientsList || !noClientsMessage) return;
+  noClientsMessage.classList.toggle('hidden', state.clients.length > 0);
+  if (filteredClients.length > 0) {
+    clientsList.innerHTML = filteredClients
+      .map(
+        (client) =>
+          `<div class="card p-4 rounded-lg flex flex-col justify-between hover:border-green-500 transition-colors"><div><p class="font-bold text-lg">${escapeHTML(
+            client.name
+          )}</p><p class="text-sm text-gray-500">${escapeHTML(
+            client.phone || 'Sin teléfono'
+          )}</p><p class="text-xs text-gray-400 mt-2">${escapeHTML(
+            client.details || 'Sin detalles'
+          )}</p></div><div class="flex items-center justify-between mt-4"><button class="view-client-history-btn btn-secondary text-xs py-1 px-2" data-client-id="${
+            client.id
+          }">Ver Historial</button><div class="flex items-center"><button class="edit-client-btn" data-client='${JSON.stringify(
+            client
+          )}'><i class="fas fa-edit text-gray-400 hover:text-blue-500"></i></button><button class="delete-client-btn ml-2" data-id="${
+            client.id
+          }" data-name="${escapeHTML(
+            client.name
+          )}"><i class="fas fa-trash text-gray-400 hover:text-red-500"></i></button></div></div></div>`
+      )
+      .join('');
+  } else {
+    clientsList.innerHTML = '';
+    if (noClientsMessage) noClientsMessage.classList.remove('hidden');
+  }
+}
+function renderDashboardSection(state) {
+  if (!state.sales || !state.dailyExpenses || !state.capitalHistory) return;
+  const { sales, dailyExpenses, capitalHistory, ui } = state;
+  const { dashboardPeriod, dashboardCustomStartDate, dashboardCustomEndDate } = ui.dashboard;
+
+  const activeSales = sales.filter((s) => s.status !== 'reverted');
+  const customControls = document.getElementById('dashboard-custom-date-range-controls');
+  if (customControls) {
+    customControls.classList.toggle('hidden', dashboardPeriod !== 'custom');
+  }
+  document
+    .querySelectorAll('.filter-btn[data-hub="dashboard"]')
+    .forEach((btn) =>
+      btn.classList.toggle('filter-btn-active', btn.dataset.period === dashboardPeriod)
+    );
+
+  const now = new Date();
+  let startDate, endDate;
+  switch (dashboardPeriod) {
+    case 'today':
+      startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'week':
+      const day = now.getDay();
+      startDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - day + (day === 0 ? -6 : 1)
+      );
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'month':
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'year':
+      startDate = new Date(now.getFullYear(), 0, 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), 11, 31);
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'custom':
+      startDate = dashboardCustomStartDate
+        ? new Date(dashboardCustomStartDate + 'T00:00:00')
+        : new Date(0);
+      endDate = dashboardCustomEndDate
+        ? new Date(dashboardCustomEndDate + 'T23:59:59')
+        : new Date();
+      break;
+    default:
+      startDate = new Date(0);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+  }
+
+  const salesInPeriod = activeSales.filter((s) => {
+    let saleDate;
+    if (s.soldAt && s.soldAt.toDate) {
+      saleDate = s.soldAt.toDate();
+    } else if (s.saleDate) {
+      saleDate = new Date(s.saleDate + 'T12:00:00Z');
     } else {
-        clientsList.innerHTML = '';
-        if(noClientsMessage) noClientsMessage.classList.remove('hidden');
+      return false;
     }
-} 
-function renderDashboardSection(state) { 
-    if (!state.sales || !state.dailyExpenses || !state.capitalHistory) return; 
-    const { sales, dailyExpenses, capitalHistory, ui } = state; 
-    const { dashboardPeriod, dashboardCustomStartDate, dashboardCustomEndDate } = ui.dashboard;
+    return saleDate >= startDate && saleDate <= endDate;
+  });
 
-    const activeSales = sales.filter(s => s.status !== 'reverted'); 
-    const customControls = document.getElementById('dashboard-custom-date-range-controls'); 
-    if (customControls) { 
-        customControls.classList.toggle('hidden', dashboardPeriod !== 'custom'); 
-    } 
-    document.querySelectorAll('.filter-btn[data-hub="dashboard"]').forEach(btn => btn.classList.toggle('filter-btn-active', btn.dataset.period === dashboardPeriod)); 
-    
-    const now = new Date(); 
-    let startDate, endDate; 
-    switch (dashboardPeriod) { 
-        case 'today': 
-            startDate = new Date(); 
-            startDate.setHours(0, 0, 0, 0); 
-            endDate = new Date(); 
-            endDate.setHours(23, 59, 59, 999); 
-            break; 
-        case 'week': 
-            const day = now.getDay(); 
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + (day === 0 ? -6 : 1)); 
-            startDate.setHours(0, 0, 0, 0); 
-            endDate = new Date(); 
-            endDate.setHours(23, 59, 59, 999); 
-            break; 
-        case 'month': 
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1); 
-            startDate.setHours(0, 0, 0, 0); 
-            endDate = new Date(); 
-            endDate.setHours(23, 59, 59, 999); 
-            break; 
-        case 'year': 
-            startDate = new Date(now.getFullYear(), 0, 1); 
-            startDate.setHours(0, 0, 0, 0); 
-            endDate = new Date(now.getFullYear(), 11, 31); 
-            endDate.setHours(23, 59, 59, 999); 
-            break; 
-        case 'custom': 
-            startDate = dashboardCustomStartDate ? new Date(dashboardCustomStartDate + 'T00:00:00') : new Date(0); 
-            endDate = dashboardCustomEndDate ? new Date(dashboardCustomEndDate + 'T23:59:59') : new Date(); 
-            break; 
-        default: 
-            startDate = new Date(0); 
-            endDate = new Date(); 
-            endDate.setHours(23, 59, 59, 999); 
-    } 
-    
-    const salesInPeriod = activeSales.filter(s => {
-        let saleDate;
-        if (s.soldAt && s.soldAt.toDate) {
-            saleDate = s.soldAt.toDate();
-        } else if (s.saleDate) {
-            saleDate = new Date(s.saleDate + 'T12:00:00Z');
-        } else {
-            return false;
-        }
-        return saleDate >= startDate && saleDate <= endDate;
-    });
+  const dailyExpensesInPeriod = dailyExpenses.filter((e) => {
+    if (!e.date) return false;
+    const expenseDate = new Date(e.date + 'T12:00:00Z');
+    return expenseDate >= startDate && expenseDate <= endDate;
+  });
 
-    const dailyExpensesInPeriod = dailyExpenses.filter(e => { 
-        if (!e.date) return false; 
-        const expenseDate = new Date(e.date + 'T12:00:00Z'); 
-        return expenseDate >= startDate && expenseDate <= endDate; 
-    }); 
+  const totalSales = salesInPeriod.reduce((sum, s) => sum + (s.total || 0), 0);
+  const grossProfit = salesInPeriod.reduce((sum, s) => {
+    const itemsCost = (s.items || []).reduce((itemSum, i) => itemSum + (i.phoneCost || 0), 0);
+    return sum + (s.total - itemsCost);
+  }, 0);
+  const dailyCosts = dailyExpensesInPeriod.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const totalExpenses = dailyCosts;
+  const netProfit = grossProfit - totalExpenses;
 
-    const totalSales = salesInPeriod.reduce((sum, s) => sum + (s.total || 0), 0); 
-    const grossProfit = salesInPeriod.reduce((sum, s) => { 
-        const itemsCost = (s.items || []).reduce((itemSum, i) => itemSum + (i.phoneCost || 0), 0); 
-        return sum + (s.total - itemsCost); 
-    }, 0); 
-    const dailyCosts = dailyExpensesInPeriod.reduce((sum, e) => sum + (e.amount || 0), 0); 
-    const totalExpenses = dailyCosts; 
-    const netProfit = grossProfit - totalExpenses; 
-    
-    const summarySalesEl = document.getElementById('summary-sales');
-    if(summarySalesEl) summarySalesEl.textContent = formatCurrency(totalSales, 'USD'); 
+  const summarySalesEl = document.getElementById('summary-sales');
+  if (summarySalesEl) summarySalesEl.textContent = formatCurrency(totalSales, 'USD');
 
-    const summaryGrossEl = document.getElementById('summary-gross-profit');
-    if(summaryGrossEl) summaryGrossEl.textContent = formatCurrency(grossProfit, 'USD'); 
+  const summaryGrossEl = document.getElementById('summary-gross-profit');
+  if (summaryGrossEl) summaryGrossEl.textContent = formatCurrency(grossProfit, 'USD');
 
-    const summaryExpensesEl = document.getElementById('summary-expenses');
-    if(summaryExpensesEl) summaryExpensesEl.textContent = formatCurrency(totalExpenses, 'USD'); 
+  const summaryExpensesEl = document.getElementById('summary-expenses');
+  if (summaryExpensesEl) summaryExpensesEl.textContent = formatCurrency(totalExpenses, 'USD');
 
-    const netProfitEl = document.getElementById('summary-net-profit'); 
-    if(netProfitEl) {
-        netProfitEl.textContent = formatCurrency(netProfit, 'USD'); 
-        netProfitEl.className = `text-2xl font-bold ${netProfit >= 0 ? 'profit-positive' : 'profit-negative'}`; 
-    } 
+  const netProfitEl = document.getElementById('summary-net-profit');
+  if (netProfitEl) {
+    netProfitEl.textContent = formatCurrency(netProfit, 'USD');
+    netProfitEl.className = `text-2xl font-bold ${
+      netProfit >= 0 ? 'profit-positive' : 'profit-negative'
+    }`;
+  }
 
-    renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate, endDate); 
-    const executedFixedExpenses = dailyExpensesInPeriod.filter(e => e.isFixedPayment).reduce((sum, e) => sum + e.amount, 0); 
-    const pureDailyExpenses = dailyCosts - executedFixedExpenses; 
-    renderExpenseBreakdownChart(0, executedFixedExpenses, pureDailyExpenses); 
-    renderNetProfitCategoryChart(salesInPeriod); 
-    renderSalesMetricsChart(salesInPeriod);
-    renderCapitalGrowthChart(capitalHistory, startDate, endDate);
-} 
+  renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate, endDate);
+  const executedFixedExpenses = dailyExpensesInPeriod
+    .filter((e) => e.isFixedPayment)
+    .reduce((sum, e) => sum + e.amount, 0);
+  const pureDailyExpenses = dailyCosts - executedFixedExpenses;
+  renderExpenseBreakdownChart(0, executedFixedExpenses, pureDailyExpenses);
+  renderNetProfitCategoryChart(salesInPeriod);
+  renderSalesMetricsChart(salesInPeriod);
+  renderCapitalGrowthChart(capitalHistory, startDate, endDate);
+}
 
 function renderCategoryManagerSection(state) {
-    const { categories, categoryManager } = state;
-    if (!categories) return;
+  const { categories, categoryManager } = state;
+  if (!categories) return;
 
-    const listContainer = document.getElementById('category-manager-list');
-    if (!listContainer) return;
+  const listContainer = document.getElementById('category-manager-list');
+  if (!listContainer) return;
 
-    listContainer.innerHTML = categories.map(cat => `
-        <div class="category-manager-item p-3 rounded-lg flex justify-between items-center cursor-pointer border-2 ${categoryManager.selectedCategoryId === cat.id ? 'border-green-500 bg-green-50' : 'border-transparent hover:bg-gray-100'}" data-category-id="${cat.id}">
+  listContainer.innerHTML = categories
+    .map(
+      (cat) => `
+        <div class="category-manager-item p-3 rounded-lg flex justify-between items-center cursor-pointer border-2 ${
+          categoryManager.selectedCategoryId === cat.id
+            ? 'border-green-500 bg-green-50'
+            : 'border-transparent hover:bg-gray-100'
+        }" data-category-id="${cat.id}">
             <span class="font-semibold">${escapeHTML(cat.name)}</span>
         </div>
-    `).join('');
+    `
+    )
+    .join('');
 
-    const attributesContainer = document.getElementById('category-attributes-manager');
-    const placeholder = document.getElementById('category-manager-placeholder');
-    if (!attributesContainer || !placeholder) return;
+  const attributesContainer = document.getElementById('category-attributes-manager');
+  const placeholder = document.getElementById('category-manager-placeholder');
+  if (!attributesContainer || !placeholder) return;
 
-    const selectedCategory = categories.find(c => c.id === categoryManager.selectedCategoryId);
+  const selectedCategory = categories.find((c) => c.id === categoryManager.selectedCategoryId);
 
-    if (selectedCategory) {
-        attributesContainer.classList.remove('hidden');
-        placeholder.classList.add('hidden');
-        renderCategoryAttributes(selectedCategory);
-    } else {
-        attributesContainer.classList.add('hidden');
-        placeholder.classList.remove('hidden');
-    }
+  if (selectedCategory) {
+    attributesContainer.classList.remove('hidden');
+    placeholder.classList.add('hidden');
+    renderCategoryAttributes(selectedCategory);
+  } else {
+    attributesContainer.classList.add('hidden');
+    placeholder.classList.remove('hidden');
+  }
 }
 
 function renderCategoryAttributes(category) {
-    const container = document.getElementById('category-attributes-content');
-    if (!container) return;
+  const container = document.getElementById('category-attributes-content');
+  if (!container) return;
 
-    const { categoryManager } = appState;
-    const isEditingName = categoryManager.isEditingCategoryName;
+  const { categoryManager } = appState;
+  const isEditingName = categoryManager.isEditingCategoryName;
 
-    const nameDisplay = isEditingName 
-        ? `<input type="text" id="edit-category-name-input" class="text-2xl font-bold form-input" value="${escapeHTML(category.name)}">`
-        : `<h3 class="text-2xl font-bold">${escapeHTML(category.name)}</h3>`;
+  const nameDisplay = isEditingName
+    ? `<input type="text" id="edit-category-name-input" class="text-2xl font-bold form-input" value="${escapeHTML(
+        category.name
+      )}">`
+    : `<h3 class="text-2xl font-bold">${escapeHTML(category.name)}</h3>`;
 
-    container.innerHTML = `
+  container.innerHTML = `
         <div class="flex justify-between items-start mb-6">
             <div class="flex items-center gap-3">
                 ${nameDisplay}
-                ${isEditingName 
+                ${
+                  isEditingName
                     ? `<button id="save-category-name-btn" class="text-green-600 hover:text-green-800"><i class="fas fa-check-circle fa-lg"></i></button>`
                     : `<button id="edit-category-name-btn" class="text-gray-400 hover:text-gray-600"><i class="fas fa-pencil-alt"></i></button>`
                 }
@@ -1539,15 +1722,27 @@ function renderCategoryAttributes(category) {
 
         <h4 class="font-semibold text-lg mb-3">Atributos de la Plantilla</h4>
         <div id="attribute-list" class="space-y-3 mb-6">
-            ${(category.attributes && category.attributes.length > 0) ? category.attributes.map(attr => `
+            ${
+              category.attributes && category.attributes.length > 0
+                ? category.attributes
+                    .map(
+                      (attr) => `
                 <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center border">
                     <div>
                         <p class="font-medium">${escapeHTML(attr.name)}</p>
-                        <p class="text-xs text-gray-500">Tipo: ${attr.type} ${attr.options ? `(${(attr.options || []).join(', ')})` : ''}</p>
+                        <p class="text-xs text-gray-500">Tipo: ${attr.type} ${
+                        attr.options ? `(${(attr.options || []).join(', ')})` : ''
+                      }</p>
                     </div>
-                    <button class="delete-attribute-btn text-red-500 hover:text-red-700" data-attr-id="${attr.id}"><i class="fas fa-times"></i></button>
+                    <button class="delete-attribute-btn text-red-500 hover:text-red-700" data-attr-id="${
+                      attr.id
+                    }"><i class="fas fa-times"></i></button>
                 </div>
-            `).join('') : '<p class="text-gray-400 text-center py-4">Esta categoría no tiene atributos personalizados.</p>'}
+            `
+                    )
+                    .join('')
+                : '<p class="text-gray-400 text-center py-4">Esta categoría no tiene atributos personalizados.</p>'
+            }
         </div>
 
         <div class="border-t pt-6">
@@ -1577,63 +1772,92 @@ function renderCategoryAttributes(category) {
         </div>
     `;
 }
-export function updateSaleBalance(state) { 
-    const { sale, exchangeRate } = state; 
-    const summaryEl = document.getElementById('sale-summary'); 
-    if (!summaryEl) return; 
+export function updateSaleBalance(state) {
+  const { sale, exchangeRate } = state;
+  const summaryEl = document.getElementById('sale-summary');
+  if (!summaryEl) return;
 
-    const subtotal = (sale.items || []).reduce((sum, item) => sum + (item.salePrice || 0), 0); 
-    const costTotal = (sale.items || []).reduce((sum, item) => sum + (item.phoneCost || 0), 0); 
-    
-    const totalSalePrice = subtotal; 
-    const netProfit = totalSalePrice - costTotal; 
-    
-    const tradeInCheckbox = document.getElementById('has-trade-in'); 
-    const tradeInValueInput = document.getElementById('trade-in-value'); 
-    const tradeInValueUSD = (tradeInCheckbox && tradeInCheckbox.checked && tradeInValueInput) ? (parseFloat(tradeInValueInput.value) || 0) : 0; 
-    
-    let totalPaidViaMethods = 0; 
-    document.querySelectorAll('.payment-input').forEach(input => { 
-        const value = parseFloat(input.value) || 0; 
-        const type = input.dataset.payment; 
-        if (type === 'ars' || type === 'mp') { 
-            totalPaidViaMethods += value / exchangeRate; 
-            const displayElement = document.getElementById(`${type}-usd-display`); 
-            if (displayElement) displayElement.textContent = value > 0 ? `(${formatCurrency(value / exchangeRate, 'USD')})` : ''; 
-        } else { 
-            totalPaidViaMethods += value; 
-        } 
-    }); 
-    
-    const totalReceived = totalPaidViaMethods + tradeInValueUSD;
-    const balance = totalSalePrice - totalReceived; 
-    
-    summaryEl.innerHTML = ` 
-        <div class="flex justify-between items-center text-sm"><span>Subtotal:</span> <span class="font-medium">${formatCurrency(subtotal, 'USD')}</span></div> 
-        ${tradeInValueUSD > 0 ? `<div class="flex justify-between items-center text-sm"><span>Canje (Crédito):</span> <span class="font-medium text-blue-600">-${formatCurrency(tradeInValueUSD, 'USD')}</span></div>` : ''}
+  const subtotal = (sale.items || []).reduce((sum, item) => sum + (item.salePrice || 0), 0);
+  const costTotal = (sale.items || []).reduce((sum, item) => sum + (item.phoneCost || 0), 0);
+
+  const totalSalePrice = subtotal;
+  const netProfit = totalSalePrice - costTotal;
+
+  const tradeInCheckbox = document.getElementById('has-trade-in');
+  const tradeInValueInput = document.getElementById('trade-in-value');
+  const tradeInValueUSD =
+    tradeInCheckbox && tradeInCheckbox.checked && tradeInValueInput
+      ? parseFloat(tradeInValueInput.value) || 0
+      : 0;
+
+  let totalPaidViaMethods = 0;
+  document.querySelectorAll('.payment-input').forEach((input) => {
+    const value = parseFloat(input.value) || 0;
+    const type = input.dataset.payment;
+    if (type === 'ars' || type === 'mp') {
+      totalPaidViaMethods += value / exchangeRate;
+      const displayElement = document.getElementById(`${type}-usd-display`);
+      if (displayElement)
+        displayElement.textContent =
+          value > 0 ? `(${formatCurrency(value / exchangeRate, 'USD')})` : '';
+    } else {
+      totalPaidViaMethods += value;
+    }
+  });
+
+  const totalReceived = totalPaidViaMethods + tradeInValueUSD;
+  const balance = totalSalePrice - totalReceived;
+
+  summaryEl.innerHTML = ` 
+        <div class="flex justify-between items-center text-sm"><span>Subtotal:</span> <span class="font-medium">${formatCurrency(
+          subtotal,
+          'USD'
+        )}</span></div> 
+        ${
+          tradeInValueUSD > 0
+            ? `<div class="flex justify-between items-center text-sm"><span>Canje (Crédito):</span> <span class="font-medium text-blue-600">-${formatCurrency(
+                tradeInValueUSD,
+                'USD'
+              )}</span></div>`
+            : ''
+        }
         <div class="border-t my-2"></div> 
-        <div class="flex justify-between items-center font-bold text-lg"><span>Total a Pagar:</span> <span>${formatCurrency(totalSalePrice - tradeInValueUSD, 'USD')}</span></div> 
-        <div class="flex justify-between items-center text-sm"><span>Total Pagado (Métodos):</span> <span>${formatCurrency(totalPaidViaMethods, 'USD')}</span></div> 
-        <div class="flex justify-between items-center font-bold text-xl ${balance > -0.01 && balance < 0.01 ? 'text-green-600' : 'text-red-600'}"> 
+        <div class="flex justify-between items-center font-bold text-lg"><span>Total a Pagar:</span> <span>${formatCurrency(
+          totalSalePrice - tradeInValueUSD,
+          'USD'
+        )}</span></div> 
+        <div class="flex justify-between items-center text-sm"><span>Total Pagado (Métodos):</span> <span>${formatCurrency(
+          totalPaidViaMethods,
+          'USD'
+        )}</span></div> 
+        <div class="flex justify-between items-center font-bold text-xl ${
+          balance > -0.01 && balance < 0.01 ? 'text-green-600' : 'text-red-600'
+        }"> 
             <span>Balance:</span> <span>${formatCurrency(balance, 'USD')}</span> 
         </div> 
         <div class="border-t my-2 pt-2"></div>
-        <div class="flex justify-between items-center text-sm"><span>Ganancia (Venta):</span> <span class="font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}">${formatCurrency(netProfit, 'USD')}</span></div> 
-    `; 
-} 
+        <div class="flex justify-between items-center text-sm"><span>Ganancia (Venta):</span> <span class="font-bold ${
+          netProfit >= 0 ? 'text-green-600' : 'text-red-600'
+        }">${formatCurrency(netProfit, 'USD')}</span></div> 
+    `;
+}
 
-export function toggleTradeInDetails() { 
-    const tradeInCheckbox = document.getElementById('has-trade-in'); 
-    const tradeInDetailsEl = document.getElementById('trade-in-details'); 
-    if (!tradeInCheckbox || !tradeInDetailsEl) return; 
+export function toggleTradeInDetails() {
+  const tradeInCheckbox = document.getElementById('has-trade-in');
+  const tradeInDetailsEl = document.getElementById('trade-in-details');
+  if (!tradeInCheckbox || !tradeInDetailsEl) return;
 
-    const show = tradeInCheckbox.checked;
+  const show = tradeInCheckbox.checked;
 
-    if (show && tradeInDetailsEl.innerHTML === '') { 
-        const allCategories = appState.categories || [];
-        const categoryOptions = '<option value="">-- Seleccionar Categoría --</option>' + allCategories.map(cat => `<option value="${escapeHTML(cat.name)}">${escapeHTML(cat.name)}</option>`).join(''); 
-        
-        tradeInDetailsEl.innerHTML = ` 
+  if (show && tradeInDetailsEl.innerHTML === '') {
+    const allCategories = appState.categories || [];
+    const categoryOptions =
+      '<option value="">-- Seleccionar Categoría --</option>' +
+      allCategories
+        .map((cat) => `<option value="${escapeHTML(cat.name)}">${escapeHTML(cat.name)}</option>`)
+        .join('');
+
+    tradeInDetailsEl.innerHTML = ` 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"> 
                 <div><label class="text-sm">Nombre Identificador</label><input type="text" id="trade-in-model" class="form-input w-full p-2 mt-1"></div> 
                 <div><label class="text-sm">N/S</label><input type="text" id="trade-in-serial" class="form-input w-full p-2 mt-1"></div> 
@@ -1645,82 +1869,119 @@ export function toggleTradeInDetails() {
             <div id="trade-in-attributes-container" class="mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <!-- Los atributos dinámicos aparecerán aquí -->
             </div>
-        `; 
-    } 
+        `;
+  }
 
-    tradeInDetailsEl.classList.toggle('hidden', !show); 
+  tradeInDetailsEl.classList.toggle('hidden', !show);
 
-    ['trade-in-model', 'trade-in-serial', 'trade-in-value'].forEach(id => { 
-        const el = document.getElementById(id);
-        if(el) el.required = show; 
-    }); 
+  ['trade-in-model', 'trade-in-serial', 'trade-in-value'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.required = show;
+  });
 
-    const tradeInValue = document.getElementById('trade-in-value');
-    if (!show && tradeInValue) {
-        tradeInValue.value = 0;
-    }
-    
-    if (!show) {
-        const attributesContainer = document.getElementById('trade-in-attributes-container');
-        if (attributesContainer) attributesContainer.innerHTML = '';
-        const categorySelect = document.getElementById('trade-in-category');
-        if (categorySelect) categorySelect.value = '';
-    }
+  const tradeInValue = document.getElementById('trade-in-value');
+  if (!show && tradeInValue) {
+    tradeInValue.value = 0;
+  }
 
-    updateSaleBalance(appState); 
+  if (!show) {
+    const attributesContainer = document.getElementById('trade-in-attributes-container');
+    if (attributesContainer) attributesContainer.innerHTML = '';
+    const categorySelect = document.getElementById('trade-in-category');
+    if (categorySelect) categorySelect.value = '';
+  }
+
+  updateSaleBalance(appState);
 }
 
 export function renderTradeInAttributes() {
-    const categorySelect = document.getElementById('trade-in-category');
-    const attributesContainer = document.getElementById('trade-in-attributes-container');
-    if (!categorySelect || !attributesContainer) return;
+  const categorySelect = document.getElementById('trade-in-category');
+  const attributesContainer = document.getElementById('trade-in-attributes-container');
+  if (!categorySelect || !attributesContainer) return;
 
-    const selectedCategoryName = categorySelect.value;
-    const allCategories = appState.categories || [];
-    const selectedCategory = allCategories.find(c => c.name === selectedCategoryName);
+  const selectedCategoryName = categorySelect.value;
+  const allCategories = appState.categories || [];
+  const selectedCategory = allCategories.find((c) => c.name === selectedCategoryName);
 
-    if (selectedCategory && selectedCategory.attributes) {
-        attributesContainer.innerHTML = selectedCategory.attributes.map(attr => generateAttributeInputHTML(attr)).join('');
-    } else {
-        attributesContainer.innerHTML = '';
-    }
+  if (selectedCategory && selectedCategory.attributes) {
+    attributesContainer.innerHTML = selectedCategory.attributes
+      .map((attr) => generateAttributeInputHTML(attr))
+      .join('');
+  } else {
+    attributesContainer.innerHTML = '';
+  }
 }
-export function formatCurrency(number, currency = 'ARS') { 
-    const num = number || 0; 
-    if (currency === 'USDT') return `${num.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`; 
-    try { 
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, minimumFractionDigits: 2 }).format(num); 
-    } catch (e) { 
-        return `${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`; 
-    } 
-} 
-export function formatDate(dateString) { if (!dateString) return 'N/A'; const date = new Date(dateString + 'T12:00:00Z'); return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }); } 
-export function escapeHTML(str) { if (str === null || str === undefined) return ''; return str.toString().replace(/[&<>"']/g, match => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[match])); } 
+export function formatCurrency(number, currency = 'ARS') {
+  const num = number || 0;
+  if (currency === 'USDT')
+    return `${num.toLocaleString('es-AR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} USDT`;
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+    }).format(num);
+  } catch (e) {
+    return `${num.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} ${currency}`;
+  }
+}
+export function formatDate(dateString) {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString + 'T12:00:00Z');
+  return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+export function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  return str
+    .toString()
+    .replace(
+      /[&<>"']/g,
+      (match) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[match])
+    );
+}
 
-export function switchTab(activeKey) { 
-    document.querySelectorAll('.main-tab-btn').forEach(btn => btn.classList.toggle('tab-active', btn.dataset.section === activeKey)); 
-    document.querySelectorAll('.main-section').forEach(section => section.classList.toggle('hidden', section.id !== `section-${activeKey}`)); 
-    
-    if (activeKey === 'ventas') switchSubTab('ventas', 'nueva');
-    if (activeKey === 'inventario') switchSubTab('inventario', 'stock');
-    if (activeKey === 'operaciones') switchSubTab('operaciones', 'gastos');
-    if (activeKey === 'reportes') switchSubTab('reportes', 'dashboard');
-} 
+export function switchTab(activeKey) {
+  document
+    .querySelectorAll('.main-tab-btn')
+    .forEach((btn) => btn.classList.toggle('tab-active', btn.dataset.section === activeKey));
+  document
+    .querySelectorAll('.main-section')
+    .forEach((section) =>
+      section.classList.toggle('hidden', section.id !== `section-${activeKey}`)
+    );
 
-export function switchSubTab(hubKey, activeKey) { 
-    document.querySelectorAll(`[data-hub="${hubKey}"]`).forEach(btn => btn.classList.toggle('sub-tab-btn-active', btn.dataset.subTab === activeKey)); 
-    document.querySelectorAll(`.${hubKey}-sub-section`).forEach(section => section.classList.toggle('hidden', section.id !== `${hubKey}-sub-${activeKey}`)); 
-} 
+  if (activeKey === 'ventas') switchSubTab('ventas', 'nueva');
+  if (activeKey === 'inventario') switchSubTab('inventario', 'stock');
+  if (activeKey === 'operaciones') switchSubTab('operaciones', 'gastos');
+  if (activeKey === 'reportes') switchSubTab('reportes', 'dashboard');
+}
 
-export function showModal(content, title = "Notificación", footerContent = null) {
-    const modalContainer = document.getElementById('modal-container');
-    if (!modalContainer) return;
+export function switchSubTab(hubKey, activeKey) {
+  document
+    .querySelectorAll(`[data-hub="${hubKey}"]`)
+    .forEach((btn) => btn.classList.toggle('sub-tab-btn-active', btn.dataset.subTab === activeKey));
+  document
+    .querySelectorAll(`.${hubKey}-sub-section`)
+    .forEach((section) =>
+      section.classList.toggle('hidden', section.id !== `${hubKey}-sub-${activeKey}`)
+    );
+}
 
-    const footerHtml = footerContent
-        ? `<div class="modal-footer flex justify-end gap-4">${footerContent}</div>`
-        : `<div class="modal-footer"><button class="btn-primary close-modal-btn px-4 py-2">Cerrar</button></div>`;
+export function showModal(content, title = 'Notificación', footerContent = null) {
+  const modalContainer = document.getElementById('modal-container');
+  if (!modalContainer) return;
 
-    modalContainer.innerHTML = `
+  const footerHtml = footerContent
+    ? `<div class="modal-footer flex justify-end gap-4">${footerContent}</div>`
+    : `<div class="modal-footer"><button class="btn-primary close-modal-btn px-4 py-2">Cerrar</button></div>`;
+
+  modalContainer.innerHTML = `
         <div id="app-modal" class="modal-backdrop">
             <div class="modal-content">
                 <div class="modal-header">
@@ -1734,65 +1995,67 @@ export function showModal(content, title = "Notificación", footerContent = null
             </div>
         </div>`;
 
-    modalContainer.querySelector('#app-modal')?.addEventListener('click', e => {
-        if (e.target.id === 'app-modal' || e.target.closest('.close-modal-btn')) {
-            modalContainer.innerHTML = '';
-        }
-    });
+  modalContainer.querySelector('#app-modal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'app-modal' || e.target.closest('.close-modal-btn')) {
+      modalContainer.innerHTML = '';
+    }
+  });
 }
 
-
 export function openConfirmModal(message, onConfirm) {
-    const content = `<p>${message}</p>`;
-    const footer = `
+  const content = `<p>${message}</p>`;
+  const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button id="confirm-ok" class="btn-danger px-4 py-2">Confirmar</button>
     `;
-    showModal(content, "Confirmación Requerida", footer);
-    
-    const confirmButton = document.getElementById('confirm-ok');
-    if (confirmButton) {
-        confirmButton.addEventListener('click', () => {
-            const modalContainer = document.getElementById('modal-container');
-            if (modalContainer) {
-                modalContainer.innerHTML = ''; 
-            }
-            if (onConfirm && typeof onConfirm === 'function') {
-                onConfirm(); 
-            }
-        });
-    }
+  showModal(content, 'Confirmación Requerida', footer);
+
+  const confirmButton = document.getElementById('confirm-ok');
+  if (confirmButton) {
+    confirmButton.addEventListener('click', () => {
+      const modalContainer = document.getElementById('modal-container');
+      if (modalContainer) {
+        modalContainer.innerHTML = '';
+      }
+      if (onConfirm && typeof onConfirm === 'function') {
+        onConfirm();
+      }
+    });
+  }
 }
 
 export function openNoteModal(note = null) {
-    const isEditing = note !== null;
-    const title = isEditing ? 'Editar Nota' : 'Nueva Nota';
-    const noteTitle = isEditing ? note.title : '';
-    const noteContent = isEditing ? note.content : '';
-    const noteId = isEditing ? note.id : '';
+  const isEditing = note !== null;
+  const title = isEditing ? 'Editar Nota' : 'Nueva Nota';
+  const noteTitle = isEditing ? note.title : '';
+  const noteContent = isEditing ? note.content : '';
+  const noteId = isEditing ? note.id : '';
 
-    const content = `
+  const content = `
         <form id="note-form" class="space-y-4" data-id="${noteId}">
             <div>
                 <label for="note-title" class="block text-sm font-medium text-gray-700">Título</label>
-                <input type="text" id="note-title" class="form-input w-full mt-1" value="${escapeHTML(noteTitle)}" required>
+                <input type="text" id="note-title" class="form-input w-full mt-1" value="${escapeHTML(
+                  noteTitle
+                )}" required>
             </div>
             <div>
                 <label for="note-content" class="block text-sm font-medium text-gray-700">Contenido</label>
-                <textarea id="note-content" rows="8" class="form-textarea w-full mt-1">${escapeHTML(noteContent)}</textarea>
+                <textarea id="note-content" rows="8" class="form-textarea w-full mt-1">${escapeHTML(
+                  noteContent
+                )}</textarea>
             </div>
         </form>
     `;
-    const footer = `
+  const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="note-form" class="btn-primary px-4 py-2">Guardar Nota</button>
     `;
-    showModal(content, title, footer);
+  showModal(content, title, footer);
 }
 
-
 export function openChangePasswordModal() {
-    const content = `
+  const content = `
         <form id="password-change-form" class="space-y-4">
             <div>
                 <label for="current-password" class="block text-sm font-medium text-gray-700">Contraseña Actual</label>
@@ -1808,43 +2071,60 @@ export function openChangePasswordModal() {
             </div>
         </form>
     `;
-    const footer = `
+  const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="password-change-form" class="btn-primary px-4 py-2">Guardar Cambios</button>
     `;
-    showModal(content, "Cambiar Contraseña", footer);
+  showModal(content, 'Cambiar Contraseña', footer);
 }
 
 export function openAdjustCapitalModal(state) {
-    const content = `<form id="adjust-capital-form" class="space-y-4">${Object.entries(WALLET_CONFIG).filter(([k, c]) => !c.type || k === 'clientDebt').map(([key, config]) => `<div><label class="block text-sm">${config.name}</label><input type="number" step="any" id="adjust-${key}" class="form-input w-full" value="${state.capital[key] || 0}"></div>`).join('')}</form>`;
-    const footer = `
+  const content = `<form id="adjust-capital-form" class="space-y-4">${Object.entries(WALLET_CONFIG)
+    .filter(([k, c]) => !c.type || k === 'clientDebt')
+    .map(
+      ([key, config]) =>
+        `<div><label class="block text-sm">${
+          config.name
+        }</label><input type="number" step="any" id="adjust-${key}" class="form-input w-full" value="${
+          state.capital[key] || 0
+        }"></div>`
+    )
+    .join('')}</form>`;
+  const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="adjust-capital-form" class="btn-primary px-4 py-2">Guardar</button>
     `;
-    showModal(content, "Ajustar Saldos", footer);
+  showModal(content, 'Ajustar Saldos', footer);
 }
 
 export function openAddClientModal() {
-    const content = `<form id="client-form-modal" class="space-y-4"><div><label class="block text-sm">Nombre</label><input type="text" id="client-name-modal" class="form-input w-full" required></div><div><label class="block text-sm">Teléfono</label><input type="text" id="client-phone-modal" class="form-input w-full"></div><div><label class="block text-sm">Detalles</label><textarea id="client-details-modal" class="form-textarea w-full"></textarea></div></form>`;
-    const footer = `
+  const content = `<form id="client-form-modal" class="space-y-4"><div><label class="block text-sm">Nombre</label><input type="text" id="client-name-modal" class="form-input w-full" required></div><div><label class="block text-sm">Teléfono</label><input type="text" id="client-phone-modal" class="form-input w-full"></div><div><label class="block text-sm">Detalles</label><textarea id="client-details-modal" class="form-textarea w-full"></textarea></div></form>`;
+  const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="client-form-modal" class="btn-primary px-4 py-2">Guardar</button>
     `;
-    showModal(content, "Añadir Nuevo Cliente", footer);
+  showModal(content, 'Añadir Nuevo Cliente', footer);
 }
 
 export function openAddStockModal(state) {
-    const { categories } = state;
-    const allCategories = categories || [];
+  const { categories } = state;
+  const allCategories = categories || [];
 
-    let content = `
+  let content = `
         <form id="stock-form-modal" class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm">Categoría</label>
                     <select id="stock-category-modal" class="form-select w-full" required>
                         <option value="">-- Seleccionar --</option>
-                        ${allCategories.map(cat => `<option value="${escapeHTML(cat.name)}">${escapeHTML(cat.name)}</option>`).join('')}
+                        ${allCategories
+                          .map(
+                            (cat) =>
+                              `<option value="${escapeHTML(cat.name)}">${escapeHTML(
+                                cat.name
+                              )}</option>`
+                          )
+                          .join('')}
                     </select>
                 </div>
                 <div>
@@ -1868,92 +2148,137 @@ export function openAddStockModal(state) {
             <div><label class="block text-sm">Detalles Adicionales</label><textarea id="stock-details-modal" class="form-textarea w-full"></textarea></div>
         </form>
     `;
-    const footer = `
+  const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="stock-form-modal" class="btn-primary px-4 py-2">Guardar</button>
     `;
-    showModal(content, `Añadir Nuevo Producto`, footer);
+  showModal(content, `Añadir Nuevo Producto`, footer);
 }
 
 export function openEditStockModal(item, state) {
-    const { categories } = state;
-    const allCategories = categories || [];
-    const itemCategory = allCategories.find(c => c.name === item.category);
+  const { categories } = state;
+  const allCategories = categories || [];
+  const itemCategory = allCategories.find((c) => c.name === item.category);
 
-    let content = `
+  let content = `
         <form id="edit-stock-form" class="space-y-4" data-id="${item.id}">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label>Categoría</label>
                     <select id="edit-stock-category" class="form-select w-full" required>
-                        ${allCategories.map(cat => `<option value="${escapeHTML(cat.name)}" ${item.category === cat.name ? 'selected' : ''}>${escapeHTML(cat.name)}</option>`).join('')}
+                        ${allCategories
+                          .map(
+                            (cat) =>
+                              `<option value="${escapeHTML(cat.name)}" ${
+                                item.category === cat.name ? 'selected' : ''
+                              }>${escapeHTML(cat.name)}</option>`
+                          )
+                          .join('')}
                     </select>
                 </div>
                 <div>
                     <label>Nombre Identificador</label>
-                    <input type="text" id="edit-stock-model" class="form-input w-full" value="${escapeHTML(item.model)}" required>
+                    <input type="text" id="edit-stock-model" class="form-input w-full" value="${escapeHTML(
+                      item.model
+                    )}" required>
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label>N/S</label><input type="text" id="edit-stock-serial" class="form-input w-full" value="${escapeHTML(item.serialNumber)}" required></div>
-                <div><label>Cantidad</label><input type="number" id="edit-stock-quantity" class="form-input w-full" value="${item.quantity || 1}" min="0" required></div>
+                <div><label>N/S</label><input type="text" id="edit-stock-serial" class="form-input w-full" value="${escapeHTML(
+                  item.serialNumber
+                )}" required></div>
+                <div><label>Cantidad</label><input type="number" id="edit-stock-quantity" class="form-input w-full" value="${
+                  item.quantity || 1
+                }" min="0" required></div>
             </div>
             <div class="border-t my-4"></div>
             <div id="dynamic-attributes-container-modal" class="space-y-4">
-                ${itemCategory?.attributes?.map(attr => generateAttributeInputHTML(attr, item.attributes?.[attr.name])).join('') || ''}
+                ${
+                  itemCategory?.attributes
+                    ?.map((attr) => generateAttributeInputHTML(attr, item.attributes?.[attr.name]))
+                    .join('') || ''
+                }
             </div>
             <div class="border-t my-4"></div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label>Costo (USD)</label><input type="number" id="edit-stock-cost" class="form-input w-full" value="${item.phoneCost || 0}" required></div>
-                <div><label>P. Venta (USD)</label><input type="number" id="edit-stock-price" class="form-input w-full" value="${item.suggestedSalePrice || 0}"></div>
+                <div><label>Costo (USD)</label><input type="number" id="edit-stock-cost" class="form-input w-full" value="${
+                  item.phoneCost || 0
+                }" required></div>
+                <div><label>P. Venta (USD)</label><input type="number" id="edit-stock-price" class="form-input w-full" value="${
+                  item.suggestedSalePrice || 0
+                }"></div>
             </div>
-            <div><label>Detalles</label><textarea id="edit-stock-details" class="form-textarea w-full">${escapeHTML(item.details || '')}</textarea></div>
+            <div><label>Detalles</label><textarea id="edit-stock-details" class="form-textarea w-full">${escapeHTML(
+              item.details || ''
+            )}</textarea></div>
         </form>
     `;
-    const footer = `
+  const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="edit-stock-form" class="btn-primary px-4 py-2">Guardar</button>
     `;
-    showModal(content, `Editar ${item.model}`, footer);
+  showModal(content, `Editar ${item.model}`, footer);
 }
 
 export function openEditClientModal(client) {
-    const content = `<form id="edit-client-form" class="space-y-4" data-id="${client.id}"><div><label class="block text-sm">Nombre</label><input type="text" id="edit-client-name" class="form-input w-full" value="${escapeHTML(client.name)}" required></div><div><label class="block text-sm">Teléfono</label><input type="text" id="edit-client-phone" class="form-input w-full" value="${escapeHTML(client.phone || '')}"></div><div><label class="block text-sm">Detalles</label><textarea id="edit-client-details" class="form-textarea w-full">${escapeHTML(client.details || '')}</textarea></div></form>`;
-    const footer = `
+  const content = `<form id="edit-client-form" class="space-y-4" data-id="${
+    client.id
+  }"><div><label class="block text-sm">Nombre</label><input type="text" id="edit-client-name" class="form-input w-full" value="${escapeHTML(
+    client.name
+  )}" required></div><div><label class="block text-sm">Teléfono</label><input type="text" id="edit-client-phone" class="form-input w-full" value="${escapeHTML(
+    client.phone || ''
+  )}"></div><div><label class="block text-sm">Detalles</label><textarea id="edit-client-details" class="form-textarea w-full">${escapeHTML(
+    client.details || ''
+  )}</textarea></div></form>`;
+  const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="edit-client-form" class="btn-primary px-4 py-2">Guardar</button>
     `;
-    showModal(content, `Editar Cliente`, footer);
+  showModal(content, `Editar Cliente`, footer);
 }
 
 export function openEditDebtModal(debt) {
-    const content = `<form id="edit-debt-form" class="space-y-4" data-id="${debt.id}"><div><label class="block text-sm">Nombre</label><input type="text" id="edit-debtor-name" class="form-input w-full" value="${escapeHTML(debt.debtorName)}" required></div><div><label class="block text-sm">Descripción</label><input type="text" id="edit-debt-desc" class="form-input w-full" value="${escapeHTML(debt.description)}" required></div><div><label class="block text-sm">Monto (USD)</label><input type="number" id="edit-debt-amount" class="form-input w-full" value="${debt.amount}" required></div></form>`;
-    const footer = `
+  const content = `<form id="edit-debt-form" class="space-y-4" data-id="${
+    debt.id
+  }"><div><label class="block text-sm">Nombre</label><input type="text" id="edit-debtor-name" class="form-input w-full" value="${escapeHTML(
+    debt.debtorName
+  )}" required></div><div><label class="block text-sm">Descripción</label><input type="text" id="edit-debt-desc" class="form-input w-full" value="${escapeHTML(
+    debt.description
+  )}" required></div><div><label class="block text-sm">Monto (USD)</label><input type="number" id="edit-debt-amount" class="form-input w-full" value="${
+    debt.amount
+  }" required></div></form>`;
+  const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="edit-debt-form" class="btn-primary px-4 py-2">Guardar</button>
     `;
-    showModal(content, `Editar Deuda`, footer);
+  showModal(content, `Editar Deuda`, footer);
 }
 
 export function openEditFixedExpenseModal(expense) {
-    const content = ` 
+  const content = ` 
         <form id="edit-fixed-expense-form" class="space-y-4" data-id="${expense.id}"> 
-            <div><label class="block text-sm">Descripción</label><input type="text" id="edit-fixed-expense-description" class="form-input w-full p-2" value="${escapeHTML(expense.description)}" required></div> 
+            <div><label class="block text-sm">Descripción</label><input type="text" id="edit-fixed-expense-description" class="form-input w-full p-2" value="${escapeHTML(
+              expense.description
+            )}" required></div> 
             <div class="grid grid-cols-2 gap-4"> 
-                <div><label class="block text-sm">Monto (USD)</label><input type="number" id="edit-fixed-expense-amount" class="form-input w-full p-2" value="${expense.amount}" required></div> 
-                <div><label class="block text-sm">Día de Pago (1-31)</label><input type="number" id="edit-fixed-expense-day" class="form-input w-full p-2" value="${expense.paymentDay}" required min="1" max="31"></div> 
+                <div><label class="block text-sm">Monto (USD)</label><input type="number" id="edit-fixed-expense-amount" class="form-input w-full p-2" value="${
+                  expense.amount
+                }" required></div> 
+                <div><label class="block text-sm">Día de Pago (1-31)</label><input type="number" id="edit-fixed-expense-day" class="form-input w-full p-2" value="${
+                  expense.paymentDay
+                }" required min="1" max="31"></div> 
             </div> 
         </form>`;
-    const footer = `
+  const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="edit-fixed-expense-form" class="btn-primary px-4 py-2">Guardar Cambios</button>
     `;
-    showModal(content, `Editar Gasto Fijo`, footer);
+  showModal(content, `Editar Gasto Fijo`, footer);
 }
 
 export function openExecutePaymentModal(expense, state) {
-    const { capital, exchangeRate } = state;
-    const content = `
+  const { capital, exchangeRate } = state;
+  const content = `
         <div class="text-center">
             <p class="mb-2">Pagar Gasto Fijo:</p>
             <h3 class="text-2xl font-bold mb-4">${escapeHTML(expense.description)}</h3>
@@ -1962,22 +2287,39 @@ export function openExecutePaymentModal(expense, state) {
         <div>
             <h4 class="font-semibold mb-3 text-center">1. Seleccionar Billetera de Origen</h4>
             <div id="payment-wallet-selector" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                ${Object.entries(WALLET_CONFIG).filter(([key, config]) => !config.type).map(([key, config]) => {
+                ${Object.entries(WALLET_CONFIG)
+                  .filter(([key, config]) => !config.type)
+                  .map(([key, config]) => {
                     const balance = capital[key] || 0;
-                    const expenseAmountInCurrency = config.currency === 'ARS' ? expense.amount * exchangeRate : expense.amount;
+                    const expenseAmountInCurrency =
+                      config.currency === 'ARS' ? expense.amount * exchangeRate : expense.amount;
                     const hasEnoughFunds = balance >= expenseAmountInCurrency;
                     return `
-                        <button class="payment-wallet-option w-full p-3 rounded-lg border-2 border-gray-200 text-left transition-colors ${hasEnoughFunds ? 'hover:border-green-500' : 'opacity-50 cursor-not-allowed'}" 
+                        <button class="payment-wallet-option w-full p-3 rounded-lg border-2 border-gray-200 text-left transition-colors ${
+                          hasEnoughFunds
+                            ? 'hover:border-green-500'
+                            : 'opacity-50 cursor-not-allowed'
+                        }" 
                             data-wallet-type="${key}" 
                             data-expense-id="${expense.id}" 
                             ${!hasEnoughFunds ? 'disabled' : ''}>
                             <div class="flex justify-between items-center">
-                                <span class="font-semibold"><i class="${config.icon} mr-2"></i>${config.name}</span>
-                                <span class="font-mono text-sm">${formatCurrency(balance, config.currency)}</span>
+                                <span class="font-semibold"><i class="${config.icon} mr-2"></i>${
+                      config.name
+                    }</span>
+                                <span class="font-mono text-sm">${formatCurrency(
+                                  balance,
+                                  config.currency
+                                )}</span>
                             </div>
-                            ${!hasEnoughFunds ? '<p class="text-xs text-red-500 mt-1">Fondos insuficientes</p>' : ''}
+                            ${
+                              !hasEnoughFunds
+                                ? '<p class="text-xs text-red-500 mt-1">Fondos insuficientes</p>'
+                                : ''
+                            }
                         </button>`;
-                }).join('')}
+                  })
+                  .join('')}
             </div>
         </div>
         <div class="payment-confirmation-actions hidden mt-6 text-center border-t pt-4">
@@ -1985,13 +2327,13 @@ export function openExecutePaymentModal(expense, state) {
             <button id="confirm-payment-btn" class="btn-primary w-full py-3 text-lg">Confirmar Pago</button>
         </div>
     `;
-    const footer = `<button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>`;
-    showModal(content, 'Confirmar Pago', footer);
+  const footer = `<button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>`;
+  showModal(content, 'Confirmar Pago', footer);
 }
 
-export function openExecuteDailyExpenseModal(expenseData, state) { 
-    const { capital, exchangeRate } = state; 
-    const content = ` 
+export function openExecuteDailyExpenseModal(expenseData, state) {
+  const { capital, exchangeRate } = state;
+  const content = ` 
         <div class="text-center"> 
             <p class="mb-2">Pagar Gasto Diario:</p> 
             <h3 class="text-2xl font-bold mb-4">${escapeHTML(expenseData.description)}</h3> 
@@ -2000,56 +2342,75 @@ export function openExecuteDailyExpenseModal(expenseData, state) {
         <div> 
             <h4 class="font-semibold mb-3 text-center">1. Seleccionar Billetera de Origen</h4> 
             <div id="daily-expense-wallet-selector" class="grid grid-cols-1 md:grid-cols-2 gap-3"> 
-                ${Object.entries(WALLET_CONFIG).filter(([key, config]) => !config.type).map(([key, config]) => { 
-                    const balance = capital[key] || 0; 
-                    let hasEnoughFunds = false; 
-                    if (config.currency === 'ARS') { 
-                        hasEnoughFunds = balance >= (expenseData.amount * exchangeRate); 
-                    } else { 
-                        hasEnoughFunds = balance >= expenseData.amount; 
-                    } 
+                ${Object.entries(WALLET_CONFIG)
+                  .filter(([key, config]) => !config.type)
+                  .map(([key, config]) => {
+                    const balance = capital[key] || 0;
+                    let hasEnoughFunds = false;
+                    if (config.currency === 'ARS') {
+                      hasEnoughFunds = balance >= expenseData.amount * exchangeRate;
+                    } else {
+                      hasEnoughFunds = balance >= expenseData.amount;
+                    }
                     return ` 
-                        <button class="execute-daily-expense-wallet-btn w-full p-3 rounded-lg border text-left ${hasEnoughFunds ? 'hover:bg-green-50' : 'opacity-50 cursor-not-allowed'}" 
+                        <button class="execute-daily-expense-wallet-btn w-full p-3 rounded-lg border text-left ${
+                          hasEnoughFunds ? 'hover:bg-green-50' : 'opacity-50 cursor-not-allowed'
+                        }" 
                             data-wallet-type="${key}" ${!hasEnoughFunds ? 'disabled' : ''}> 
                             <div class="flex justify-between items-center"> 
-                                <span class="font-semibold"><i class="${config.icon} mr-2"></i>${config.name}</span> 
-                                <span class="font-mono text-sm">${formatCurrency(balance, config.currency)}</span> 
+                                <span class="font-semibold"><i class="${config.icon} mr-2"></i>${
+                      config.name
+                    }</span> 
+                                <span class="font-mono text-sm">${formatCurrency(
+                                  balance,
+                                  config.currency
+                                )}</span> 
                             </div> 
-                            ${!hasEnoughFunds ? '<p class="text-xs text-red-500 mt-1">Fondos insuficientes</p>' : ''} 
-                        </button>`; 
-                }).join('')} 
+                            ${
+                              !hasEnoughFunds
+                                ? '<p class="text-xs text-red-500 mt-1">Fondos insuficientes</p>'
+                                : ''
+                            } 
+                        </button>`;
+                  })
+                  .join('')} 
             </div> 
         </div>
         <div class="payment-confirmation-actions hidden mt-6 text-center border-t pt-4">
             <h4 class="font-semibold mb-3 text-center">2. Confirmar Pago</h4>
-            <button id="confirm-daily-expense-payment-btn" class="btn-primary w-full py-3 text-lg" data-expense-data='${JSON.stringify(expenseData)}'>Confirmar Pago</button>
+            <button id="confirm-daily-expense-payment-btn" class="btn-primary w-full py-3 text-lg" data-expense-data='${JSON.stringify(
+              expenseData
+            )}'>Confirmar Pago</button>
         </div>
-    `; 
-    const footer = `<div class="text-center mt-6"><button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button></div>`;
-    showModal(content, 'Confirmar Pago de Gasto Diario', footer); 
+    `;
+  const footer = `<div class="text-center mt-6"><button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button></div>`;
+  showModal(content, 'Confirmar Pago de Gasto Diario', footer);
 }
 
-export function showSaleDetailModal(sale) { 
-    if (!sale) return;
-    const modalContainer = document.getElementById('modal-container');
-    if (!modalContainer) return;
+export function showSaleDetailModal(sale) {
+  if (!sale) return;
+  const modalContainer = document.getElementById('modal-container');
+  if (!modalContainer) return;
 
-    const itemsCost = (sale.items || []).reduce((sum, item) => sum + (item.phoneCost || 0), 0); 
-    const netProfit = (sale.total || 0) - itemsCost; 
+  const itemsCost = (sale.items || []).reduce((sum, item) => sum + (item.phoneCost || 0), 0);
+  const netProfit = (sale.total || 0) - itemsCost;
 
-    let warrantyHtml = `<p class="font-semibold text-gray-500">No especificada</p>`; 
-    if (sale.saleDate && sale.warrantyDays) { 
-        const saleDate = new Date(sale.saleDate + 'T12:00:00Z'); 
-        const expirationDate = new Date(new Date(saleDate).setDate(saleDate.getDate() + sale.warrantyDays)); 
-        const today = new Date(); 
-        today.setHours(0, 0, 0, 0); 
-        const diffDays = Math.ceil((expirationDate - today) / (1000 * 60 * 60 * 24)); 
-        warrantyHtml = diffDays >= 0 
-            ? `<p class="font-bold text-green-600">${diffDays} días restantes</p>` 
-            : `<p class="font-bold text-red-600">Vencida hace ${Math.abs(diffDays)} días</p>`; 
-    } 
+  let warrantyHtml = `<p class="font-semibold text-gray-500">No especificada</p>`;
+  if (sale.saleDate && sale.warrantyDays) {
+    const saleDate = new Date(sale.saleDate + 'T12:00:00Z');
+    const expirationDate = new Date(
+      new Date(saleDate).setDate(saleDate.getDate() + sale.warrantyDays)
+    );
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((expirationDate - today) / (1000 * 60 * 60 * 24));
+    warrantyHtml =
+      diffDays >= 0
+        ? `<p class="font-bold text-green-600">${diffDays} días restantes</p>`
+        : `<p class="font-bold text-red-600">Vencida hace ${Math.abs(diffDays)} días</p>`;
+  }
 
-    const modalHTML = `
+  const modalHTML = `
         <div id="sale-detail-modal-backdrop" class="modal-backdrop">
             <div class="modal-content max-w-2xl max-h-[85vh] flex flex-col p-0">
                 <header class="p-4 border-b sticky top-0 bg-white z-10 flex justify-between items-center">
@@ -2061,11 +2422,15 @@ export function showSaleDetailModal(sale) {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="bg-white p-3 rounded-lg border">
                             <p class="text-sm text-gray-500">Cliente</p>
-                            <p class="font-bold text-lg text-gray-900">${escapeHTML(sale.customerName)}</p>
+                            <p class="font-bold text-lg text-gray-900">${escapeHTML(
+                              sale.customerName
+                            )}</p>
                         </div>
                         <div class="bg-white p-3 rounded-lg border">
                             <p class="text-sm text-gray-500">Fecha de Venta</p>
-                            <p class="font-semibold text-gray-900">${sale.soldAt ? sale.soldAt.toDate().toLocaleString('es-AR') : 'N/A'}</p>
+                            <p class="font-semibold text-gray-900">${
+                              sale.soldAt ? sale.soldAt.toDate().toLocaleString('es-AR') : 'N/A'
+                            }</p>
                         </div>
                     </div>
 
@@ -2079,26 +2444,51 @@ export function showSaleDetailModal(sale) {
                     <div>
                         <h4 class="font-bold text-lg mb-2 text-gray-700">Productos Vendidos</h4>
                         <div class="space-y-2">
-                            ${(sale.items || []).map((item, index) => {
-                                const attributesHTML = (item.attributes && Object.keys(item.attributes).length > 0)
-                                    ? Object.entries(item.attributes).map(([key, value]) => `<div class="flex justify-between py-1"><span class="text-gray-600">${escapeHTML(key)}:</span><span class="font-semibold">${escapeHTML(String(value))}</span></div>`).join('')
+                            ${(sale.items || [])
+                              .map((item, index) => {
+                                const attributesHTML =
+                                  item.attributes && Object.keys(item.attributes).length > 0
+                                    ? Object.entries(item.attributes)
+                                        .map(
+                                          ([key, value]) =>
+                                            `<div class="flex justify-between py-1"><span class="text-gray-600">${escapeHTML(
+                                              key
+                                            )}:</span><span class="font-semibold">${escapeHTML(
+                                              String(value)
+                                            )}</span></div>`
+                                        )
+                                        .join('')
                                     : '';
 
                                 return `
                                 <div class="bg-white border rounded-md overflow-hidden">
                                     <div class="sold-item-toggle flex justify-between items-center p-3 cursor-pointer hover:bg-gray-50">
-                                        <span class="font-medium text-gray-800">- ${item.model} <span class="text-gray-500 text-sm">(${item.serialNumber})</span></span>
+                                        <span class="font-medium text-gray-800">- ${
+                                          item.model
+                                        } <span class="text-gray-500 text-sm">(${
+                                  item.serialNumber
+                                })</span></span>
                                         <div class="flex items-center gap-4">
-                                            <span class="font-mono font-semibold">${formatCurrency(item.salePrice, 'USD')}</span>
+                                            <span class="font-mono font-semibold">${formatCurrency(
+                                              item.salePrice,
+                                              'USD'
+                                            )}</span>
                                             <i class="fas fa-chevron-down text-gray-400 transition-transform"></i>
                                         </div>
                                     </div>
                                     <div class="sold-item-details hidden p-4 border-t bg-gray-50 text-sm space-y-2">
-                                        ${attributesHTML ? `<div><h5 class="font-semibold mb-1">Atributos:</h5><div class="space-y-1">${attributesHTML}</div></div>` : ''}
-                                        <div><h5 class="font-semibold">Detalles Adicionales:</h5><p class="text-gray-600">${escapeHTML(item.details || 'Sin detalles.')}</p></div>
+                                        ${
+                                          attributesHTML
+                                            ? `<div><h5 class="font-semibold mb-1">Atributos:</h5><div class="space-y-1">${attributesHTML}</div></div>`
+                                            : ''
+                                        }
+                                        <div><h5 class="font-semibold">Detalles Adicionales:</h5><p class="text-gray-600">${escapeHTML(
+                                          item.details || 'Sin detalles.'
+                                        )}</p></div>
                                     </div>
                                 </div>`;
-                            }).join('')}
+                              })
+                              .join('')}
                         </div>
                     </div>
 
@@ -2106,14 +2496,25 @@ export function showSaleDetailModal(sale) {
                     <div>
                         <h4 class="font-bold text-lg mb-2 text-gray-700">Resumen Financiero</h4>
                         <div class="space-y-2 bg-white p-4 rounded-lg border">
-                             <div class="flex justify-between"><span>Subtotal:</span> <span>${formatCurrency(sale.subtotal, 'USD')}</span></div>
-                             <div class="flex justify-between text-lg font-bold border-t pt-2 mt-2"><span>TOTAL VENTA:</span> <span>${formatCurrency(sale.total, 'USD')}</span></div>
+                             <div class="flex justify-between"><span>Subtotal:</span> <span>${formatCurrency(
+                               sale.subtotal,
+                               'USD'
+                             )}</span></div>
+                             <div class="flex justify-between text-lg font-bold border-t pt-2 mt-2"><span>TOTAL VENTA:</span> <span>${formatCurrency(
+                               sale.total,
+                               'USD'
+                             )}</span></div>
                         </div>
                         <div class="space-y-2 bg-green-50 p-4 rounded-lg mt-3 border border-green-200">
-                             <div class="flex justify-between"><span>Costo de Venta:</span> <span>-${formatCurrency(itemsCost, 'USD')}</span></div>
+                             <div class="flex justify-between"><span>Costo de Venta:</span> <span>-${formatCurrency(
+                               itemsCost,
+                               'USD'
+                             )}</span></div>
                              <div class="flex justify-between text-xl font-extrabold border-t-2 border-green-300 pt-2 mt-2">
                                  <span>GANANCIA:</span>
-                                 <span class="${netProfit >= 0 ? 'text-green-700' : 'text-red-700'}">${formatCurrency(netProfit, 'USD')}</span>
+                                 <span class="${
+                                   netProfit >= 0 ? 'text-green-700' : 'text-red-700'
+                                 }">${formatCurrency(netProfit, 'USD')}</span>
                              </div>
                         </div>
                     </div>
@@ -2122,9 +2523,27 @@ export function showSaleDetailModal(sale) {
                     <div>
                         <h4 class="font-bold text-lg mb-2 text-gray-700">Detalles Adicionales</h4>
                         <div class="space-y-3 bg-white p-4 rounded-lg border">
-                            <p><strong>Pagos (USD):</strong> ${Object.entries(sale.paymentBreakdownUSD || {}).map(([key, val]) => `${key.replace('_in_usd', '').toUpperCase()}: ${formatCurrency(val, 'USD')}`).join(' | ')}</p>
-                            ${sale.tradeInValueUSD ? `<div class="bg-blue-100 p-2 rounded-md mt-2 border border-blue-200"><p><strong>Canje:</strong> ${escapeHTML(sale.tradeIn.model)} por ${formatCurrency(sale.tradeInValueUSD, 'USD')}</p></div>` : ''}
-                            <p class="mt-2"><strong>Notas:</strong> ${escapeHTML(sale.notes || 'Sin notas')}</p>
+                            <p><strong>Pagos (USD):</strong> ${Object.entries(
+                              sale.paymentBreakdownUSD || {}
+                            )
+                              .map(
+                                ([key, val]) =>
+                                  `${key.replace('_in_usd', '').toUpperCase()}: ${formatCurrency(
+                                    val,
+                                    'USD'
+                                  )}`
+                              )
+                              .join(' | ')}</p>
+                            ${
+                              sale.tradeInValueUSD
+                                ? `<div class="bg-blue-100 p-2 rounded-md mt-2 border border-blue-200"><p><strong>Canje:</strong> ${escapeHTML(
+                                    sale.tradeIn.model
+                                  )} por ${formatCurrency(sale.tradeInValueUSD, 'USD')}</p></div>`
+                                : ''
+                            }
+                            <p class="mt-2"><strong>Notas:</strong> ${escapeHTML(
+                              sale.notes || 'Sin notas'
+                            )}</p>
                         </div>
                     </div>
                 </div>
@@ -2135,50 +2554,81 @@ export function showSaleDetailModal(sale) {
         </div>
     `;
 
-    modalContainer.innerHTML = modalHTML;
+  modalContainer.innerHTML = modalHTML;
 
-    const modalBackdrop = modalContainer.querySelector('#sale-detail-modal-backdrop');
-    modalBackdrop?.addEventListener('click', e => { 
-        if (e.target.id === 'sale-detail-modal-backdrop' || e.target.closest('.close-modal-btn')) { 
-            modalContainer.innerHTML = ''; 
-        }
+  const modalBackdrop = modalContainer.querySelector('#sale-detail-modal-backdrop');
+  modalBackdrop?.addEventListener('click', (e) => {
+    if (e.target.id === 'sale-detail-modal-backdrop' || e.target.closest('.close-modal-btn')) {
+      modalContainer.innerHTML = '';
+    }
 
-        const itemToggle = e.target.closest('.sold-item-toggle');
-        if (itemToggle) {
-            const details = itemToggle.nextElementSibling;
-            const icon = itemToggle.querySelector('.fa-chevron-down');
-            details.classList.toggle('hidden');
-            icon.classList.toggle('rotate-180');
-        }
-    }); 
+    const itemToggle = e.target.closest('.sold-item-toggle');
+    if (itemToggle) {
+      const details = itemToggle.nextElementSibling;
+      const icon = itemToggle.querySelector('.fa-chevron-down');
+      details.classList.toggle('hidden');
+      icon.classList.toggle('rotate-180');
+    }
+  });
 }
-export function showClientHistoryModal(clientId, state) { 
-    const client = state.clients.find(c => c.id === clientId); 
-    if (!client) return; 
-    const clientSales = state.sales.filter(s => s.clientId === clientId); 
-    const salesHtml = clientSales.length > 0 ? clientSales.map(sale => { 
-        const profitUSD = (sale.items || []).reduce((sum, item) => sum + (item.salePrice - item.phoneCost), 0); 
-        return `<div class="bg-gray-100 p-3 rounded-md border"><p class="font-semibold">${(sale.items || []).map(i => i.model).join(', ')} - ${formatDate(sale.saleDate)}</p><p class="text-sm">Venta: ${formatCurrency(sale.total, 'USD')} | Ganancia: ${formatCurrency(profitUSD, 'USD')}</p></div>`; 
-    }).join('') : '<p class="text-gray-500">Este cliente no tiene compras registradas.</p>'; 
-    const content = `<div class="space-y-4 text-left"><p><strong>Teléfono:</strong> ${escapeHTML(client.phone || 'N/A')}</p><p><strong>Detalles:</strong> ${escapeHTML(client.details || 'N/A')}</p><hr><h4 class="font-semibold text-lg">Historial de Compras</h4><div class="space-y-2 max-h-64 overflow-y-auto">${salesHtml}</div></div>`; 
-    const footer = `<div class="text-center mt-6"><button class="btn-primary close-modal-btn px-4 py-2">Cerrar</button></div>`;
-    showModal(content, `Historial de ${client.name}`, footer); 
+export function showClientHistoryModal(clientId, state) {
+  const client = state.clients.find((c) => c.id === clientId);
+  if (!client) return;
+  const clientSales = state.sales.filter((s) => s.clientId === clientId);
+  const salesHtml =
+    clientSales.length > 0
+      ? clientSales
+          .map((sale) => {
+            const profitUSD = (sale.items || []).reduce(
+              (sum, item) => sum + (item.salePrice - item.phoneCost),
+              0
+            );
+            return `<div class="bg-gray-100 p-3 rounded-md border"><p class="font-semibold">${(
+              sale.items || []
+            )
+              .map((i) => i.model)
+              .join(', ')} - ${formatDate(
+              sale.saleDate
+            )}</p><p class="text-sm">Venta: ${formatCurrency(
+              sale.total,
+              'USD'
+            )} | Ganancia: ${formatCurrency(profitUSD, 'USD')}</p></div>`;
+          })
+          .join('')
+      : '<p class="text-gray-500">Este cliente no tiene compras registradas.</p>';
+  const content = `<div class="space-y-4 text-left"><p><strong>Teléfono:</strong> ${escapeHTML(
+    client.phone || 'N/A'
+  )}</p><p><strong>Detalles:</strong> ${escapeHTML(
+    client.details || 'N/A'
+  )}</p><hr><h4 class="font-semibold text-lg">Historial de Compras</h4><div class="space-y-2 max-h-64 overflow-y-auto">${salesHtml}</div></div>`;
+  const footer = `<div class="text-center mt-6"><button class="btn-primary close-modal-btn px-4 py-2">Cerrar</button></div>`;
+  showModal(content, `Historial de ${client.name}`, footer);
 }
 
 export function showItemDetailsModal(item) {
-    if (!item) return;
+  if (!item) return;
 
-    const attributesHTML = (item.attributes && Object.keys(item.attributes).length > 0)
-        ? Object.entries(item.attributes)
-            .map(([key, value]) => `<div class="flex justify-between py-1"><span class="text-gray-600">${escapeHTML(key)}:</span><span class="font-semibold">${escapeHTML(value)}</span></div>`)
-            .join('')
-        : '<p class="text-gray-500">No hay atributos específicos para este producto.</p>';
+  const attributesHTML =
+    item.attributes && Object.keys(item.attributes).length > 0
+      ? Object.entries(item.attributes)
+          .map(
+            ([key, value]) =>
+              `<div class="flex justify-between py-1"><span class="text-gray-600">${escapeHTML(
+                key
+              )}:</span><span class="font-semibold">${escapeHTML(value)}</span></div>`
+          )
+          .join('')
+      : '<p class="text-gray-500">No hay atributos específicos para este producto.</p>';
 
-    const content = `
+  const content = `
         <div class="space-y-3">
             <div class="bg-gray-100 p-3 rounded-lg">
-                <div class="flex justify-between text-lg"><span class="font-bold">${escapeHTML(item.model)}</span><span class="text-gray-500">${escapeHTML(item.category)}</span></div>
-                <div class="text-sm text-center text-gray-500 font-mono">${escapeHTML(item.serialNumber)}</div>
+                <div class="flex justify-between text-lg"><span class="font-bold">${escapeHTML(
+                  item.model
+                )}</span><span class="text-gray-500">${escapeHTML(item.category)}</span></div>
+                <div class="text-sm text-center text-gray-500 font-mono">${escapeHTML(
+                  item.serialNumber
+                )}</div>
             </div>
             <div class="border-t pt-3">
                 <h4 class="font-semibold mb-2">Atributos</h4>
@@ -2186,129 +2636,172 @@ export function showItemDetailsModal(item) {
             </div>
              <div class="border-t pt-3">
                 <h4 class="font-semibold mb-2">Detalles Adicionales</h4>
-                <p class="text-sm text-gray-600">${escapeHTML(item.details || 'Sin detalles adicionales.')}</p>
+                <p class="text-sm text-gray-600">${escapeHTML(
+                  item.details || 'Sin detalles adicionales.'
+                )}</p>
             </div>
         </div>
     `;
 
-    showModal(content, "Detalles del Producto");
+  showModal(content, 'Detalles del Producto');
 }
-function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate, endDate) { 
-    const ctxEl = document.getElementById('performance-chart'); 
-    if (!ctxEl) return; 
-    const ctx = ctxEl.getContext('2d'); 
-    if (charts.performance) charts.performance.destroy(); 
-    const timeUnit = (endDate - startDate) / (1000 * 3600 * 24) > 35 ? 'month' : 'day'; 
-    const getGroupKey = (date) => { 
-        const year = date.getFullYear(); 
-        const month = String(date.getMonth() + 1).padStart(2, '0'); 
-        if (timeUnit === 'day') { 
-            const day = String(date.getDate()).padStart(2, '0'); 
-            return `${year}-${month}-${day}`; 
-        } 
-        return `${year}-${month}`; 
-    }; 
-    const groupedData = {}; 
-    let currentDate = new Date(startDate); 
-    while (currentDate <= endDate) { 
-        const key = getGroupKey(currentDate); 
-        if (!groupedData[key]) { 
-            const labelFormat = { 
-                day: (d) => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }), 
-                month: (d) => d.toLocaleString('es-ES', { month: 'short', year: 'numeric' }) 
-            }; 
-            groupedData[key] = { label: labelFormat[timeUnit](new Date(currentDate)), income: 0, expenses: 0, grossProfit: 0, date: new Date(currentDate) }; 
-        } 
-        if (timeUnit === 'day') { 
-            currentDate.setDate(currentDate.getDate() + 1); 
-        } else { 
-            currentDate.setMonth(currentDate.getMonth() + 1); 
-        } 
-    } 
-    salesInPeriod.forEach(sale => {
-        let saleDate;
-        if (sale.soldAt && sale.soldAt.toDate) saleDate = sale.soldAt.toDate();
-        else if (sale.saleDate) saleDate = new Date(sale.saleDate + 'T12:00:00Z');
-        else return;
-        const key = getGroupKey(saleDate); 
-        if (groupedData[key]) { 
-            groupedData[key].income += (sale.total || 0); 
-            const itemsCost = (sale.items || []).reduce((sum, i) => sum + (i.phoneCost || 0), 0); 
-            groupedData[key].grossProfit += ((sale.total || 0) - itemsCost); 
-        } 
-    }); 
-    dailyExpensesInPeriod.forEach(expense => { 
-        const expenseDate = new Date(expense.date + 'T12:00:00Z'); 
-        const key = getGroupKey(expenseDate); 
-        if (groupedData[key]) { 
-            groupedData[key].expenses += (expense.amount || 0); 
-        } 
-    }); 
-    const sortedGroups = Object.values(groupedData).sort((a, b) => a.date - b.date); 
-    charts.performance = new Chart(ctx, { 
-        type: 'bar', 
-        data: { 
-            labels: sortedGroups.map(g => g.label), 
-            datasets: [ 
-                { label: 'Ingresos', data: sortedGroups.map(g => g.income), backgroundColor: 'rgba(52, 199, 89, 0.7)', order: 1 }, 
-                { label: 'Gastos', data: sortedGroups.map(g => g.expenses), backgroundColor: 'rgba(255, 59, 48, 0.7)', order: 1 }, 
-                { label: 'Ganancia Bruta', data: sortedGroups.map(g => g.grossProfit), borderColor: '#00aaff', borderWidth: 2, type: 'line', tension: 0.3, fill: false, order: 0 }, 
-                { label: 'Ganancia Neta', data: sortedGroups.map(g => g.grossProfit - g.expenses), borderColor: '#5856d6', borderWidth: 2, type: 'line', tension: 0.3, fill: false, order: 0 } 
-            ] 
-        }, 
-        options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } } 
-    }); 
-} 
+function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate, endDate) {
+  const ctxEl = document.getElementById('performance-chart');
+  if (!ctxEl) return;
+  const ctx = ctxEl.getContext('2d');
+  if (charts.performance) charts.performance.destroy();
+  const timeUnit = (endDate - startDate) / (1000 * 3600 * 24) > 35 ? 'month' : 'day';
+  const getGroupKey = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    if (timeUnit === 'day') {
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    return `${year}-${month}`;
+  };
+  const groupedData = {};
+  let currentDate = new Date(startDate);
+  while (currentDate <= endDate) {
+    const key = getGroupKey(currentDate);
+    if (!groupedData[key]) {
+      const labelFormat = {
+        day: (d) => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+        month: (d) => d.toLocaleString('es-ES', { month: 'short', year: 'numeric' }),
+      };
+      groupedData[key] = {
+        label: labelFormat[timeUnit](new Date(currentDate)),
+        income: 0,
+        expenses: 0,
+        grossProfit: 0,
+        date: new Date(currentDate),
+      };
+    }
+    if (timeUnit === 'day') {
+      currentDate.setDate(currentDate.getDate() + 1);
+    } else {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+  }
+  salesInPeriod.forEach((sale) => {
+    let saleDate;
+    if (sale.soldAt && sale.soldAt.toDate) saleDate = sale.soldAt.toDate();
+    else if (sale.saleDate) saleDate = new Date(sale.saleDate + 'T12:00:00Z');
+    else return;
+    const key = getGroupKey(saleDate);
+    if (groupedData[key]) {
+      groupedData[key].income += sale.total || 0;
+      const itemsCost = (sale.items || []).reduce((sum, i) => sum + (i.phoneCost || 0), 0);
+      groupedData[key].grossProfit += (sale.total || 0) - itemsCost;
+    }
+  });
+  dailyExpensesInPeriod.forEach((expense) => {
+    const expenseDate = new Date(expense.date + 'T12:00:00Z');
+    const key = getGroupKey(expenseDate);
+    if (groupedData[key]) {
+      groupedData[key].expenses += expense.amount || 0;
+    }
+  });
+  const sortedGroups = Object.values(groupedData).sort((a, b) => a.date - b.date);
+  charts.performance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sortedGroups.map((g) => g.label),
+      datasets: [
+        {
+          label: 'Ingresos',
+          data: sortedGroups.map((g) => g.income),
+          backgroundColor: 'rgba(52, 199, 89, 0.7)',
+          order: 1,
+        },
+        {
+          label: 'Gastos',
+          data: sortedGroups.map((g) => g.expenses),
+          backgroundColor: 'rgba(255, 59, 48, 0.7)',
+          order: 1,
+        },
+        {
+          label: 'Ganancia Bruta',
+          data: sortedGroups.map((g) => g.grossProfit),
+          borderColor: '#00aaff',
+          borderWidth: 2,
+          type: 'line',
+          tension: 0.3,
+          fill: false,
+          order: 0,
+        },
+        {
+          label: 'Ganancia Neta',
+          data: sortedGroups.map((g) => g.grossProfit - g.expenses),
+          borderColor: '#5856d6',
+          borderWidth: 2,
+          type: 'line',
+          tension: 0.3,
+          fill: false,
+          order: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top' } },
+      scales: { y: { beginAtZero: true } },
+    },
+  });
+}
 
 function renderExpenseBreakdownChart(saleCosts, executedFixed, daily) {
-    const chartContainer = document.getElementById('expense-chart-container');
-    if (!chartContainer) return;
+  const chartContainer = document.getElementById('expense-chart-container');
+  if (!chartContainer) return;
 
-    chartContainer.innerHTML = '<canvas id="expense-breakdown-chart"></canvas>';
-    const ctxEl = document.getElementById('expense-breakdown-chart');
-    if (!ctxEl) return;
+  chartContainer.innerHTML = '<canvas id="expense-breakdown-chart"></canvas>';
+  const ctxEl = document.getElementById('expense-breakdown-chart');
+  if (!ctxEl) return;
 
-    const totalExpenses = executedFixed + daily;
-    if (totalExpenses === 0) {
-        if (charts.expenseBreakdown) {
-            charts.expenseBreakdown.destroy();
-            charts.expenseBreakdown = null;
-        }
-        chartContainer.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400">No hay datos de gastos para el período.</div>';
-        const summaryContainer = document.getElementById('expense-breakdown-summary');
-        if (summaryContainer) summaryContainer.innerHTML = '';
-        return;
-    }
-
+  const totalExpenses = executedFixed + daily;
+  if (totalExpenses === 0) {
     if (charts.expenseBreakdown) {
-        charts.expenseBreakdown.destroy();
+      charts.expenseBreakdown.destroy();
+      charts.expenseBreakdown = null;
     }
-
-    charts.expenseBreakdown = new Chart(ctxEl.getContext('2d'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Pagos Fijos', 'Gastos Diarios'],
-            datasets: [{
-                data: [executedFixed, daily],
-                backgroundColor: ['#ff3b30', '#ffcc00'],
-                borderColor: '#ffffff',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                }
-            }
-        }
-    });
-
+    chartContainer.innerHTML =
+      '<div class="flex items-center justify-center h-full text-gray-400">No hay datos de gastos para el período.</div>';
     const summaryContainer = document.getElementById('expense-breakdown-summary');
-    if (summaryContainer) {
-        summaryContainer.innerHTML = `
+    if (summaryContainer) summaryContainer.innerHTML = '';
+    return;
+  }
+
+  if (charts.expenseBreakdown) {
+    charts.expenseBreakdown.destroy();
+  }
+
+  charts.expenseBreakdown = new Chart(ctxEl.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Pagos Fijos', 'Gastos Diarios'],
+      datasets: [
+        {
+          data: [executedFixed, daily],
+          backgroundColor: ['#ff3b30', '#ffcc00'],
+          borderColor: '#ffffff',
+          borderWidth: 2,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+      },
+    },
+  });
+
+  const summaryContainer = document.getElementById('expense-breakdown-summary');
+  if (summaryContainer) {
+    summaryContainer.innerHTML = `
             <ul class="space-y-2 text-sm">
                 <li class="flex justify-between items-center py-1">
                     <span><i class="fas fa-circle mr-2" style="color: #ff3b30;"></i>Pagos Fijos</span>
@@ -2320,307 +2813,422 @@ function renderExpenseBreakdownChart(saleCosts, executedFixed, daily) {
                 </li>
             </ul>
         `;
-    }
+  }
 }
 
-function renderNetProfitCategoryChart(salesInPeriod) { 
-    const ctxEl = document.getElementById('net-profit-category-chart'); 
-    if (!ctxEl) return; 
-    const ctx = ctxEl.getContext('2d'); 
-    const profitsByCat = {}; 
-    salesInPeriod.forEach(sale => { 
-        (sale.items || []).forEach(item => { 
-            const category = item.category || 'Sin Categoría'; 
-            if (!profitsByCat[category]) profitsByCat[category] = 0; 
-            const itemNetProfit = (item.salePrice || 0) - (item.phoneCost || 0); 
-            profitsByCat[category] += itemNetProfit; 
-        }); 
-    }); 
-    const labels = Object.keys(profitsByCat); 
-    const netProfitData = labels.map(label => profitsByCat[label]); 
-    if (charts.netProfitCategory) charts.netProfitCategory.destroy(); 
-    charts.netProfitCategory = new Chart(ctx, { 
-        type: 'bar', 
-        data: { 
-            labels: labels, 
-            datasets: [
-                { label: 'Ganancia Neta', data: netProfitData, backgroundColor: 'rgba(0, 122, 255, 0.7)', borderColor: 'rgba(0, 122, 255, 1)', borderWidth: 1 }
-            ] 
-        }, 
-        options: { indexAxis: 'y', responsive: true, plugins: { legend: { position: 'top' } }, scales: { x: { beginAtZero: true } } } 
-    }); 
-} 
-function renderSalesMetricsChart(salesInPeriod) { 
-    const ctxEl = document.getElementById('sales-metrics-chart'); 
-    if (!ctxEl) return; 
-    const ctx = ctxEl.getContext('2d'); 
-    const salesCount = salesInPeriod.length; 
-    let totalNetProfit = 0; 
-    const totalSalesValue = salesInPeriod.reduce((sum, s) => sum + (s.total || 0), 0); 
-    salesInPeriod.forEach(sale => { 
-        const itemsCost = (sale.items || []).reduce((itemSum, i) => itemSum + (i.phoneCost || 0), 0); 
-        const saleNetProfit = (sale.total || 0) - itemsCost; 
-        totalNetProfit += saleNetProfit; 
-    }); 
-    const avgSaleValue = salesCount > 0 ? totalSalesValue / salesCount : 0; 
-    const avgNetProfit = salesCount > 0 ? totalNetProfit / salesCount : 0; 
-    if (charts.salesMetrics) charts.salesMetrics.destroy(); 
-    charts.salesMetrics = new Chart(ctx, { 
-        type: 'bar', 
-        data: { 
-            labels: ['Ventas Totales', 'Ganancia Neta Total', 'Venta Promedio', 'Ganancia Neta Promedio'], 
-            datasets: [{ 
-                label: 'Métricas (USD)', 
-                data: [totalSalesValue, totalNetProfit, avgSaleValue, avgNetProfit], 
-                backgroundColor: [ 'rgba(0, 122, 255, 0.7)', 'rgba(88, 86, 214, 0.7)', 'rgba(0, 122, 255, 0.5)', 'rgba(88, 86, 214, 0.5)' ] 
-            }] 
-        }, 
-        options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 10 } } } } } 
-    }); 
+function renderNetProfitCategoryChart(salesInPeriod) {
+  const ctxEl = document.getElementById('net-profit-category-chart');
+  if (!ctxEl) return;
+  const ctx = ctxEl.getContext('2d');
+  const profitsByCat = {};
+  salesInPeriod.forEach((sale) => {
+    (sale.items || []).forEach((item) => {
+      const category = item.category || 'Sin Categoría';
+      if (!profitsByCat[category]) profitsByCat[category] = 0;
+      const itemNetProfit = (item.salePrice || 0) - (item.phoneCost || 0);
+      profitsByCat[category] += itemNetProfit;
+    });
+  });
+  const labels = Object.keys(profitsByCat);
+  const netProfitData = labels.map((label) => profitsByCat[label]);
+  if (charts.netProfitCategory) charts.netProfitCategory.destroy();
+  charts.netProfitCategory = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Ganancia Neta',
+          data: netProfitData,
+          backgroundColor: 'rgba(0, 122, 255, 0.7)',
+          borderColor: 'rgba(0, 122, 255, 1)',
+          borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: { legend: { position: 'top' } },
+      scales: { x: { beginAtZero: true } },
+    },
+  });
+}
+function renderSalesMetricsChart(salesInPeriod) {
+  const ctxEl = document.getElementById('sales-metrics-chart');
+  if (!ctxEl) return;
+  const ctx = ctxEl.getContext('2d');
+  const salesCount = salesInPeriod.length;
+  let totalNetProfit = 0;
+  const totalSalesValue = salesInPeriod.reduce((sum, s) => sum + (s.total || 0), 0);
+  salesInPeriod.forEach((sale) => {
+    const itemsCost = (sale.items || []).reduce((itemSum, i) => itemSum + (i.phoneCost || 0), 0);
+    const saleNetProfit = (sale.total || 0) - itemsCost;
+    totalNetProfit += saleNetProfit;
+  });
+  const avgSaleValue = salesCount > 0 ? totalSalesValue / salesCount : 0;
+  const avgNetProfit = salesCount > 0 ? totalNetProfit / salesCount : 0;
+  if (charts.salesMetrics) charts.salesMetrics.destroy();
+  charts.salesMetrics = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Ventas Totales', 'Ganancia Neta Total', 'Venta Promedio', 'Ganancia Neta Promedio'],
+      datasets: [
+        {
+          label: 'Métricas (USD)',
+          data: [totalSalesValue, totalNetProfit, avgSaleValue, avgNetProfit],
+          backgroundColor: [
+            'rgba(0, 122, 255, 0.7)',
+            'rgba(88, 86, 214, 0.7)',
+            'rgba(0, 122, 255, 0.5)',
+            'rgba(88, 86, 214, 0.5)',
+          ],
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { font: { size: 10 } } } },
+    },
+  });
 }
 
 function renderCapitalGrowthChart(capitalHistory, startDate, endDate) {
-    const ctxEl = document.getElementById('capital-growth-chart');
-    if (!ctxEl) return;
-    const ctx = ctxEl.getContext('2d');
+  const ctxEl = document.getElementById('capital-growth-chart');
+  if (!ctxEl) return;
+  const ctx = ctxEl.getContext('2d');
 
-    if (charts.capitalGrowth) {
-        charts.capitalGrowth.destroy();
-    }
+  if (charts.capitalGrowth) {
+    charts.capitalGrowth.destroy();
+  }
 
-    if (!capitalHistory || capitalHistory.length === 0) {
-        return;
-    }
+  if (!capitalHistory || capitalHistory.length === 0) {
+    return;
+  }
 
-    const filteredHistory = capitalHistory.filter(entry => {
-        if (!entry.timestamp || !entry.timestamp.toDate) return false;
-        const entryDate = entry.timestamp.toDate();
-        return entryDate >= startDate && entryDate <= endDate;
-    });
+  const filteredHistory = capitalHistory.filter((entry) => {
+    if (!entry.timestamp || !entry.timestamp.toDate) return false;
+    const entryDate = entry.timestamp.toDate();
+    return entryDate >= startDate && entryDate <= endDate;
+  });
 
-    if (filteredHistory.length === 0) {
-        return;
-    }
+  if (filteredHistory.length === 0) {
+    return;
+  }
 
-    charts.capitalGrowth = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: filteredHistory.map(entry => entry.timestamp.toDate().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })),
-            datasets: [{
-                label: 'Capital Total (USD)',
-                data: filteredHistory.map(entry => entry.totalCapital),
-                borderColor: '#16a34a',
-                backgroundColor: 'rgba(22, 163, 74, 0.1)',
-                fill: true,
-                tension: 0.1,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-            }]
+  charts.capitalGrowth = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: filteredHistory.map((entry) =>
+        entry.timestamp
+          .toDate()
+          .toLocaleDateString('es-AR', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+      ),
+      datasets: [
+        {
+          label: 'Capital Total (USD)',
+          data: filteredHistory.map((entry) => entry.totalCapital),
+          borderColor: '#16a34a',
+          backgroundColor: 'rgba(22, 163, 74, 0.1)',
+          fill: true,
+          tension: 0.1,
+          pointRadius: 4,
+          pointHoverRadius: 6,
         },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        title: function(context) {
-                            const entry = filteredHistory[context[0].dataIndex];
-                            return `${entry.timestamp.toDate().toLocaleString('es-AR')} - ${entry.reason}`;
-                        },
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += formatCurrency(context.parsed.y, 'USD');
-                            }
-                            return label;
-                        }
-                    }
-                }
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          callbacks: {
+            title: function (context) {
+              const entry = filteredHistory[context[0].dataIndex];
+              return `${entry.timestamp.toDate().toLocaleString('es-AR')} - ${entry.reason}`;
             },
-            scales: {
-                y: {
-                    beginAtZero: false,
-                    ticks: {
-                        callback: function(value, index, values) {
-                            return formatCurrency(value, 'USD');
-                        }
-                    }
-                }
-            }
-        }
-    });
+            label: function (context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (context.parsed.y !== null) {
+                label += formatCurrency(context.parsed.y, 'USD');
+              }
+              return label;
+            },
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: false,
+          ticks: {
+            callback: function (value, index, values) {
+              return formatCurrency(value, 'USD');
+            },
+          },
+        },
+      },
+    },
+  });
 }
 
 export function renderSalesAnalysis(state) {
-    const { sales, stock, clients, ui } = state;
-    const { analysisPeriod, analysisCustomStartDate, analysisCustomEndDate } = ui.analysis;
-    const container = document.getElementById('analysis-results-container');
-    const selector = document.getElementById('analysis-selector');
+  const { sales, stock, clients, ui } = state;
+  const { analysisPeriod, analysisCustomStartDate, analysisCustomEndDate } = ui.analysis;
+  const container = document.getElementById('analysis-results-container');
+  const selector = document.getElementById('analysis-selector');
 
-    if (!container || !selector || !sales || !stock || !clients) return;
+  if (!container || !selector || !sales || !stock || !clients) return;
 
-    document.querySelectorAll('.filter-btn[data-hub="analysis"]').forEach(btn => btn.classList.toggle('filter-btn-active', btn.dataset.period === analysisPeriod));
-    const customControls = document.getElementById('analysis-custom-date-range-controls');
-    if (customControls) customControls.classList.toggle('hidden', analysisPeriod !== 'custom');
+  document
+    .querySelectorAll('.filter-btn[data-hub="analysis"]')
+    .forEach((btn) =>
+      btn.classList.toggle('filter-btn-active', btn.dataset.period === analysisPeriod)
+    );
+  const customControls = document.getElementById('analysis-custom-date-range-controls');
+  if (customControls) customControls.classList.toggle('hidden', analysisPeriod !== 'custom');
 
-    const now = new Date();
-    let startDate, endDate;
-    switch (analysisPeriod) {
-        case 'today':
-            startDate = new Date(); startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(); endDate.setHours(23, 59, 59, 999);
-            break;
-        case 'week':
-            const day = now.getDay();
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + (day === 0 ? -6 : 1));
-            startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(); endDate.setHours(23, 59, 59, 999);
-            break;
-        case 'month':
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(); endDate.setHours(23, 59, 59, 999);
-            break;
-        case 'year':
-            startDate = new Date(now.getFullYear(), 0, 1);
-            startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(now.getFullYear(), 11, 31);
-            endDate.setHours(23, 59, 59, 999);
-            break;
-        case 'custom':
-            startDate = analysisCustomStartDate ? new Date(analysisCustomStartDate + 'T00:00:00') : new Date(0);
-            endDate = analysisCustomEndDate ? new Date(analysisCustomEndDate + 'T23:59:59') : new Date();
-            break;
-        default: 
-            startDate = new Date(0);
-            endDate = new Date();
-    }
+  const now = new Date();
+  let startDate, endDate;
+  switch (analysisPeriod) {
+    case 'today':
+      startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'week':
+      const day = now.getDay();
+      startDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - day + (day === 0 ? -6 : 1)
+      );
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'month':
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'year':
+      startDate = new Date(now.getFullYear(), 0, 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), 11, 31);
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'custom':
+      startDate = analysisCustomStartDate
+        ? new Date(analysisCustomStartDate + 'T00:00:00')
+        : new Date(0);
+      endDate = analysisCustomEndDate ? new Date(analysisCustomEndDate + 'T23:59:59') : new Date();
+      break;
+    default:
+      startDate = new Date(0);
+      endDate = new Date();
+  }
 
-    const salesInPeriod = sales.filter(s => {
-        const saleDate = s.soldAt?.toDate() || new Date(s.saleDate + 'T12:00:00Z');
-        return saleDate >= startDate && saleDate <= endDate;
-    });
+  const salesInPeriod = sales.filter((s) => {
+    const saleDate = s.soldAt?.toDate() || new Date(s.saleDate + 'T12:00:00Z');
+    return saleDate >= startDate && saleDate <= endDate;
+  });
 
-    const analysisType = selector.value;
-    let contentHTML = '';
+  const analysisType = selector.value;
+  let contentHTML = '';
 
-    switch (analysisType) {
-        case 'sales':
-            if (salesInPeriod.length === 0) {
-                contentHTML = '<p class="text-center text-gray-500">No hay ventas en el período seleccionado.</p>';
-                break;
-            }
-            const totalRevenue = salesInPeriod.reduce((sum, s) => sum + s.total, 0);
-            const totalNetProfit = salesInPeriod.reduce((sum, s) => {
-                const itemsCost = (s.items || []).reduce((cost, i) => cost + (i.phoneCost || 0), 0);
-                return sum + (s.total - itemsCost);
-            }, 0);
-            
-            const salesByCategory = salesInPeriod.flatMap(s => s.items).reduce((acc, item) => {
-                const category = item.category || 'Sin Categoría';
-                if (!acc[category]) {
-                    acc[category] = { count: 0, revenue: 0 };
-                }
-                acc[category].count++;
-                acc[category].revenue += item.salePrice || 0;
-                return acc;
-            }, {});
+  switch (analysisType) {
+    case 'sales':
+      if (salesInPeriod.length === 0) {
+        contentHTML =
+          '<p class="text-center text-gray-500">No hay ventas en el período seleccionado.</p>';
+        break;
+      }
+      const totalRevenue = salesInPeriod.reduce((sum, s) => sum + s.total, 0);
+      const totalNetProfit = salesInPeriod.reduce((sum, s) => {
+        const itemsCost = (s.items || []).reduce((cost, i) => cost + (i.phoneCost || 0), 0);
+        return sum + (s.total - itemsCost);
+      }, 0);
 
-            contentHTML = `
+      const salesByCategory = salesInPeriod
+        .flatMap((s) => s.items)
+        .reduce((acc, item) => {
+          const category = item.category || 'Sin Categoría';
+          if (!acc[category]) {
+            acc[category] = { count: 0, revenue: 0 };
+          }
+          acc[category].count++;
+          acc[category].revenue += item.salePrice || 0;
+          return acc;
+        }, {});
+
+      contentHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Ventas Totales</p><p class="text-2xl font-bold">${salesInPeriod.length}</p></div>
-                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Facturación Total</p><p class="text-2xl font-bold">${formatCurrency(totalRevenue, 'USD')}</p></div>
-                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Ganancia Neta Total</p><p class="text-2xl font-bold text-green-600">${formatCurrency(totalNetProfit, 'USD')}</p></div>
+                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Ventas Totales</p><p class="text-2xl font-bold">${
+                      salesInPeriod.length
+                    }</p></div>
+                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Facturación Total</p><p class="text-2xl font-bold">${formatCurrency(
+                      totalRevenue,
+                      'USD'
+                    )}</p></div>
+                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Ganancia Neta Total</p><p class="text-2xl font-bold text-green-600">${formatCurrency(
+                      totalNetProfit,
+                      'USD'
+                    )}</p></div>
                 </div>
                 <h4 class="text-lg font-semibold mb-2">Ventas por Categoría</h4>
                 <div class="overflow-x-auto"><table class="min-w-full text-sm">
                     <thead class="bg-gray-100"><tr>
                         <th class="p-2 text-left">Categoría</th><th class="p-2 text-center">Unidades</th><th class="p-2 text-right">Facturación</th>
                     </tr></thead>
-                    <tbody>${Object.entries(salesByCategory).map(([cat, data]) => `
-                        <tr class="border-b"><td class="p-2 font-semibold">${cat}</td><td class="p-2 text-center">${data.count}</td><td class="p-2 text-right">${formatCurrency(data.revenue, 'USD')}</td></tr>
-                    `).join('')}</tbody>
+                    <tbody>${Object.entries(salesByCategory)
+                      .map(
+                        ([cat, data]) => `
+                        <tr class="border-b"><td class="p-2 font-semibold">${cat}</td><td class="p-2 text-center">${
+                          data.count
+                        }</td><td class="p-2 text-right">${formatCurrency(
+                          data.revenue,
+                          'USD'
+                        )}</td></tr>
+                    `
+                      )
+                      .join('')}</tbody>
                 </table></div>
             `;
-            break;
+      break;
 
-        case 'stock':
-            const totalStockValue = stock.reduce((sum, item) => sum + (item.phoneCost || 0), 0);
-            const stockByCategory = stock.reduce((acc, item) => {
-                const category = item.category || 'Sin Categoría';
-                if (!acc[category]) {
-                    acc[category] = { count: 0, value: 0 };
-                }
-                acc[category].count++;
-                acc[category].value += (item.phoneCost || 0);
-                return acc;
-            }, {});
+    case 'stock':
+      const totalStockValue = stock.reduce((sum, item) => sum + (item.phoneCost || 0), 0);
+      const stockByCategory = stock.reduce((acc, item) => {
+        const category = item.category || 'Sin Categoría';
+        if (!acc[category]) {
+          acc[category] = { count: 0, value: 0 };
+        }
+        acc[category].count++;
+        acc[category].value += item.phoneCost || 0;
+        return acc;
+      }, {});
 
-            contentHTML = `
+      contentHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Unidades en Stock</p><p class="text-2xl font-bold">${stock.length}</p></div>
-                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Valor Total del Stock</p><p class="text-2xl font-bold text-blue-600">${formatCurrency(totalStockValue, 'USD')}</p></div>
+                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Unidades en Stock</p><p class="text-2xl font-bold">${
+                      stock.length
+                    }</p></div>
+                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Valor Total del Stock</p><p class="text-2xl font-bold text-blue-600">${formatCurrency(
+                      totalStockValue,
+                      'USD'
+                    )}</p></div>
                 </div>
                 <h4 class="text-lg font-semibold mb-2">Stock por Categoría</h4>
                 <div class="overflow-x-auto"><table class="min-w-full text-sm">
                     <thead class="bg-gray-100"><tr>
                         <th class="p-2 text-left">Categoría</th><th class="p-2 text-center">Unidades</th><th class="p-2 text-right">Valor (USD)</th>
                     </tr></thead>
-                    <tbody>${Object.entries(stockByCategory).map(([cat, data]) => `
-                        <tr class="border-b"><td class="p-2 font-semibold">${cat}</td><td class="p-2 text-center">${data.count}</td><td class="p-2 text-right">${formatCurrency(data.value, 'USD')}</td></tr>
-                    `).join('')}</tbody>
+                    <tbody>${Object.entries(stockByCategory)
+                      .map(
+                        ([cat, data]) => `
+                        <tr class="border-b"><td class="p-2 font-semibold">${cat}</td><td class="p-2 text-center">${
+                          data.count
+                        }</td><td class="p-2 text-right">${formatCurrency(
+                          data.value,
+                          'USD'
+                        )}</td></tr>
+                    `
+                      )
+                      .join('')}</tbody>
                 </table></div>
             `;
-            break;
+      break;
 
-        case 'clients':
-             if (salesInPeriod.length === 0) {
-                contentHTML = '<p class="text-center text-gray-500">No hay datos de clientes para el período seleccionado.</p>';
-                break;
-            }
-            const salesByClient = salesInPeriod.reduce((acc, sale) => {
-                const id = sale.clientId;
-                if (!acc[id]) {
-                    acc[id] = { name: sale.customerName, count: 0, totalProfit: 0 };
-                }
-                const itemsCost = (sale.items || []).reduce((cost, i) => cost + (i.phoneCost || 0), 0);
-                acc[id].count++;
-                acc[id].totalProfit += (sale.total - itemsCost);
-                return acc;
-            }, {});
+    case 'clients':
+      if (salesInPeriod.length === 0) {
+        contentHTML =
+          '<p class="text-center text-gray-500">No hay datos de clientes para el período seleccionado.</p>';
+        break;
+      }
+      const salesByClient = salesInPeriod.reduce((acc, sale) => {
+        const id = sale.clientId;
+        if (!acc[id]) {
+          acc[id] = { name: sale.customerName, count: 0, totalProfit: 0 };
+        }
+        const itemsCost = (sale.items || []).reduce((cost, i) => cost + (i.phoneCost || 0), 0);
+        acc[id].count++;
+        acc[id].totalProfit += sale.total - itemsCost;
+        return acc;
+      }, {});
 
-            const repeatClients = Object.values(salesByClient).filter(c => c.count > 1).sort((a,b) => b.count - a.count);
-            const topClients = Object.values(salesByClient).sort((a, b) => b.totalProfit - a.totalProfit).slice(0, 10);
+      const repeatClients = Object.values(salesByClient)
+        .filter((c) => c.count > 1)
+        .sort((a, b) => b.count - a.count);
+      const topClients = Object.values(salesByClient)
+        .sort((a, b) => b.totalProfit - a.totalProfit)
+        .slice(0, 10);
 
-            contentHTML = `
+      contentHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Clientes Únicos (Período)</p><p class="text-2xl font-bold">${Object.keys(salesByClient).length}</p></div>
-                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Clientes Recurrentes (Período)</p><p class="text-2xl font-bold">${repeatClients.length}</p></div>
+                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Clientes Únicos (Período)</p><p class="text-2xl font-bold">${
+                      Object.keys(salesByClient).length
+                    }</p></div>
+                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Clientes Recurrentes (Período)</p><p class="text-2xl font-bold">${
+                      repeatClients.length
+                    }</p></div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div>
                         <h4 class="text-lg font-semibold mb-2">Clientes con Más Compras (Período)</h4>
                         <div class="overflow-x-auto"><table class="min-w-full text-sm">
                             <thead class="bg-gray-100"><tr><th class="p-2 text-left">Nombre</th><th class="p-2 text-center">Compras</th></tr></thead>
-                            <tbody>${repeatClients.length > 0 ? repeatClients.map(c => `<tr class="border-b"><td class="p-2">${escapeHTML(c.name)}</td><td class="p-2 text-center">${c.count}</td></tr>`).join('') : '<tr><td colspan="2" class="text-center p-4 text-gray-500">Ninguno</td></tr>'}</tbody>
+                            <tbody>${
+                              repeatClients.length > 0
+                                ? repeatClients
+                                    .map(
+                                      (c) =>
+                                        `<tr class="border-b"><td class="p-2">${escapeHTML(
+                                          c.name
+                                        )}</td><td class="p-2 text-center">${c.count}</td></tr>`
+                                    )
+                                    .join('')
+                                : '<tr><td colspan="2" class="text-center p-4 text-gray-500">Ninguno</td></tr>'
+                            }</tbody>
                         </table></div>
                     </div>
                     <div>
                         <h4 class="text-lg font-semibold mb-2">Top 10 Clientes por Ganancia (Período)</h4>
                         <div class="overflow-x-auto"><table class="min-w-full text-sm">
                             <thead class="bg-gray-100"><tr><th class="p-2 text-left">Nombre</th><th class="p-2 text-right">Ganancia Generada</th></tr></thead>
-                            <tbody>${topClients.length > 0 ? topClients.map(c => `<tr class="border-b"><td class="p-2">${escapeHTML(c.name)}</td><td class="p-2 text-right font-semibold text-green-600">${formatCurrency(c.totalProfit, 'USD')}</td></tr>`).join('') : '<tr><td colspan="2" class="text-center p-4 text-gray-500">Sin datos</td></tr>'}</tbody>
+                            <tbody>${
+                              topClients.length > 0
+                                ? topClients
+                                    .map(
+                                      (c) =>
+                                        `<tr class="border-b"><td class="p-2">${escapeHTML(
+                                          c.name
+                                        )}</td><td class="p-2 text-right font-semibold text-green-600">${formatCurrency(
+                                          c.totalProfit,
+                                          'USD'
+                                        )}</td></tr>`
+                                    )
+                                    .join('')
+                                : '<tr><td colspan="2" class="text-center p-4 text-gray-500">Sin datos</td></tr>'
+                            }</tbody>
                         </table></div>
                     </div>
                 </div>
             `;
-            break;
-    }
-    
-    container.innerHTML = contentHTML;
+      break;
+  }
+
+  container.innerHTML = contentHTML;
 }
