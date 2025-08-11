@@ -53,7 +53,7 @@ async function checkSubscription(userId) {
       console.log('Verificando estado de suscripción con tu servidor Node.js...');
 
       // ⚠️ Líneas clave: Comunicación con tu servidor Node.js local
-      const response = await fetch(`http://localhost:3000/check-subscription/${preapprovalId}`);
+      const response = await fetch(`https://api-mp.vercel.app/check-subscription/${preapprovalId}`);
       const data = await response.json();
 
       // Muestra el resultado de la consulta en la consola
