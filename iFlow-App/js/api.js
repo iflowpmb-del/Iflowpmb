@@ -27,11 +27,10 @@ export function loadAllData(userId) {
   setState({ isDataLoading: true, isInitialRender: true });
 
   const collectionsToLoad = {
-    // MODIFICACIÓN: El estado por defecto ahora es 'active'
     profile: {
       type: 'doc',
       path: `users/${userId}/profile/main`,
-      default: { businessName: 'Mi Negocio', subscriptionStatus: 'active' },
+      default: { businessName: 'Mi Negocio', subscriptionStatus: 'active' }, // Estado por defecto
     },
     capital: {
       type: 'doc',
@@ -88,18 +87,14 @@ export function loadAllData(userId) {
     }
   };
 
-  // Manejo del resto de las colecciones
   for (const [key, config] of Object.entries(collectionsToLoad)) {
-    // *** INICIO DE CORRECCIÓN: Se manejan las categorías de forma especial primero ***
     if (key === 'categories') {
       const categoriesCollectionRef = collection(db, `users/${userId}/categories`);
       const categoriesUnsubscribe = onSnapshot(
         query(categoriesCollectionRef),
         async (snapshot) => {
           if (snapshot.empty && initialLoadFlags.categories) {
-            console.log(
-              `[API] La colección de categorías está vacía para el usuario ${userId}. Creando categorías por defecto.`
-            );
+            console.log(`[API] La colección de categorías está vacía para el usuario ${userId}. Creando categorías por defecto.`);
             const batch = writeBatch(db);
             DEFAULT_CATEGORIES.forEach((category) => {
               const categoryRef = doc(db, `users/${userId}/categories`, category.id);
@@ -119,12 +114,10 @@ export function loadAllData(userId) {
         }
       );
       addFirebaseListener(categoriesUnsubscribe);
-      continue; // Se salta el resto del bucle para esta clave
+      continue;
     }
-    // *** FIN DE CORRECCIÓN ***
 
-    const queryRef =
-      config.type === 'doc' ? doc(db, config.path) : query(collection(db, config.path));
+    const queryRef = config.type === 'doc' ? doc(db, config.path) : query(collection(db, config.path));
 
     const unsubscribe = onSnapshot(
       queryRef,
@@ -132,9 +125,6 @@ export function loadAllData(userId) {
         let data;
         if (config.type === 'doc') {
           data = snapshot.exists() ? { ...config.default, ...snapshot.data() } : config.default;
-
-          // MODIFICACIÓN: Se elimina toda la lógica de suscripción y período de prueba.
-          // El chequeo de `subscriptionStatus` y `trialEndDate` ya no es necesario.
         } else {
           data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
           if (config.sorter) data.sort(config.sorter);
