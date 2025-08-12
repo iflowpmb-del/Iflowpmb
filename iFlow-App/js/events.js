@@ -1073,6 +1073,23 @@ export function setupEventListeners() {
       return;
     }
 
+    // =================================================================================
+    // >>>>>>>>>> INICIO DE LA CORRECCIÓN <<<<<<<<<<
+    // Se añade el manejador para los botones de login/registro.
+    // =================================================================================
+    if (element.id === 'show-register' || element.id === 'show-login') {
+      const loginForm = document.getElementById('login-form');
+      const registerForm = document.getElementById('register-form');
+      if (loginForm && registerForm) {
+        loginForm.classList.toggle('hidden');
+        registerForm.classList.toggle('hidden');
+      }
+      return; // Se detiene la ejecución para no interferir con otra lógica.
+    }
+    // =================================================================================
+    // >>>>>>>>>> FIN DE LA CORRECCIÓN <<<<<<<<<<
+    // =================================================================================
+
     if (element.id === 'user-menu-button') {
       document.getElementById('user-menu-dropdown')?.classList.toggle('hidden');
       return;
@@ -1081,12 +1098,9 @@ export function setupEventListeners() {
     const { dataset } = element;
 
     const actionMap = {
-      // MODIFICACIÓN: Se elimina la lógica de suscripción.
-      // 'logout-from-trial-screen': () => signOut(auth),
       'change-password-btn': () => openChangePasswordModal(),
       'logout-button': () => signOut(auth),
       'manage-subscription-btn': () => {
-        // MODIFICACIÓN: Se cambia el mensaje para no mencionar Gumroad.
         showModal(
           `Actualmente, la gestión de la cuenta se realiza directamente a través de la aplicación.`,
           'Gestionar Cuenta'
@@ -1102,30 +1116,6 @@ export function setupEventListeners() {
           input.focus();
         }
       },
-      // MODIFICACIÓN: Se elimina toda la lógica de botones de suscripción.
-      // 'start-trial-btn': () => handleStartSubscriptionFlow(),
-      // 'subscribe-now-btn': () => handleStartSubscriptionFlow(),
-      // 'cancel-validation-btn': () => setData('profile', 'main', { subscriptionStatus: 'pending_trial_setup' }, true),
-      // 'logout-from-subscription-modal': () => {
-      //     document.getElementById('modal-container').innerHTML = '';
-      //     signOut(auth);
-      // },
-      // 'confirm-gumroad-redirect': async (button) => {
-      //     const user = appState.user;
-      //     if (!user) return;
-
-      //     const gumroadLink = `https://pacomatic.gumroad.com/l/scnaca?user_id=${user.uid}&email=${user.email}`;
-      //     const paymentWindow = window.open(gumroadLink, '_blank');
-      //     if (!paymentWindow) {
-      //         showModal("Tu navegador ha bloqueado la ventana de pago. Por favor, deshabilita el bloqueador de pop-ups para este sitio e inténtalo de nuevo.");
-      //         return;
-      //     }
-
-      //     document.getElementById('modal-container').innerHTML = '';
-      //     setButtonLoading(button, true, "Redirigiendo...");
-      //     await setData('profile', 'main', { subscriptionStatus: 'pending_payment_validation' }, true);
-      //     setButtonLoading(button, false);
-      // },
       'toggle-sale-form-btn': () =>
         document.getElementById('add-sale-form-container')?.classList.toggle('hidden'),
       'toggle-stock-form-btn': () =>
