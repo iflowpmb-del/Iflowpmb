@@ -1,49 +1,32 @@
-// C:\Users\jmarr\iFlow-App\functions\index.js
+/**
+ * Import function triggers from their respective submodules:
+ *
+ * const {onCall} = require("firebase-functions/v2/https");
+ * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
+ *
+ * See a full list of supported triggers at https://firebase.google.com/docs/functions
+ */
 
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
-const axios = require('axios');
+const {setGlobalOptions} = require("firebase-functions");
+const {onRequest} = require("firebase-functions/https");
+const logger = require("firebase-functions/logger");
 
-admin.initializeApp();
+// For cost control, you can set the maximum number of containers that can be
+// running at the same time. This helps mitigate the impact of unexpected
+// traffic spikes by instead downgrading performance. This limit is a
+// per-function limit. You can override the limit for each function using the
+// `maxInstances` option in the function's options, e.g.
+// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
+// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
+// functions should each use functions.runWith({ maxInstances: 10 }) instead.
+// In the v1 API, each function can only serve one request per container, so
+// this will be the maximum concurrent request count.
+setGlobalOptions({ maxInstances: 10 });
 
-// Configura tu access token de Mercado Pago como una variable de entorno.
-// NO lo pongas aquí directamente.
-const mpAccessToken = functions.config().mercadopago.access_token;
+// Create and deploy your first functions
+// https://firebase.google.com/docs/functions/get-started
 
-exports.getSubscriptionStatus = functions.https.onCall(async (data, context) => {
-  // Asegúrate de que el usuario esté autenticado.
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'La función debe ser llamada por un usuario autenticado.'
-    );
-  }
-
-  const { preapprovalId } = data;
-
-  if (!preapprovalId) {
-    throw new functions.https.HttpsError('invalid-argument', "El 'preapprovalId' es obligatorio.");
-  }
-
-  try {
-    const url = `https://api.mercadopago.com/v1/preapproval/${preapprovalId}`;
-
-    // Realiza la solicitud a la API de Mercado Pago.
-    const response = await axios.get(url, {
-      headers: {
-        Authorization: `Bearer ${mpAccessToken}`,
-      },
-    });
-
-    const preapprovalData = response.data;
-    const status = preapprovalData.status;
-
-    // Retorna un objeto con el estado de la suscripción.
-    // 'authorized' es el estado de éxito.
-    return { status: status };
-  } catch (error) {
-    console.error('Error al obtener el estado de la suscripción:', error);
-    // Retorna un error si la solicitud falla (ej. si el preapproval_id no existe).
-    return { status: 'error', message: error.response?.data?.message || error.message };
-  }
-});
+// exports.helloWorld = onRequest((request, response) => {
+//   logger.info("Hello logs!", {structuredData: true});
+//   response.send("Hello from Firebase!");
+// });
