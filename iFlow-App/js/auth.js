@@ -108,7 +108,7 @@ function showSubscriptionPrompt(userId) {
 
   document.getElementById('pay-btn')?.addEventListener('click', () => {
     const subscriptionUrl =
-      'http://localhost:3000/check-subscription/7685da0fece444b88083185c7cd69d53';
+      'https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=7685da0fece444b88083185c7cd69d53';
     window.location.href = subscriptionUrl;
   });
 }
@@ -144,12 +144,22 @@ export async function handleRegistration(email, password) {
 
     await batch.commit();
   } catch (error) {
+    // =================================================================================
+    // >>>>>>>>>> INICIO DE LA CORRECCIÓN <<<<<<<<<<
+    // Se añaden más casos para dar mensajes de error más específicos al usuario.
+    // =================================================================================
+    console.error('Error en registro:', error); // Log para depuración
     let friendlyMessage = 'Ocurrió un error durante el registro.';
     if (error.code === 'auth/email-already-in-use') {
       friendlyMessage = 'Este correo ya está en uso.';
     } else if (error.code === 'auth/weak-password') {
-      friendlyMessage = 'La contraseña es demasiado débil.';
+      friendlyMessage = 'La contraseña es demasiado débil. Debe tener al menos 6 caracteres.';
+    } else if (error.code === 'auth/invalid-email') {
+      friendlyMessage = 'El formato del correo electrónico no es válido.';
     }
+    // =================================================================================
+    // >>>>>>>>>> FIN DE LA CORRECCIÓN <<<<<<<<<<
+    // =================================================================================
     showAuthError(friendlyMessage);
     throw error;
   }
