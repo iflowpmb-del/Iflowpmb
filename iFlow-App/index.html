@@ -1,89 +1,440 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>iFlow Pro - La Herramienta Definitiva para Revendedores</title>
 
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/12.1.0/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/12.1.0/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/12.1.0/firebase-database-compat.js"></script>
-    <script defer src="/__/firebase/12.1.0/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/12.1.0/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/12.1.0/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/12.1.0/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/12.1.0/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/12.1.0/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/12.1.0/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f8fafc; /* Color de fondo base */
+        color: #1f2937; /* Color de texto principal */
       }
+      .gradient-text {
+        background: linear-gradient(to right, #16a34a, #15803d);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .cta-button {
+        background-color: #16a34a;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(22, 163, 74, 0.2);
+      }
+      .cta-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 7px 14px rgba(22, 163, 74, 0.3);
+      }
+      .section-title {
+        font-size: 2.25rem; /* 36px */
+        font-weight: 800;
+        line-height: 1.2;
+      }
+      @media (min-width: 768px) {
+        .section-title {
+          font-size: 3rem; /* 48px */
+        }
+      }
+      .feature-card {
+        background-color: white;
+        border-radius: 1rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+      }
+      .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      }
+
+      /* ESTILOS PARA EL BOTÓN DE WHATSAPP AÑADIDOS */
+      #whatsapp-support-button {
+        position: fixed; /* Lo mantiene fijo en la pantalla */
+        bottom: 25px; /* Distancia desde abajo */
+        right: 25px; /* Distancia desde la derecha */
+        width: 60px; /* Ancho del botón */
+        height: 60px; /* Alto del botón */
+        background-color: #25d366; /* Color de WhatsApp */
+        color: #ffffff; /* Color del ícono (blanco) */
+        border-radius: 50%; /* Lo hace circular */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px; /* Tamaño del ícono */
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* Sombra para efecto flotante */
+        z-index: 1000; /* Se asegura que esté por encima de todo */
+        transition: transform 0.2s ease-in-out; /* Animación suave */
+      }
+
+      #whatsapp-support-button:hover {
+        transform: scale(1.1); /* Agranda el botón al pasar el mouse */
+      }
+      /* FIN ESTILOS BOTÓN WHATSAPP */
     </style>
   </head>
-  <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
-    </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
+  <body class="antialiased">
+    <!-- BOTÓN DE WHATSAPP AÑADIDO -->
+    <a
+      id="whatsapp-support-button"
+      href="https://wa.me/5492241576696"
+      target="_blank"
+      title="Contactar por WhatsApp"
+    >
+      <i class="fab fa-whatsapp"></i>
+    </a>
+    <!-- FIN BOTÓN DE WHATSAPP -->
 
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-lg fixed top-0 left-0 right-0 z-50 shadow-sm">
+      <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <i class="fas fa-leaf text-green-600 text-2xl"></i>
+          <span class="text-2xl font-bold text-gray-800"
+            >iFlow <span class="text-green-600">Pro</span></span
+          >
+        </div>
+        <a
+          href="./app.html"
+          class="hidden md:inline-block cta-button text-white font-bold py-2 px-5 rounded-lg"
+        >
+          Comenzar Prueba Gratuita
+        </a>
+      </div>
+    </header>
 
-        try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
-        }
-      });
-    </script>
+    <!-- Hero Section -->
+    <section class="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
+      <!-- Background Image -->
+      <div class="absolute inset-0">
+        <img
+          src="https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?q=80&w=2070&auto=format&fit=crop"
+          alt="Escritorio de un revendedor de iPhones con productos Apple y la app iFlow"
+          class="w-full h-full object-cover"
+        />
+      </div>
+      <!-- Overlay -->
+      <div class="absolute inset-0 bg-white/90"></div>
+
+      <div class="container mx-auto px-6 text-center relative z-10">
+        <h1 class="text-4xl md:text-6xl font-extrabold text-gray-900 leading-tight">
+          Deja de ser un simple revendedor. <br />Conviértete en el dueño de un
+          <span class="gradient-text">negocio que crece</span>.
+        </h1>
+        <p class="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-gray-600">
+          El desorden te cuesta dinero. La falta de datos te impide crecer. La compra a precios no
+          competitivos limita tu ganancia. iFlow Pro soluciona los tres problemas a la vez.
+        </p>
+        <div class="mt-10">
+          <a
+            href="./app.html"
+            class="cta-button text-white font-bold text-lg py-4 px-8 rounded-xl inline-block"
+          >
+            <i class="fas fa-rocket mr-2"></i> Comienza tu Prueba Gratuita de 7 Días
+          </a>
+          <p class="mt-3 text-sm text-gray-500">Sin compromiso. Cancela cuando quieras.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Irresistible Offer Section -->
+    <section id="oferta" class="py-20 bg-green-50">
+      <div class="container mx-auto px-6">
+        <div class="text-center max-w-3xl mx-auto">
+          <h2 class="section-title text-gray-900">
+            Una Suscripción que se <span class="text-green-600">Paga Sola</span>. Literalmente.
+          </h2>
+          <p class="mt-4 text-lg text-gray-600">
+            Sabemos que cada peso (o dólar) cuenta. Por eso creamos una oferta que no podrás
+            rechazar.
+          </p>
+        </div>
+        <div
+          class="mt-12 bg-white rounded-2xl shadow-xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8"
+        >
+          <div class="flex-shrink-0">
+            <i class="fas fa-gem text-green-500 text-7xl md:text-8xl"></i>
+          </div>
+          <div class="flex-grow">
+            <h3 class="text-2xl font-bold text-gray-800">
+              Tu suscripción de $15 USD te da acceso a nuestra red exclusiva de
+              <span class="text-green-600">Proveedores Verificados</span>.
+            </h3>
+            <p class="mt-4 text-gray-600">
+              Estos no son proveedores cualquiera. Son contactos directos que ofrecen descuentos
+              especiales únicamente a los miembros de iFlow Pro.
+            </p>
+            <div class="mt-6 bg-green-100 border-l-4 border-green-500 p-4 rounded-r-lg">
+              <p class="font-semibold text-green-800">
+                La matemática es simple: con el ahorro que obtienes en tus primeras 2 o 3 compras
+                del mes, ya cubriste el costo de la suscripción. Todo lo que ahorres después es
+                ganancia neta para ti.
+              </p>
+            </div>
+            <p class="mt-4 font-bold text-lg text-gray-700">
+              Tu suscripción no es un gasto. Es tu mejor inversión para comprar más barato y vender
+              con más margen.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20">
+      <div class="container mx-auto px-6">
+        <div class="text-center max-w-3xl mx-auto">
+          <h2 class="section-title text-gray-900">
+            Dile Adiós al Caos. <br />Hola al <span class="gradient-text">Control Total</span>.
+          </h2>
+          <p class="mt-4 text-lg text-gray-600">
+            Si tu negocio se parece a esto, necesitas iFlow Pro.
+          </p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 mt-16">
+          <!-- Feature 1 -->
+          <div class="feature-card p-8">
+            <div class="text-4xl text-green-600 mb-4"><i class="fas fa-wallet"></i></div>
+            <h3 class="text-xl font-bold mb-2">Controla tu Dinero al Centavo</h3>
+            <p class="text-gray-600">
+              ¿Cuánto capital tienes realmente? iFlow te lo dice al instante. Diferencia entre
+              efectivo ARS, USD, saldo en Mercado Pago y cripto. Conoce tu valor de stock y tus
+              deudas para tener una visión 360° de tu salud financiera.
+            </p>
+          </div>
+          <!-- Feature 2 -->
+          <div class="feature-card p-8">
+            <div class="text-4xl text-green-600 mb-4"><i class="fas fa-box-open"></i></div>
+            <h3 class="text-xl font-bold mb-2">Inventario Inteligente y Detallado</h3>
+            <p class="text-gray-600">
+              Registra cada producto con plantillas personalizables. Ideal para iPhones, MacBooks,
+              termos, consolas o lo que sea que vendas. Asigna número de serie, costo y precio de
+              venta sugerido. Nunca más pierdas un producto.
+            </p>
+          </div>
+          <!-- Feature 3 -->
+          <div class="feature-card p-8">
+            <div class="text-4xl text-green-600 mb-4"><i class="fas fa-cash-register"></i></div>
+            <h3 class="text-xl font-bold mb-2">Ventas Rápidas y Profesionales</h3>
+            <p class="text-gray-600">
+              Registra una venta en segundos. Asigna un cliente, elige productos del stock y cobra
+              con múltiples métodos de pago (¡incluso deudas de cliente!). Gestiona garantías y
+              equipos en parte de pago (canje) sin esfuerzo.
+            </p>
+          </div>
+          <!-- Feature 4 -->
+          <div class="feature-card p-8">
+            <div class="text-4xl text-green-600 mb-4"><i class="fas fa-chart-pie"></i></div>
+            <h3 class="text-xl font-bold mb-2">Piensa como un CEO, no como un Vendedor</h3>
+            <p class="text-gray-600">
+              Nuestro Dashboard es tu centro de comando. Analiza tus ventas por día, mes o año.
+              Descubre qué categorías te dan más ganancia neta y quiénes son tus mejores clientes.
+              Toma decisiones basadas en datos, no en intuición.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Social Proof Section -->
+    <section class="py-20 bg-gray-50">
+      <div class="container mx-auto px-6">
+        <div class="text-center max-w-3xl mx-auto">
+          <h2 class="section-title text-gray-900">
+            Lo que dicen los <span class="gradient-text">Revendedores Pro</span>
+          </h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12 max-w-4xl mx-auto">
+          <!-- Testimonial 1 -->
+          <div class="bg-white p-8 rounded-xl shadow-lg">
+            <p class="text-gray-600 italic">
+              "Antes usaba 3 planillas de Excel y un cuaderno para anotar las deudas. Era un
+              desastre. Con iFlow, en 5 minutos al día sé exactamente cuánto gané, cuánto gasté y
+              quién me debe plata. Me cambió el negocio."
+            </p>
+            <div class="flex items-center mt-6">
+              <img
+                src="https://placehold.co/50x50/E2E8F0/475569?text=MG"
+                class="w-12 h-12 rounded-full"
+                alt="Foto de Martín G."
+              />
+              <div class="ml-4">
+                <p class="font-bold text-gray-900">Martín G.</p>
+                <p class="text-sm text-gray-500">Revendedor de iPhones, Palermo</p>
+              </div>
+            </div>
+          </div>
+          <!-- Testimonial 2 (MODIFICADO) -->
+          <div class="bg-white p-8 rounded-xl shadow-lg">
+            <p class="text-gray-600 italic">
+              "Manejaba todo en las Notas del iPhone. Un caos. iFlow me dio el control, pero la red
+              de proveedores es el verdadero tesoro. Con los descuentos que consigo en iPhones, la
+              suscripción se paga sola varias veces al mes."
+            </p>
+            <div class="flex items-center mt-6">
+              <img
+                src="https://placehold.co/50x50/E2E8F0/475569?text=LP"
+                class="w-12 h-12 rounded-full"
+                alt="Foto de Laura P."
+              />
+              <div class="ml-4">
+                <p class="font-bold text-gray-900">Laura P.</p>
+                <p class="text-sm text-gray-500">Revendedora de Apple, Rosario</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="precios" class="py-20">
+      <div class="container mx-auto px-6">
+        <div class="text-center max-w-3xl mx-auto">
+          <h2 class="section-title text-gray-900">
+            Un Precio Simple para un <span class="gradient-text">Crecimiento Ilimitado</span>
+          </h2>
+          <p class="mt-4 text-lg text-gray-600">
+            Todo lo que necesitas para profesionalizar y escalar tu negocio, sin costos ocultos ni
+            complicaciones.
+          </p>
+        </div>
+
+        <div class="mt-12 max-w-md mx-auto">
+          <div class="bg-white rounded-2xl shadow-2xl border-2 border-green-500 p-8 text-center">
+            <h3 class="text-3xl font-bold text-gray-900">iFlow Pro</h3>
+            <p class="mt-4">
+              <span class="text-5xl font-extrabold">$15</span>
+              <span class="text-xl text-gray-500">USD / mes</span>
+            </p>
+            <ul class="mt-8 space-y-4 text-left">
+              <li class="flex items-center">
+                <i class="fas fa-check-circle text-green-500 mr-3"></i> Gestión de Ventas y Stock
+                Ilimitada
+              </li>
+              <li class="flex items-center">
+                <i class="fas fa-check-circle text-green-500 mr-3"></i> Dashboard Financiero
+                Completo
+              </li>
+              <li class="flex items-center">
+                <i class="fas fa-check-circle text-green-500 mr-3"></i> Gestión de Clientes y Deudas
+              </li>
+              <li class="flex items-center">
+                <i class="fas fa-check-circle text-green-500 mr-3"></i> Gestión de Gastos Fijos y
+                Variables
+              </li>
+              <li class="flex items-center font-bold">
+                <i class="fas fa-gem text-green-500 mr-3"></i> Acceso a Proveedores Verificados
+              </li>
+              <li class="flex items-center font-bold">
+                <i class="fas fa-gem text-green-500 mr-3"></i> Descuentos Exclusivos
+              </li>
+            </ul>
+            <a
+              href="./app.html"
+              class="mt-10 block w-full cta-button text-white font-bold text-lg py-4 px-8 rounded-xl"
+            >
+              Empezar Prueba GRATIS de 7 Días
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="py-20 bg-gray-50">
+      <div class="container mx-auto px-6 max-w-4xl">
+        <div class="text-center">
+          <h2 class="section-title text-gray-900">
+            ¿Tienes Dudas? <span class="gradient-text">Las Resolvemos</span>
+          </h2>
+        </div>
+        <div class="mt-12 space-y-6">
+          <!-- FAQ Item 1 -->
+          <div>
+            <h3 class="font-semibold text-lg">¿Sirve para cualquier tipo de producto importado?</h3>
+            <p class="mt-2 text-gray-600">
+              ¡Sí! iFlow Pro está diseñado para cualquier tipo de producto que manejes en dólares.
+              Aunque tenemos plantillas especiales para productos Apple, puedes crear tus propias
+              categorías y atributos para lo que sea que vendas: consolas, parlantes, termos,
+              accesorios, etc. La flexibilidad es total.
+            </p>
+          </div>
+          <!-- FAQ Item 2 -->
+          <div class="border-t pt-6">
+            <h3 class="font-semibold text-lg">
+              ¿Cómo funcionan exactamente los descuentos con proveedores?
+            </h3>
+            <p class="mt-2 text-gray-600">
+              Una vez que tienes tu suscripción activa, en la sección "Proveedores" de la app verás
+              la lista de contactos verificados. Al contactarlos, te identificas como miembro de
+              iFlow Pro para acceder a los precios especiales. ¡Simple!
+            </p>
+          </div>
+          <!-- FAQ Item 3 -->
+          <div class="border-t pt-6">
+            <h3 class="font-semibold text-lg">¿Mis datos están seguros?</h3>
+            <p class="mt-2 text-gray-600">
+              Absolutamente. Usamos la misma infraestructura en la nube de gigantes tecnológicos
+              (Firebase de Google), garantizando que tu información está encriptada y segura. Solo
+              tú tienes acceso a los datos de tu negocio.
+            </p>
+          </div>
+          <!-- FAQ Item 4 -->
+          <div class="border-t pt-6">
+            <h3 class="font-semibold text-lg">¿Puedo cancelar en cualquier momento?</h3>
+            <p class="mt-2 text-gray-600">
+              Sí. Puedes cancelar tu suscripción cuando quieras, sin preguntas. Seguirás teniendo
+              acceso hasta que termine tu ciclo de facturación actual.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final CTA Section (AÑADIDA) -->
+    <section class="py-20 bg-gray-900 text-white">
+      <div class="container mx-auto px-6 text-center">
+        <h2 class="text-3xl md:text-5xl font-extrabold">
+          Tu negocio de reventa, <br />¿en un Excel caótico o en
+          <span style="color: #34d399">piloto automático</span>?
+        </h2>
+        <p class="mt-6 max-w-2xl mx-auto text-lg text-gray-300">
+          iFlow Pro es la herramienta definitiva diseñada para **revendedores de productos
+          importados** que quieren escalar de verdad.
+        </p>
+        <div class="mt-10">
+          <a
+            href="./app.html"
+            class="cta-button text-white font-bold text-lg py-4 px-8 rounded-xl inline-block"
+          >
+            <i class="fas fa-chart-line mr-2"></i> Quiero mi Prueba Gratuita AHORA
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8">
+      <div class="container mx-auto px-6 text-center">
+        <p>&copy; 2024 iFlow Pro. Todos los derechos reservados.</p>
+        <p class="text-sm text-gray-400 mt-2">Diseñado para emprendedores en Argentina y LATAM.</p>
+      </div>
+    </footer>
   </body>
 </html>
