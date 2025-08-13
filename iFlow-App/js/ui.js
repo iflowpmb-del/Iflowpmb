@@ -10,6 +10,8 @@ import { Timestamp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-fi
 // SECCIÓN 1: RENDERIZADO PRINCIPAL
 // =================================================================================
 
+let exchangeRate;
+
 async function getDolarBlueRate() {
   try {
     const response = await fetch('https://dolarapi.com/v1/dolares/blue');
@@ -17,12 +19,28 @@ async function getDolarBlueRate() {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
-    return data.venta; // Se usa el valor de venta para la conversión
+    return Number(data.venta);
   } catch (error) {
     console.error('Error al obtener la cotización del dólar blue:', error);
     return null;
   }
 }
+
+(async () => {
+  const rate = await getDolarBlueRate();
+  if (rate) {
+    exchangeRate = rate;
+    console.log('Tasa de cambio Dólar Blue obtenida:', rate);
+    setState({ exchangeRate: rate });
+  } else {
+    const fallbackRate = 1000;
+    exchangeRate = fallbackRate;
+    console.warn(
+      `No se pudo obtener la tasa de Dólar Blue. Usando valor por defecto: ${fallbackRate}`
+    );
+    setState({ exchangeRate: fallbackRate });
+  }
+})();
 
 export function renderApp(state) {
   const { user, profile, isDataLoading } = state;
@@ -31,8 +49,9 @@ export function renderApp(state) {
   const mainContentWrapper = document.getElementById('main-content-wrapper');
   const loadingContainer = document.getElementById('loading-container');
   const header = document.querySelector('header');
-  const nav = document.querySelector('.tabs-container'); // FIX: Se cambió el selector para que coincida con el div contenedor.
+  const nav = document.querySelector('.tabs-container');
 
+  // FIX: Se cambió el selector para que coincida con el div contenedor.
   if (isDataLoading) {
     if (loadingContainer) loadingContainer.classList.remove('hidden');
     if (mainContentWrapper) mainContentWrapper.classList.add('hidden');
@@ -76,16 +95,9 @@ function renderHeader(state) {
   }
 
   const exchangeRateInput = document.getElementById('exchange-rate-input');
-  if (exchangeRateInput && profile) {
-    const currentRate = profile.exchangeRate || 1000;
-
-    if (parseFloat(exchangeRateInput.value) !== currentRate) {
-      exchangeRateInput.value = currentRate;
-    }
-
-    if (state.exchangeRate !== currentRate) {
-      setState({ exchangeRate: currentRate });
-    }
+  if (exchangeRateInput && state.exchangeRate) {
+    exchangeRateInput.value = state.exchangeRate;
+    exchangeRateInput.readOnly = true;
   }
 }
 
@@ -95,13 +107,16 @@ function renderAllSections(state) {
   renderCapitalSection(state);
   renderSalesSection(state);
   renderSalesHistory(state);
-  renderReservationsSection(state); // ADDED: Llamada a la función de renderizado de reservas
-  renderSalespeopleSection(state); // ADDED: Llamada a la función de renderizado de vendedores
+  renderReservationsSection(state);
+  // ADDED: Llamada a la función de renderizado de reservas
+  renderSalespeopleSection(state);
+  // ADDED: Llamada a la función de renderizado de vendedores
   renderInventorySections(state);
   renderClientsSection(state);
   renderOperationsSections(state);
   renderReportsSections(state);
-  renderPublicProvidersSection(state); // FIX: Renombrada para claridad
+  renderPublicProvidersSection(state);
+  // FIX: Renombrada para claridad
 
   updateSaleBalance(state);
 
@@ -137,40 +152,43 @@ function renderReportsSections(state) {
 function getAppSectionsHTML() {
   // FIX: Se reestructura el HTML para acomodar las nuevas secciones y corregir la jerarquía de pestañas.
   return `
-    <!-- ======================= SECCIÓN BILLETERAS ======================= -->
     <div id="section-capital" class="main-section">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="card p-6"><p class="text-lg text-gray-500">Capital Total</p><h3 id="capital-total" class="text-4xl font-bold"></h3></div>
             <div class="card p-6"><p class="text-lg text-gray-500">Capital Líquido</p><h3 id="capital-liquid" class="text-4xl font-bold text-teal-600"></h3></div>
             <div class="card p-6"><p class="text-lg text-gray-500">Valor en Stock</p><h3 id="capital-stock-value" class="text-4xl font-bold text-blue-600"></h3></div>
         </div>
+
         <div class="card p-6 md:p-8 mb-8">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-semibold">Fondos y Deudas</h3>
                 <button id="adjust-capital-btn" class="btn-secondary py-2 px-4 flex items-center"><i class="fas fa-edit mr-2"></i>Ajustar</button>
             </div>
             <div id="wallets-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+
             <div class="border-t my-6"></div>
             <div id="debts-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-6"></div>
             <div class="border-t my-6"></div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div>
                     <h4 class="text-xl font-semibold mb-4">Detalle Deudas de Clientes</h4>
+
                     <div id="client-debts-list" class="space-y-3 mt-4"></div>
                 </div>
                 <div>
                     <h4 class="text-xl font-semibold mb-4">Detalle Deudas a Proveedores</h4>
                     <div id="our-debts-list" class="space-y-3 mt-4"></div>
+
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ======================= SECCIÓN VENTAS ======================= -->
     <div id="section-ventas" class="hidden main-section">
         <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap">
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="ventas" data-sub-tab="nueva">Nueva Venta</button>
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="ventas" data-sub-tab="historial">Historial</button>
+
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="ventas" data-sub-tab="reservas">Reservas</button>
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="ventas" data-sub-tab="vendedores">Vendedores</button>
         </div>
@@ -178,50 +196,65 @@ function getAppSectionsHTML() {
         <div id="ventas-sub-nueva" class="ventas-sub-section hidden">
             <div class="card p-6 md:p-8">
                 <form id="sale-form" class="space-y-6">
+
                     <div class="space-y-4 p-4 border-b">
                         <h3 class="text-xl font-semibold">1. Cliente</h3>
+
                         <div class="relative">
                             <label class="block text-sm">Buscar Cliente</label>
                             <div class="flex items-center">
                                 <input type="text" id="client-search-input-sale" class="form-input w-full p-3" placeholder="Escribe para buscar...">
+
                                 <button type="button" id="add-client-from-sale-btn" class="ml-2 btn-secondary p-3"><i class="fas fa-plus"></i></button>
                             </div>
                             <div id="client-search-results" class="absolute z-20 w-full bg-white border rounded-md mt-1 hidden max-h-60 overflow-y-auto"></div>
+
                             <div id="selected-client-display" class="mt-2"></div>
                         </div>
                     </div>
+
                     <div class="space-y-4 p-4 border-b">
                         <h3 class="text-xl font-semibold">2. Productos</h3>
+
                         <div class="relative">
                             <label class="block text-sm">Buscar Producto en Stock</label>
                             <div class="flex items-center">
                                 <input type="text" id="stock-search-input-sale" class="form-input w-full p-3" placeholder="Escribe nombre o N/S para buscar...">
+
                             </div>
                             <div id="stock-search-results-sale" class="absolute z-10 w-full bg-white border rounded-md mt-1 hidden max-h-60 overflow-y-auto"></div>
                         </div>
+
                         <div id="sale-items-list" class="mt-4 space-y-2"></div>
                     </div>
                     <div class="space-y-4 p-4 border-b">
                         <h3 class="text-xl font-semibold">3. Pago</h3>
+
                         <div class="flex items-center"><input id="has-trade-in" type="checkbox" class="h-4 w-4"><label for="has-trade-in" class="ml-3">Recibir equipo en parte de pago</label></div>
                         <div id="trade-in-details" class="hidden my-4 space-y-4 border-l-4 pl-4 py-2"></div>
                         <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
                             <div><label class="text-sm">Efectivo (ARS)</label><input type="number" data-payment="ars" class="payment-input form-input w-full p-2 mt-1" value="0"><p id="ars-usd-display" class="text-xs text-gray-500 h-4 mt-1"></p></div>
+
                             <div><label class="text-sm">Digital (ARS)</label><input type="number" data-payment="mp" class="payment-input form-input w-full p-2 mt-1" value="0"><p id="mp-usd-display" class="text-xs text-gray-500 h-4 mt-1"></p></div>
                             <div><label class="text-sm">Dólares (USD)</label><input type="number" data-payment="usd" class="payment-input form-input w-full p-2 mt-1" value="0"></div>
+
                             <div><label class="text-sm">USDT</label><input type="number" data-payment="usdt" class="payment-input form-input w-full p-2 mt-1" value="0"></div>
                             <div><label class="text-sm">Deuda Cliente (USD)</label><input type="number" data-payment="clientDebt" class="payment-input form-input w-full p-2 mt-1" value="0"></div>
                         </div>
+
                     </div>
                     <div class="space-y-4 p-4">
                         <h3 class="text-xl font-semibold">4. Cierre y Resumen</h3>
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div><label class="block text-sm">Fecha de Venta</label><input type="date" id="sale-date" class="form-input w-full p-3" required></div>
                             <div><label class="block text-sm">Garantía (días)</label><input type="number" id="warranty-days" class="form-input w-full p-3" value="30" required></div>
+
                         </div>
                         <div><label class="block text-sm">Notas</label><textarea id="notes" rows="2" class="form-textarea w-full p-3"></textarea></div>
                         <div id="sale-summary" class="mt-4 p-4 rounded-lg bg-gray-100 space-y-2"></div>
                     </div>
+
                     <div><button type="submit" class="w-full btn-primary py-3 text-lg">Finalizar Venta</button></div>
                 </form>
             </div>
@@ -230,10 +263,12 @@ function getAppSectionsHTML() {
         <div id="ventas-sub-historial" class="ventas-sub-section hidden">
             <div class="card p-6 md:p-8">
                 <div class="relative mb-6">
+
                     <input type="text" id="sales-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar por cliente, nombre, N/S...">
                     <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                 </div>
                 <div id="sales-list-container"></div>
+
                 <div id="no-sales-message" class="text-center py-16 text-gray-500 hidden"><i class="fas fa-folder-open fa-3x mb-4"></i><p>Aún no has registrado ventas.</p></div>
             </div>
         </div>
@@ -241,15 +276,18 @@ function getAppSectionsHTML() {
         <div id="ventas-sub-reservas" class="ventas-sub-section hidden">
             <div class="card p-6 md:p-8">
                 <div class="flex justify-between items-center mb-6">
+
                     <h3 class="text-2xl font-semibold">Gestión de Reservas</h3>
                     <button id="add-reservation-btn" class="btn-primary py-2 px-4 flex items-center"><i class="fas fa-calendar-plus mr-2"></i>Nueva Reserva</button>
                 </div>
                 <div class="relative mb-4">
                     <input type="text" id="reservations-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar por cliente o producto...">
+
                     <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                 </div>
                 <div id="reservations-list-container" class="space-y-4 mt-6"></div>
                 <div id="no-reservations-message" class="text-center py-8 text-gray-500 hidden"><i class="fas fa-calendar-times fa-3x mb-4"></i><p>No hay reservas activas.</p></div>
+
             </div>
         </div>
 
@@ -257,25 +295,28 @@ function getAppSectionsHTML() {
             <div class="card p-6 md:p-8">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-2xl font-semibold">Gestión de Vendedores</h3>
+
                     <button id="add-salesperson-btn" class="btn-primary py-2 px-4 flex items-center"><i class="fas fa-user-plus mr-2"></i>Nuevo Vendedor</button>
                 </div>
                 <div class="relative mb-4">
                     <input type="text" id="salespeople-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar vendedor...">
                     <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+
                 </div>
                 <div id="salespeople-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6"></div>
                 <div id="no-salespeople-message" class="text-center py-8 text-gray-500 hidden"><i class="fas fa-users-slash fa-3x mb-4"></i><p>No hay vendedores registrados.</p></div>
             </div>
+
         </div>
     </div>
 
-    <!-- ======================= SECCIÓN INVENTARIO ======================= -->
-     <div id="section-inventario" class="hidden main-section">
+    <div id="section-inventario" class="hidden main-section">
         <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap">
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="inventario" data-sub-tab="stock">Stock</button>
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="inventario" data-sub-tab="registrar">Registrar Producto</button>
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="inventario" data-sub-tab="categorias">Categorías</button>
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="inventario" data-sub-tab="proveedores">Mis Proveedores</button>
+
         </div>
 
         <div id="inventario-sub-stock" class="inventario-sub-section hidden">
@@ -283,10 +324,12 @@ function getAppSectionsHTML() {
                 <h3 class="text-2xl font-semibold mb-6">Inventario Actual</h3>
                 <div class="relative mb-6">
                     <input type="text" id="stock-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar por nombre, N/S, categoría...">
+
                     <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                 </div>
                 <div id="stock-list-container-consultas" class="space-y-8"></div>
                 <div id="no-stock-message-consultas" class="text-center py-8 text-gray-500 hidden"><i class="fas fa-box-open fa-3x mb-4"></i><p>No hay productos en stock.</p></div>
+
             </div>
         </div>
 
@@ -294,6 +337,7 @@ function getAppSectionsHTML() {
              <div class="card p-6 md:p-8">
                 <h3 class="text-2xl font-semibold mb-6">Registrar Nuevo Producto en Stock</h3>
                 <form id="stock-form-register" class="space-y-4 bg-gray-50 p-6 rounded-lg border"></form>
+
             </div>
         </div>
 
@@ -302,19 +346,23 @@ function getAppSectionsHTML() {
                 <div class="lg:col-span-1 card p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-semibold">Categorías</h3>
+
                         <button id="add-new-category-btn" class="btn-secondary py-1 px-3 text-sm"><i class="fas fa-plus"></i> Añadir</button>
                     </div>
                     <div id="category-manager-list" class="space-y-2"></div>
                 </div>
+
                 <div id="category-attributes-manager" class="lg:col-span-2 card p-6 hidden">
                     <div id="category-attributes-content"></div>
                 </div>
                  <div id="category-manager-placeholder" class="lg:col-span-2 flex items-center justify-center text-center text-gray-400 bg-gray-50 rounded-lg h-64">
                     <div>
+
                         <i class="fas fa-arrow-left fa-2x mb-4"></i>
                         <p>Selecciona una categoría para ver o editar sus atributos.</p>
                     </div>
                 </div>
+
             </div>
         </div>
 
@@ -323,105 +371,130 @@ function getAppSectionsHTML() {
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-2xl font-semibold">Mis Proveedores</h3>
                     <button id="add-provider-btn" class="btn-primary py-2 px-4 flex items-center"><i class="fas fa-truck mr-2"></i>Nuevo Proveedor</button>
+
                 </div>
                 <div class="relative mb-4">
                     <input type="text" id="user-providers-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar proveedor...">
                     <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+
                 </div>
                 <div id="user-providers-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6"></div>
                 <div id="no-user-providers-message" class="text-center py-8 text-gray-500 hidden"><i class="fas fa-truck-loading fa-3x mb-4"></i><p>No has registrado proveedores.</p></div>
             </div>
         </div>
+
     </div>
 
-    <!-- ======================= SECCIÓN CLIENTES ======================= -->
     <div id="section-clientes" class="hidden main-section">
         <div class="card p-6 md:p-8">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-semibold">Gestión de Clientes</h3>
                 <button id="toggle-client-form-btn" class="btn-primary py-2 px-4 flex items-center"><i class="fas fa-user-plus mr-2"></i>Nuevo Cliente</button>
             </div>
+
             <div id="add-client-form-container" class="hidden mb-8">
                 <form id="client-form-register" class="space-y-4 bg-gray-50 p-6 rounded-lg border">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div><label class="block text-sm">Nombre Completo</label><input type="text" id="client-name-reg" class="form-input w-full" required></div>
+
                         <div><label class="block text-sm">Teléfono</label><input type="text" id="client-phone-reg" class="form-input w-full"></div>
                     </div>
                     <div><label class="block text-sm">Detalles</label><textarea id="client-details-reg" class="form-textarea w-full"></textarea></div>
                     <button type="submit" class="btn-primary py-2 px-6">Añadir Cliente</button>
+
                 </form>
             </div>
             <div class="relative"><input type="text" id="client-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar cliente..."><i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i></div>
             <div id="clients-list-consultas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6"></div>
             <div id="no-clients-message-consultas" class="text-center py-8 text-gray-500 hidden"><i class="fas fa-users-slash fa-3x mb-4"></i><p>No hay clientes registrados.</p></div>
+
         </div>
     </div>
 
-    <!-- ======================= SECCIÓN OPERACIONES ======================= -->
-     <div id="section-operaciones" class="hidden main-section">
+    <div id="section-operaciones" class="hidden main-section">
         <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap">
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="operaciones" data-sub-tab="gastos">Gastos</button>
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="operaciones" data-sub-tab="deudas">Deudas</button>
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="operaciones" data-sub-tab="notas">Notas</button>
         </div>
+
         <div id="operaciones-sub-gastos" class="operaciones-sub-section hidden">
             <div class="card p-6 md:p-8">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-2xl font-semibold">Gestión de Gastos</h3>
                     <button class="toggle-section-btn text-gray-400 hover:text-gray-600 p-2" data-section="gastos"><i class="fas fa-chevron-up"></i></button>
+
                 </div>
                 <div id="collapsible-content-gastos" class="space-y-8">
                     <div class="p-6 border rounded-lg">
                         <h3 class="text-xl font-semibold text-gray-800 mb-4">Añadir Gastos</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
                             <form id="fixed-expense-form-register" class="space-y-3 p-4 border rounded-lg">
                                 <p class="font-medium">Gasto Fijo Mensual</p>
                                 <div><label for="fixed-expense-description-reg" class="block text-sm">Descripción</label><input type="text" id="fixed-expense-description-reg" class="form-input w-full p-2 mt-1" required></div>
+
                                 <div>
                                     <label class="block text-sm">Monto</label>
                                     <div class="flex items-center gap-2">
+
                                         <input type="number" id="fixed-expense-amount-reg" data-form-type="fixed-expense-reg" class="currency-input form-input w-full p-2" required>
                                         <select id="fixed-expense-currency-reg" data-form-type="fixed-expense-reg" class="currency-select form-select p-2">
+
                                             <option value="USD">USD</option>
                                             <option value="ARS">ARS</option>
+
                                         </select>
                                     </div>
                                     <p id="fixed-expense-reg-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>
+
                                 </div>
                                 <div><label for="fixed-expense-day-reg" class="block text-sm">Día de Pago (1-31)</label><input type="number" id="fixed-expense-day-reg" class="form-input w-full p-2 mt-1" required min="1" max="31"></div>
+
                                 <button type="submit" class="w-full btn-primary py-2">Añadir Gasto Fijo</button>
                             </form>
                             <form id="daily-expense-form-register" class="space-y-3 p-4 border rounded-lg">
+
                                 <p class="font-medium">Gasto Diario/Variable</p>
                                 <div><label for="daily-expense-description-reg" class="block text-sm">Descripción</label><input type="text" id="daily-expense-description-reg" class="form-input w-full p-2 mt-1" required></div>
                                 <div>
+
                                     <label class="block text-sm">Monto</label>
                                     <div class="flex items-center gap-2">
+
                                         <input type="number" id="daily-expense-amount-reg" data-form-type="daily-expense-reg" class="currency-input form-input w-full p-2" required>
                                         <select id="daily-expense-currency-reg" data-form-type="daily-expense-reg" class="currency-select form-select p-2">
                                             <option value="USD">USD</option>
+
                                             <option value="ARS">ARS</option>
                                         </select>
+
                                     </div>
                                     <p id="daily-expense-reg-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>
+
                                 </div>
                                 <div><label for="daily-expense-date-reg" class="block text-sm">Fecha</label><input type="date" id="daily-expense-date-reg" class="form-input w-full p-2 mt-1" required></div>
                                 <button type="submit" class="w-full btn-primary py-2">Añadir y Pagar Gasto</button>
+
                             </form>
                         </div>
                     </div>
                     <div class="p-6 border rounded-lg">
+
                         <h3 class="text-xl font-semibold text-gray-800 mb-4">Gastos Fijos Pendientes</h3>
                         <div id="fixed-expenses-list-consultas" class="space-y-3"></div>
                     </div>
                     <div class="p-6 border rounded-lg">
+
                         <h3 class="text-xl font-semibold text-gray-800 mb-4">Historial de Pagos</h3>
                         <div class="relative mb-4">
                             <input type="text" id="expenses-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar por descripción...">
+
                             <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                         </div>
                         <div id="payment-history-list" class="space-y-3 max-h-[500px] overflow-y-auto"></div>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -429,61 +502,75 @@ function getAppSectionsHTML() {
             <div class="card p-6 md:p-8">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-2xl font-semibold">Gestión de Deudas (Proveedores)</h3>
+
                     <button class="toggle-section-btn text-gray-400 hover:text-gray-600 p-2" data-section="deudas"><i class="fas fa-chevron-up"></i></button>
                 </div>
                 <div id="collapsible-content-deudas">
                     <button id="toggle-debt-form-btn" class="btn-primary py-2 px-4 flex items-center mb-6"><i class="fas fa-plus mr-2"></i>Nueva Deuda</button>
+
                     <div id="add-debt-form-container" class="hidden mb-8">
                         <form id="debt-form" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-start bg-gray-50 p-6 rounded-lg border">
                             <div>
                                 <label for="debtor-name" class="block text-sm font-medium text-gray-700">Nombre del Acreedor</label>
+
                                 <input type="text" id="debtor-name" class="mt-1 form-input w-full p-2" required>
                             </div>
                             <div>
+
                                 <label for="debt-desc" class="block text-sm font-medium text-gray-700">Descripción</label>
                                 <input type="text" id="debt-desc" class="mt-1 form-input w-full p-2" required>
+
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Monto</label>
                                 <div class="flex items-center gap-2">
+
                                     <input type="number" id="debt-amount" data-form-type="debt-create" class="currency-input mt-1 form-input w-full p-2" required>
                                     <select id="debt-currency" data-form-type="debt-create" class="currency-select mt-1 form-select p-2">
+
                                         <option value="USD">USD</option>
                                         <option value="ARS">ARS</option>
                                     </select>
+
                                 </div>
                                 <p id="debt-create-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>
+
                             </div>
                             <div class="sm:col-span-2 md:col-span-3">
                                 <button type="submit" class="btn-primary w-full py-2">Añadir Deuda</button>
                             </div>
+
                         </form>
                     </div>
                     <div id="debts-list-consultas" class="space-y-3"></div>
                 </div>
+
             </div>
         </div>
         <div id="operaciones-sub-notas" class="operaciones-sub-section hidden">
             <div class="card p-6 md:p-8">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                     <h3 class="text-2xl font-semibold">Block de Notas</h3>
+
                     <div class="w-full md:w-auto flex-grow md:flex-grow-0 relative">
                          <input type="text" id="notes-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar por título o contenido...">
                          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     </div>
+
                     <button id="add-note-btn" class="btn-primary py-2 px-4 flex items-center flex-shrink-0"><i class="fas fa-plus mr-2"></i>Nueva Nota</button>
                 </div>
                 <div id="notes-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 </div>
                 <div id="no-notes-message" class="text-center py-16 text-gray-500 hidden">
+
                     <i class="fas fa-sticky-note fa-3x mb-4"></i>
                     <p>Aún no has creado ninguna nota.</p>
                 </div>
             </div>
         </div>
+
     </div>
 
-    <!-- ======================= SECCIÓN REPORTES ======================= -->
     <div id="section-reportes" class="hidden main-section">
         <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap">
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="reportes" data-sub-tab="dashboard">Dashboard</button>
@@ -492,35 +579,44 @@ function getAppSectionsHTML() {
 
         <div id="reportes-sub-dashboard" class="reportes-sub-section hidden">
             <div class="space-y-8">
+
                 <div class="card p-6 md:p-8">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <h3 class="text-2xl font-bold text-gray-800">Resumen Financiero</h3>
                         <div class="flex items-center gap-2 flex-wrap">
+
                             <button class="filter-btn btn-secondary py-1 px-3 text-sm" data-hub="dashboard" data-period="today">Hoy</button>
                             <button class="filter-btn btn-secondary py-1 px-3 text-sm" data-hub="dashboard" data-period="week">Semana</button>
                             <button class="filter-btn btn-secondary py-1 px-3 text-sm" data-hub="dashboard" data-period="month">Mes</button>
+
                             <button class="filter-btn btn-secondary py-1 px-3 text-sm" data-hub="dashboard" data-period="year">Año</button>
                             <button class="filter-btn btn-secondary py-1 px-3 text-sm" data-hub="dashboard" data-period="custom"><i class="fas fa-calendar-alt"></i></button>
                         </div>
+
                     </div>
                     <div id="dashboard-custom-date-range-controls" class="hidden flex flex-col md:flex-row gap-4 items-end mb-6 bg-gray-50 p-4 rounded-lg">
                         <div><label for="dashboard-custom-start-date" class="block text-sm">Desde</label><input type="date" id="dashboard-custom-start-date" class="form-input"></div>
                         <div><label for="dashboard-custom-end-date" class="block text-sm">Hasta</label><input type="date" id="dashboard-custom-end-date" class="form-input"></div>
+
                         <button id="dashboard-apply-custom-filter-btn" class="btn-primary py-2 px-4">Aplicar</button>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
                         <div class="bg-gray-50 p-4 rounded-lg"><p class="text-sm text-gray-500">Ventas</p><p id="summary-sales" class="text-2xl font-bold"></p></div>
+
                         <div class="bg-gray-50 p-4 rounded-lg"><p class="text-sm text-gray-500">Ganancia Bruta</p><p id="summary-gross-profit" class="text-2xl font-bold"></p></div>
                         <div class="bg-gray-50 p-4 rounded-lg"><p class="text-sm text-gray-500">Gastos</p><p id="summary-expenses" class="text-2xl font-bold"></p></div>
                         <div class="bg-gray-50 p-4 rounded-lg"><p class="text-sm text-gray-500">Ganancia Neta</p><p id="summary-net-profit" class="text-2xl font-bold"></p></div>
+
                     </div>
                 </div>
                 <div class="card p-6 md:p-8"><h3 class="text-xl font-semibold mb-4">Rendimiento (Ingresos vs Gastos)</h3><canvas id="performance-chart"></canvas></div>
                 <div class="card p-6 md:p-8"><h3 class="text-xl font-semibold mb-4">Crecimiento del Capital</h3><canvas id="capital-growth-chart"></canvas></div>
+
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div class="card p-6 md:p-8"><h3 class="text-xl font-semibold mb-4">Desglose de Gastos</h3><div id="expense-chart-container" class="h-64"><canvas id="expense-breakdown-chart"></canvas></div><div id="expense-breakdown-summary" class="mt-4"></div></div>
                     <div class="card p-6 md:p-8"><h3 class="text-xl font-semibold mb-4">Ganancia Neta por Categoría</h3><canvas id="net-profit-category-chart"></canvas></div>
                 </div>
+
                 <div class="card p-6 md:p-8"><h3 class="text-xl font-semibold mb-4">Métricas de Venta</h3><canvas id="sales-metrics-chart"></canvas></div>
             </div>
         </div>
@@ -528,46 +624,54 @@ function getAppSectionsHTML() {
         <div id="reportes-sub-analisis" class="reportes-sub-section hidden">
             <div class="card p-6 md:p-8">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+
                     <h3 class="text-2xl font-bold text-gray-800">Centro de Análisis</h3>
                     <div class="flex items-center gap-2 flex-wrap">
                         <button class="filter-btn btn-secondary py-1 px-3 text-sm" data-hub="analysis" data-period="today">Hoy</button>
                         <button class="filter-btn btn-secondary py-1 px-3 text-sm" data-hub="analysis" data-period="week">Semana</button>
+
                         <button class="filter-btn btn-secondary py-1 px-3 text-sm" data-hub="analysis" data-period="month">Mes</button>
                         <button class="filter-btn btn-secondary py-1 px-3 text-sm" data-hub="analysis" data-period="year">Año</button>
                         <button class="filter-btn btn-secondary py-1 px-3 text-sm" data-hub="analysis" data-period="custom"><i class="fas fa-calendar-alt"></i></button>
+
                     </div>
                 </div>
                 <div id="analysis-custom-date-range-controls" class="hidden flex flex-col md:flex-row gap-4 items-end mb-6 bg-gray-50 p-4 rounded-lg">
                     <div><label for="analysis-custom-start-date" class="block text-sm">Desde</label><input type="date" id="analysis-custom-start-date" class="form-input"></div>
+
                     <div><label for="analysis-custom-end-date" class="block text-sm">Hasta</label><input type="date" id="analysis-custom-end-date" class="form-input"></div>
                     <button id="analysis-apply-custom-filter-btn" class="btn-primary py-2 px-4">Aplicar</button>
                 </div>
                 <div class="flex flex-col md:flex-row gap-4 mb-6">
                     <select id="analysis-selector" class="form-select w-full md:w-1/3">
+
                         <option value="sales">Análisis de Ventas</option>
                         <option value="stock">Análisis de Stock</option>
                         <option value="clients">Análisis de Clientes</option>
                     </select>
+
                 </div>
                 <div id="analysis-results-container" class="mt-6">
                     <p class="text-center text-gray-500">Selecciona una opción para ver el análisis detallado.</p>
                 </div>
             </div>
+
         </div>
     </div>
 
-    <!-- ======================= SECCIÓN PROVEEDORES PÚBLICOS ======================= -->
     <div id="section-public-providers" class="hidden main-section">
         <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div>
                 <h2 class="text-3xl font-bold text-gray-800">Proveedores Recomendados</h2>
                 <p class="text-gray-500">Listas de precios y contacto directo de proveedores verificados.</p>
+
             </div>
             <div class="relative w-full md:w-auto">
                 <input type="text" id="public-providers-search-input" class="form-input w-full md:w-72 p-3 pl-10" placeholder="Buscar proveedor...">
                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
             </div>
         </div>
+
         <div id="public-providers-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         </div>
         <div id="no-public-providers-message" class="text-center py-16 text-gray-500 hidden">
@@ -601,7 +705,6 @@ function renderNotesSection(state) {
   const container = document.getElementById('notes-list-container');
   const noNotesMessage = document.getElementById('no-notes-message');
   const searchInput = document.getElementById('notes-search-input');
-
   if (!container || !noNotesMessage || !searchInput) return;
 
   if (searchInput.value !== state.notesSearchTerm) {
@@ -638,18 +741,22 @@ function renderNotesSection(state) {
                 <p class="text-gray-700 text-sm whitespace-pre-wrap">${escapeHTML(note.content)}</p>
             </div>
             <div class="mt-4 pt-3 border-t border-yellow-200 text-xs text-gray-500">
+
                 <div class="flex justify-between items-center">
                     <div>
                         <p>Creado: ${formatDateTime(note.createdAt)}</p>
                         <p>Editado: ${formatDateTime(note.updatedAt)}</p>
+
                     </div>
                     <div class="flex gap-2">
                         <button class="edit-note-btn text-blue-600 hover:text-blue-800" data-note-id="${
                           note.id
                         }"><i class="fas fa-edit fa-lg"></i></button>
+
                         <button class="delete-note-btn text-red-600 hover:text-red-800" data-note-id="${
                           note.id
                         }"><i class="fas fa-trash fa-lg"></i></button>
+
                     </div>
                 </div>
             </div>
@@ -663,7 +770,6 @@ function renderCollapsibleSections(state) {
   if (!state.ui || !state.ui.collapsedSections) return;
 
   const { collapsedSections } = state.ui;
-
   for (const sectionName in collapsedSections) {
     const isCollapsed = collapsedSections[sectionName];
     const content = document.getElementById(`collapsible-content-${sectionName}`);
@@ -687,7 +793,6 @@ function formatTimeAgo(timestamp) {
   const now = new Date();
   const date = timestamp.toDate();
   const seconds = Math.floor((now - date) / 1000);
-
   let interval = seconds / 31536000;
   if (interval > 1) return `hace ${Math.floor(interval)} años`;
   interval = seconds / 2592000;
@@ -770,22 +875,28 @@ function renderPublicProvidersSection(state) {
                     <h5 class="font-semibold text-md text-gray-700 bg-gray-100 p-2 rounded-t-md sticky top-0">${escapeHTML(
                       category
                     )}</h5>
+
                     <table class="min-w-full text-sm">
                         <tbody>
                             ${groupedByCategory[category]
+
                               .map(
                                 (item) => `
                                 <tr class="border-b price-list-item">
                                     <td class="p-2 item-name">${escapeHTML(item.name)}</td>
+
                                     <td class="p-2 text-right font-mono">${formatCurrency(
                                       item.price,
                                       'USD'
                                     )}</td>
+
                                 </tr>
+
                             `
                               )
                               .join('')}
                         </tbody>
+
                     </table>
                 </div>
             `
@@ -803,27 +914,33 @@ function renderPublicProvidersSection(state) {
                     }" alt="Logo de ${escapeHTML(
       provider.name
     )}" class="w-16 h-16 rounded-full mr-4 border">
+
                     <div class="flex-1">
                         <div class="flex items-center">
                             <h3 class="text-2xl font-bold text-gray-800">${escapeHTML(
                               provider.name
                             )}</h3>
+
                             ${verifiedBadge}
                         </div>
+
                         <p class="text-gray-500">${escapeHTML(provider.tagline || '')}</p>
                     </div>
                 </div>
                 <div class="flex justify-center gap-4 my-4">
                     <a href="${whatsappLink}" target="_blank" class="btn-primary flex-1 text-center py-2 px-4 flex items-center justify-center gap-2"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+
                     <a href="${instagramLink}" target="_blank" class="btn-secondary flex-1 text-center py-2 px-4 flex items-center justify-center gap-2">
                         <i class="fab fa-instagram"></i>
                         <span>@${escapeHTML(provider.instagram)}</span>
+
                     </a>
                 </div>
             </div>
             <div class="flex-grow p-6 border-t bg-gray-50 rounded-b-xl">
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-3 gap-4">
                     <div class="flex items-center">
+
                         <h4 class="font-semibold text-lg">Lista de Precios</h4>
                         ${
                           lastUpdated
@@ -832,13 +949,16 @@ function renderPublicProvidersSection(state) {
                                 .toLocaleString()}">Actualizado ${lastUpdated}</span>`
                             : ''
                         }
+
                     </div>
                     <div class="relative w-full sm:w-auto">
                         <input type="text" class="form-input w-full sm:w-48 p-2 pl-8 text-sm provider-price-list-search" placeholder="Buscar en lista..." data-provider-id="${
                           provider.id
                         }">
+
                         <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
                     </div>
+
                 </div>
                 <div class="overflow-y-auto max-h-80 pr-2 price-list-container">
                     ${priceListHtml}
@@ -855,9 +975,11 @@ function renderSalesHistory(state) {
   const noSalesMessage = document.getElementById('no-sales-message');
   const searchInput = document.getElementById('sales-search-input');
   if (!container || !noSalesMessage || !searchInput) return;
+
   if (searchInput.value !== state.salesSearchTerm) {
     searchInput.value = state.salesSearchTerm;
   }
+
   const searchTerm = (state.salesSearchTerm || '').toLowerCase();
   const filteredSales = state.sales.filter((sale) => {
     if (!searchTerm) return true;
@@ -869,8 +991,10 @@ function renderSalesHistory(state) {
     );
     return searchInClient || searchInItems;
   });
+
   noSalesMessage.classList.toggle('hidden', state.sales.length > 0);
   container.classList.toggle('hidden', filteredSales.length === 0 && searchTerm);
+
   if (filteredSales.length === 0) {
     if (searchTerm) {
       container.innerHTML = `<p class="text-center text-gray-500 py-8">No se encontraron ventas para "${escapeHTML(
@@ -881,6 +1005,7 @@ function renderSalesHistory(state) {
     }
     return;
   }
+
   const salesByDay = filteredSales.reduce((acc, sale) => {
     const date =
       sale.saleDate ||
@@ -891,7 +1016,9 @@ function renderSalesHistory(state) {
     acc[date].push(sale);
     return acc;
   }, {});
+
   const sortedDays = Object.keys(salesByDay).sort((a, b) => new Date(b) - new Date(a));
+
   container.innerHTML = sortedDays
     .map((day) => {
       const salesOfTheDay = salesByDay[day];
@@ -902,6 +1029,7 @@ function renderSalesHistory(state) {
       }, 0);
       return `
             <div class="day-group mt-8">
+
                 <div class="flex justify-between items-center bg-gray-100 p-3 rounded-t-lg border-b">
                     <h3 class="text-xl font-bold text-gray-700">${formatDate(day)}</h3>
                     <div class="text-right">
@@ -909,13 +1037,16 @@ function renderSalesHistory(state) {
                           dayTotal,
                           'USD'
                         )}</span></p>
+
                         <p class="text-sm text-gray-600">Ganancia Día: <span class="font-semibold ${
                           dayProfit >= 0 ? 'text-green-600' : 'text-red-600'
                         }">${formatCurrency(dayProfit, 'USD')}</span></p>
+
                     </div>
                 </div>
                 <div class="space-y-4 p-4 bg-white rounded-b-lg shadow-sm">
                     ${salesOfTheDay.map((sale) => renderSaleCard(sale)).join('')}
+
                 </div>
             </div>
         `;
@@ -931,6 +1062,7 @@ function renderSaleCard(sale) {
     sale.soldAt?.toDate() || (sale.saleDate ? new Date(sale.saleDate + 'T12:00:00Z') : null);
   if (saleDate) {
     const today = new Date();
+
     const diffTime = Math.abs(today - saleDate);
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     daysSinceSaleHtml = `<span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full" title="Días desde la venta">${diffDays} día(s) (Garantía)</span>`;
@@ -946,13 +1078,16 @@ function renderSaleCard(sale) {
                     <p class="text-sm text-gray-500">${(sale.items || [])
                       .map((i) => escapeHTML(i.model))
                       .join(', ')}</p>
+
                 </div>
                 <div class="text-right flex-shrink-0 ml-4">
                     <p class="text-xl font-bold">${formatCurrency(sale.total, 'USD')}</p>
+
                     <p class="text-sm ${
                       profit >= 0 ? 'text-green-600' : 'text-red-600'
                     }">Ganancia: ${formatCurrency(profit, 'USD')}</p>
                 </div>
+
             </div>
             <div class="mt-3 pt-3 border-t flex justify-between items-center">
                 ${daysSinceSaleHtml}
@@ -960,6 +1095,7 @@ function renderSaleCard(sale) {
                     <button class="delete-sale-btn btn-danger text-xs py-1 px-2 rounded" data-sale-id="${
                       sale.id
                     }">Anular</button>
+
                 </div>
             </div>
         </div>
@@ -968,20 +1104,19 @@ function renderSaleCard(sale) {
 
 function renderCapitalSection(state) {
   const { stock, capital, debts, exchangeRate } = state;
-  if (!stock || !capital || !debts) return;
+  if (!stock || !capital || !debts || !exchangeRate) return;
 
   const stockValueUSD = stock.reduce(
     (sum, item) => sum + (item.phoneCost || 0) * (item.quantity || 1),
     0
   );
-
   const totalDebtUSD = debts.reduce((sum, debt) => sum + (debt.amount || 0), 0);
   const arsWalletsUSD = ((capital.ars || 0) + (capital.mp || 0)) / exchangeRate;
   const usdWallets = (capital.usd || 0) + (capital.usdt || 0);
   const totalCapital =
     arsWalletsUSD + usdWallets + stockValueUSD + (capital.clientDebt || 0) - totalDebtUSD;
-
   const liquidCapitalUSD = arsWalletsUSD + usdWallets;
+
   const liquidCapitalEl = document.getElementById('capital-liquid');
   if (liquidCapitalEl) {
     liquidCapitalEl.textContent = formatCurrency(liquidCapitalUSD, 'USD');
@@ -1043,12 +1178,14 @@ function renderClientDebtsList(state) {
         }
       }
       totalPaidExcludingDebt += sale.tradeInValueUSD || 0;
+
       const balanceUSD = sale.total - totalPaidExcludingDebt;
       const settledAmount = payments.debtSettled || 0;
       const outstandingBalance = balanceUSD - settledAmount;
       return { ...sale, balanceUSD: outstandingBalance };
     })
     .filter((sale) => sale.balanceUSD > 0.01);
+
   const clientDebtsListEl = document.getElementById('client-debts-list');
   if (!clientDebtsListEl) return;
   clientDebtsListEl.innerHTML =
@@ -1063,8 +1200,10 @@ function renderClientDebtsList(state) {
                     <p class="text-xs text-gray-500">${(debt.items || [])
                       .map((i) => i.model)
                       .join(', ')}</p>
+
                 </div>
                 <div class="flex items-center gap-2">
+
                     <p class="font-bold text-yellow-500">${formatCurrency(
                       debt.balanceUSD,
                       'USD'
@@ -1072,6 +1211,7 @@ function renderClientDebtsList(state) {
                     <button class="settle-client-debt-btn btn-primary text-xs py-1 px-2" data-sale-id="${
                       debt.id
                     }" data-balance="${debt.balanceUSD}">Saldar</button>
+
                 </div>
             </div>`
           )
@@ -1090,12 +1230,14 @@ function renderOurDebtsList(state) {
                 <div>
                     <p class="font-semibold">${escapeHTML(debt.debtorName)}</p>
                     <p class="text-xs text-gray-500">${escapeHTML(debt.description)}</p>
+
                 </div>
                 <div class="flex items-center gap-2">
                     <p class="font-bold text-red-500">${formatCurrency(debt.amount, 'USD')}</p>
                     <button class="settle-our-debt-btn btn-primary text-xs py-1 px-2" data-debt-id="${
                       debt.id
                     }">Saldar</button>
+
                 </div>
             </div>`
           )
@@ -1150,6 +1292,7 @@ function getFixedExpenseStatus(expense) {
 function renderExpensesSection(state) {
   if (!state.fixedExpenses || !state.dailyExpenses) return;
   const { fixedExpenses, dailyExpenses, expensesSearchTerm } = state;
+
   const searchInput = document.getElementById('expenses-search-input');
   if (searchInput && searchInput.value !== expensesSearchTerm) {
     searchInput.value = expensesSearchTerm;
@@ -1163,9 +1306,11 @@ function renderExpensesSection(state) {
           return `
                     <div class="bg-white p-3 rounded-lg flex justify-between items-center border shadow-sm">
                         <div>
+
                             <p class="font-semibold">${escapeHTML(exp.description)}</p>
                             <p class="text-sm font-bold">${formatCurrency(exp.amount, 'USD')}</p>
                             <p class="text-xs ${status.color} mt-1">${status.text}</p>
+
                         </div>
                         <div class="flex items-center gap-2">
                             ${
@@ -1173,13 +1318,16 @@ function renderExpensesSection(state) {
                                 ? `<button class="btn-primary px-3 py-1 text-sm pay-fixed-expense-btn" data-id="${exp.id}">Pagar</button>`
                                 : ''
                             }
+
                             <button class="edit-fixed-expense-btn p-2 text-gray-400 hover:text-blue-500" data-expense='${JSON.stringify(
                               exp
                             )}'><i class="fas fa-edit"></i></button>
+
                             <button class="delete-fixed-expense-btn p-2 text-gray-400 hover:text-red-500" data-id="${
                               exp.id
                             }"><i class="fas fa-trash"></i></button>
                         </div>
+
                     </div>
                 `;
         })
@@ -1228,6 +1376,7 @@ function renderPaymentHistoryItem(expense) {
                 <div class="text-xs text-gray-500 flex items-center mt-1">
                     <i class="${walletIcon} mr-2"></i>
                     <span>${formatDate(expense.date)}</span>
+
                 </div>
             </div>
             <div class="flex items-center gap-4">
@@ -1235,6 +1384,7 @@ function renderPaymentHistoryItem(expense) {
                 <button class="delete-daily-expense-btn p-2 text-gray-400 hover:text-red-500" data-id="${
                   expense.id
                 }"><i class="fas fa-trash"></i></button>
+
             </div>
         </div>
     `;
@@ -1245,7 +1395,6 @@ export function renderAddStockForm(state) {
   const form = document.getElementById('stock-form-register');
 
   if (!form) return;
-
   const allCategories = categories || [];
   const selectedCategoryName =
     form.querySelector('#stock-category-reg')?.value || allCategories[0]?.name || '';
@@ -1266,6 +1415,7 @@ export function renderAddStockForm(state) {
                       .join('')}
                 </select>
             </div>
+
             <div>
                 <label class="block text-sm">Nombre Identificador</label>
                 <input type="text" id="stock-model-reg" class="form-input w-full" placeholder="Ej: iPhone de Juan, MacBook Pro M3 Max" required>
@@ -1273,6 +1423,7 @@ export function renderAddStockForm(state) {
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label class="block text-sm">N/S</label><input type="text" id="stock-serial-reg" class="form-input w-full" required></div>
+
             <div><label class="block text-sm">Cantidad</label><input type="number" id="stock-quantity-reg" class="form-input w-full" value="1" min="1" required></div>
         </div>
         <div class="border-t my-4"></div>
@@ -1282,16 +1433,17 @@ export function renderAddStockForm(state) {
                 ?.map((attr) => generateAttributeInputHTML(attr))
                 .join('') || ''
             }
+
         </div>
         <div class="border-t my-4"></div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label class="block text-sm">Costo (USD)</label><input type="number" id="stock-cost-reg" class="form-input w-full" required></div>
             <div><label class="block text-sm">P. Venta Sugerido (USD)</label><input type="number" id="stock-price-reg" class="form-input w-full"></div>
+
         </div>
         <div><label class="block text-sm">Detalles Adicionales</label><textarea id="stock-details-reg" class="form-textarea w-full"></textarea></div>
         <button type="submit" class="btn-primary py-2 px-6">Añadir a Stock</button>
     `;
-
   form.innerHTML = formHTML;
 }
 
@@ -1303,6 +1455,7 @@ function generateAttributeInputHTML(attribute, value = '') {
   const label = `<label for="${inputId}" class="block text-sm">${escapeHTML(name)} ${
     unit ? `(${unit})` : ''
   }</label>`;
+
   const requiredAttr = required ? 'required' : '';
 
   switch (type) {
@@ -1346,6 +1499,7 @@ function renderStockSection(state) {
   const noStockMessage = document.getElementById('no-stock-message-consultas');
   const searchInput = document.getElementById('stock-search-input');
   if (!stockListContainer || !noStockMessage || !searchInput) return;
+
   if (searchInput.value !== state.stockSearchTerm) {
     searchInput.value = state.stockSearchTerm;
   }
@@ -1365,12 +1519,14 @@ function renderStockSection(state) {
     acc[category].push(item);
     return acc;
   }, {});
+
   const sortedCategories = Object.keys(groupedStock).sort();
   noStockMessage.classList.toggle('hidden', state.stock.length > 0);
   if (filteredStock.length === 0 && searchTerm) {
     stockListContainer.innerHTML = `<p class="text-center text-gray-500 py-8">No se encontraron productos para "${escapeHTML(
       state.stockSearchTerm
     )}".</p>`;
+
     return;
   }
   if (sortedCategories.length > 0) {
@@ -1382,24 +1538,30 @@ function renderStockSection(state) {
                   category
                 )}</h4>
                 <div class="overflow-x-auto">
+
                     <table class="min-w-full text-left">
                         <thead class="border-b border-gray-200">
                             <tr class="text-gray-500 text-sm">
                                 <th class="p-2">Nombre Identificador</th>
+
                                 <th class="p-2">N/S</th>
                                 <th class="p-2 text-center">Qty.</th>
                                 <th class="p-2">Atributos</th>
+
                                 <th class="p-2 text-right">Costo</th>
                                 <th class="p-2 text-right">P. Sugerido</th>
                                 <th class="p-2"></th>
+
                             </tr>
                         </thead>
                         <tbody>
+
                             ${groupedStock[category]
                               .map((item) => {
                                 const attributesPreview =
                                   item.attributes && Object.keys(item.attributes).length > 0
                                     ? Object.entries(item.attributes)
+
                                         .slice(0, 2)
                                         .map(
                                           ([key, value]) =>
@@ -1415,6 +1577,7 @@ function renderStockSection(state) {
                                 const rowClass = isReserved
                                   ? 'opacity-50 bg-gray-100'
                                   : 'hover:bg-gray-50';
+
                                 const reservedTag = isReserved
                                   ? '<span class="ml-2 text-xs bg-yellow-400 text-yellow-900 font-bold px-2 py-1 rounded-full">Reservado</span>'
                                   : '';
@@ -1424,32 +1587,40 @@ function renderStockSection(state) {
                                     <td class="p-2 font-semibold">${escapeHTML(
                                       item.model
                                     )} ${reservedTag}</td>
+
                                     <td class="p-2 font-mono text-sm">${escapeHTML(
                                       item.serialNumber
                                     )}</td>
+
                                     <td class="p-2 text-center font-bold text-lg">${
                                       item.quantity || 1
                                     }</td>
+
                                     <td class="p-2 text-xs max-w-xs truncate" title="${escapeHTML(
                                       Object.entries(item.attributes || {})
                                         .map(([k, v]) => `${k}: ${v}`)
                                         .join('\n')
                                     )}">${attributesPreview}</td>
+
                                     <td class="p-2 text-right font-medium">${formatCurrency(
                                       item.phoneCost,
                                       'USD'
                                     )}</td>
+
                                     <td class="p-2 text-right font-medium text-green-600">${formatCurrency(
                                       item.suggestedSalePrice || 0,
                                       'USD'
                                     )}</td>
+
                                     <td class="p-2 text-right">
                                         <button class="edit-stock-btn text-blue-500 hover:text-blue-400 mr-2" data-id="${
                                           item.id
                                         }"><i class="fas fa-edit"></i></button>
+
                                         <button class="delete-stock-btn text-red-500 hover:text-red-400" data-id="${
                                           item.id
                                         }"><i class="fas fa-trash-alt"></i></button>
+
                                     </td>
                                 </tr>`;
                               })
@@ -1475,6 +1646,7 @@ function renderSalesSection(state) {
   const clientSearchResults = document.getElementById('client-search-results');
   const selectedClientDisplay = document.getElementById('selected-client-display');
   if (!clientSearchInput || !clientSearchResults || !selectedClientDisplay) return;
+
   if (clientSearchInput.value !== sale.clientSearchTerm) {
     clientSearchInput.value = sale.clientSearchTerm;
   }
@@ -1514,6 +1686,7 @@ function renderSalesSection(state) {
   const stockSearchInput = document.getElementById('stock-search-input-sale');
   const stockSearchResults = document.getElementById('stock-search-results-sale');
   if (!stockSearchInput || !stockSearchResults) return;
+
   if (stockSearchInput.value !== sale.stockSearchTerm) {
     stockSearchInput.value = sale.stockSearchTerm;
   }
@@ -1536,21 +1709,26 @@ function renderSalesSection(state) {
                   item
                 )}'>
                     <div class="flex justify-between items-center">
+
                         <div>
                             <p class="font-bold">${escapeHTML(
                               item.model
                             )} <span class="font-normal text-gray-500">(${escapeHTML(
                 item.category
               )})</span></p>
+
                             <p class="text-xs text-gray-500">${escapeHTML(item.serialNumber)}</p>
                         </div>
+
                         <div class="text-right">
                             <p class="text-sm font-bold">Stock: ${item.quantity || 0}</p>
                             <p class="text-xs text-green-600">P. Sug: ${formatCurrency(
                               item.suggestedSalePrice,
                               'USD'
                             )}</p>
+
                         </div>
+
                     </div>
                 </div>
             `
@@ -1571,25 +1749,31 @@ function renderSalesSection(state) {
             <div class="p-3 bg-white border rounded-lg flex flex-col gap-2">
                 <div class="flex items-center justify-between gap-4">
                     <div class="flex-grow flex items-center gap-2">
+
                         <button type="button" class="view-item-details-btn text-blue-500 hover:text-blue-700" data-item-index="${index}"><i class="fas fa-info-circle"></i></button>
                         <div>
                             <p class="font-semibold">${escapeHTML(item.model)}</p>
                             <p class="text-xs text-gray-500">${escapeHTML(item.serialNumber)}</p>
+
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <label class="text-sm">Precio:</label>
+
                         <input type="number" value="${
                           item.salePrice || item.suggestedSalePrice || 0
                         }" class="form-input p-1 w-24 text-right sale-item-price" data-index="${index}">
+
                     </div>
                     <button type="button" class="remove-sale-item-btn text-red-500 hover:text-red-700" data-index="${index}"><i class="fas fa-trash"></i></button>
                 </div>
                 <div class="flex justify-between items-center text-xs text-gray-600 border-t pt-2 mt-2">
+
                     <span>Costo: ${formatCurrency(item.phoneCost || 0, 'USD')}</span>
                     <span class="font-bold ${
                       profit >= 0 ? 'text-green-600' : 'text-red-600'
                     }">Ganancia: ${formatCurrency(profit, 'USD')}</span>
+
                 </div>
             </div>
             `;
@@ -1601,6 +1785,7 @@ function renderSalesSection(state) {
 }
 function renderClientsSection(state) {
   if (!state.clients) return;
+
   const searchTerm = state.clientSearchTerm || '';
   let filteredClients = state.clients;
   if (searchTerm) {
@@ -1613,6 +1798,7 @@ function renderClientsSection(state) {
   const clientsList = document.getElementById('clients-list-consultas');
   const noClientsMessage = document.getElementById('no-clients-message-consultas');
   if (!clientsList || !noClientsMessage) return;
+
   noClientsMessage.classList.toggle('hidden', state.clients.length > 0);
   if (filteredClients.length > 0) {
     clientsList.innerHTML = filteredClients
@@ -1692,9 +1878,11 @@ function renderDashboardSection(state) {
       startDate = dashboardCustomStartDate
         ? new Date(dashboardCustomStartDate + 'T00:00:00')
         : new Date(0);
+
       endDate = dashboardCustomEndDate
         ? new Date(dashboardCustomEndDate + 'T23:59:59')
         : new Date();
+
       break;
     default:
       startDate = new Date(0);
@@ -1713,13 +1901,11 @@ function renderDashboardSection(state) {
     }
     return saleDate >= startDate && saleDate <= endDate;
   });
-
   const dailyExpensesInPeriod = dailyExpenses.filter((e) => {
     if (!e.date) return false;
     const expenseDate = new Date(e.date + 'T12:00:00Z');
     return expenseDate >= startDate && expenseDate <= endDate;
   });
-
   const totalSales = salesInPeriod.reduce((sum, s) => sum + (s.total || 0), 0);
   const grossProfit = salesInPeriod.reduce((sum, s) => {
     const itemsCost = (s.items || []).reduce((itemSum, i) => itemSum + (i.phoneCost || 0), 0);
@@ -1764,7 +1950,6 @@ function renderUserProvidersSection(state) {
   const container = document.getElementById('user-providers-list-container');
   const noMessage = document.getElementById('no-user-providers-message');
   const searchInput = document.getElementById('user-providers-search-input');
-
   if (!container || !noMessage || !searchInput) return;
 
   if (searchInput.value !== userProvidersSearchTerm) {
@@ -1777,7 +1962,6 @@ function renderUserProvidersSection(state) {
       (p.name || '').toLowerCase().includes(searchTerm) ||
       (p.contact || '').toLowerCase().includes(searchTerm)
   );
-
   noMessage.classList.toggle('hidden', userProviders.length > 0);
   container.innerHTML = '';
 
@@ -1799,17 +1983,20 @@ function renderUserProvidersSection(state) {
                 <p class="text-sm text-gray-500">${escapeHTML(
                   provider.contact || 'Sin contacto'
                 )}</p>
+
                 <p class="text-xs text-gray-400 mt-2">${escapeHTML(
                   provider.notes || 'Sin notas'
                 )}</p>
             </div>
             <div class="flex items-center justify-end mt-4">
+
                 <button class="edit-provider-btn text-gray-400 hover:text-blue-500" data-provider='${JSON.stringify(
                   provider
                 )}'><i class="fas fa-edit"></i></button>
                 <button class="delete-provider-btn ml-2 text-gray-400 hover:text-red-500" data-id="${
                   provider.id
                 }" data-name="${escapeHTML(provider.name)}"><i class="fas fa-trash"></i></button>
+
             </div>
         </div>
     `
@@ -1834,14 +2021,13 @@ function renderCategoryManagerSection(state) {
         }" data-category-id="${cat.id}">
             <span class="font-semibold">${escapeHTML(cat.name)}</span>
         </div>
+
     `
     )
     .join('');
-
   const attributesContainer = document.getElementById('category-attributes-manager');
   const placeholder = document.getElementById('category-manager-placeholder');
   if (!attributesContainer || !placeholder) return;
-
   const selectedCategory = categories.find((c) => c.id === categoryManager.selectedCategoryId);
 
   if (selectedCategory) {
@@ -1857,7 +2043,6 @@ function renderCategoryManagerSection(state) {
 function renderCategoryAttributes(category) {
   const container = document.getElementById('category-attributes-content');
   if (!container) return;
-
   const { categoryManager } = appState;
   const isEditingName = categoryManager.isEditingCategoryName;
 
@@ -1866,7 +2051,6 @@ function renderCategoryAttributes(category) {
         category.name
       )}">`
     : `<h3 class="text-2xl font-bold">${escapeHTML(category.name)}</h3>`;
-
   container.innerHTML = `
         <div class="flex justify-between items-start mb-6">
             <div class="flex items-center gap-3">
@@ -1876,24 +2060,29 @@ function renderCategoryAttributes(category) {
                     ? `<button id="save-category-name-btn" class="text-green-600 hover:text-green-800"><i class="fas fa-check-circle fa-lg"></i></button>`
                     : `<button id="edit-category-name-btn" class="text-gray-400 hover:text-gray-600"><i class="fas fa-pencil-alt"></i></button>`
                 }
+
             </div>
             <button id="delete-category-btn" class="btn-danger py-1 px-3 text-sm"><i class="fas fa-trash"></i> Eliminar Categoría</button>
         </div>
 
         <h4 class="font-semibold text-lg mb-3">Atributos de la Plantilla</h4>
+
         <div id="attribute-list" class="space-y-3 mb-6">
             ${
               category.attributes && category.attributes.length > 0
                 ? category.attributes
+
                     .map(
                       (attr) => `
                 <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center border">
                     <div>
                         <p class="font-medium">${escapeHTML(attr.name)}</p>
+
                         <p class="text-xs text-gray-500">Tipo: ${attr.type} ${
                         attr.options ? `(${(attr.options || []).join(', ')})` : ''
                       }</p>
                     </div>
+
                     <button class="delete-attribute-btn text-red-500 hover:text-red-700" data-attr-id="${
                       attr.id
                     }"><i class="fas fa-times"></i></button>
@@ -1906,25 +2095,30 @@ function renderCategoryAttributes(category) {
         </div>
 
         <div class="border-t pt-6">
+
             <h4 class="font-semibold text-lg mb-3">Añadir Nuevo Atributo</h4>
             <form id="add-attribute-form" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                 <div>
                     <label class="block text-sm">Nombre del Atributo</label>
                     <input type="text" id="new-attribute-name" class="form-input w-full" required>
+
                 </div>
                 <div>
                     <label class="block text-sm">Tipo de Campo</label>
                     <select id="new-attribute-type" class="form-select w-full">
                         <option value="text">Texto</option>
+
                         <option value="number">Número</option>
                         <option value="select">Lista Desplegable</option>
                         <option value="checkbox">Checkbox (Sí/No)</option>
                     </select>
+
                 </div>
                 <div id="new-attribute-options-container" class="hidden">
                     <label class="block text-sm">Opciones (separadas por coma)</label>
                     <input type="text" id="new-attribute-options" class="form-input w-full">
                 </div>
+
                 <div class="md:col-span-3">
                     <button type="submit" class="btn-primary py-2 px-6">Añadir Atributo</button>
                 </div>
@@ -1935,7 +2129,7 @@ function renderCategoryAttributes(category) {
 export function updateSaleBalance(state) {
   const { sale, exchangeRate } = state;
   const summaryEl = document.getElementById('sale-summary');
-  if (!summaryEl) return;
+  if (!summaryEl || !exchangeRate) return;
 
   const subtotal = (sale.items || []).reduce((sum, item) => sum + (item.salePrice || 0), 0);
   const costTotal = (sale.items || []).reduce((sum, item) => sum + (item.phoneCost || 0), 0);
@@ -1990,6 +2184,7 @@ export function updateSaleBalance(state) {
           totalSalePrice - tradeInValueUSD,
           'USD'
         )}</span></div>
+
         <div class="flex justify-between items-center text-sm"><span>Total Pagado (Métodos):</span> <span>${formatCurrency(
           totalPaidViaMethods,
           'USD'
@@ -1997,12 +2192,14 @@ export function updateSaleBalance(state) {
         <div class="flex justify-between items-center font-bold text-xl ${
           balance > -0.01 && balance < 0.01 ? 'text-green-600' : 'text-red-600'
         }">
+
             <span>Balance:</span> <span>${formatCurrency(balance, 'USD')}</span>
         </div>
         <div class="border-t my-2 pt-2"></div>
         <div class="flex justify-between items-center text-sm"><span>Ganancia (Venta):</span> <span class="font-bold ${
           netProfit >= 0 ? 'text-green-600' : 'text-red-600'
         }">${formatCurrency(netProfit, 'USD')}</span></div>
+
     `;
 }
 
@@ -2052,6 +2249,7 @@ function renderReservationsSection(state) {
 
       return `
         <div class="bg-white p-4 rounded-lg border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+
             <div class="flex-grow">
                 <p class="font-bold text-lg">${escapeHTML(
                   res.item?.model || 'Producto no encontrado'
@@ -2059,11 +2257,13 @@ function renderReservationsSection(state) {
                 <p class="text-sm text-gray-600">Para: <span class="font-semibold">${escapeHTML(
                   res.customerName
                 )}</span></p>
+
                 <p class="text-xs text-gray-500">Reservado el: ${formatDateTime(res.createdAt)}</p>
             </div>
             <div class="flex-shrink-0 text-left md:text-right">
                 <p class="text-sm">Seña: ${depositText}</p>
             </div>
+
             <div class="flex-shrink-0 flex items-center gap-2 w-full md:w-auto">
                 <button class="cancel-reservation-btn btn-danger py-2 px-3 text-sm flex-1 md:flex-none" data-id="${
                   res.id
@@ -2071,6 +2271,7 @@ function renderReservationsSection(state) {
                 <button class="finalize-sale-from-reservation-btn btn-primary py-2 px-3 text-sm flex-1 md:flex-none" data-id="${
                   res.id
                 }"><i class="fas fa-check mr-1"></i> Finalizar Venta</button>
+
             </div>
         </div>
         `;
@@ -2085,7 +2286,6 @@ function renderSalespeopleSection(state) {
   const container = document.getElementById('salespeople-list-container');
   const noMessage = document.getElementById('no-salespeople-message');
   const searchInput = document.getElementById('salespeople-search-input');
-
   if (!container || !noMessage || !searchInput) return;
 
   if (searchInput.value !== salespeopleSearchTerm) {
@@ -2096,7 +2296,6 @@ function renderSalespeopleSection(state) {
   const filteredSalespeople = salespeople.filter((p) =>
     (p.name || '').toLowerCase().includes(searchTerm)
   );
-
   noMessage.classList.toggle('hidden', salespeople.length > 0);
   container.innerHTML = '';
 
@@ -2117,6 +2316,7 @@ function renderSalespeopleSection(state) {
                 <p class="font-bold text-lg">${escapeHTML(person.name)}</p>
                 <p class="text-sm text-gray-500">${escapeHTML(person.contact || 'Sin contacto')}</p>
                 <p class="text-xs text-green-600 mt-2">Comisión: ${person.commissionRate || 0}%</p>
+
             </div>
             <div class="flex items-center justify-end mt-4">
                 <button class="edit-salesperson-btn text-gray-400 hover:text-blue-500" data-salesperson='${JSON.stringify(
@@ -2125,6 +2325,7 @@ function renderSalespeopleSection(state) {
                 <button class="delete-salesperson-btn ml-2 text-gray-400 hover:text-red-500" data-id="${
                   person.id
                 }" data-name="${escapeHTML(person.name)}"><i class="fas fa-trash"></i></button>
+
             </div>
         </div>
     `
@@ -2136,7 +2337,6 @@ export function toggleTradeInDetails() {
   const tradeInCheckbox = document.getElementById('has-trade-in');
   const tradeInDetailsEl = document.getElementById('trade-in-details');
   if (!tradeInCheckbox || !tradeInDetailsEl) return;
-
   const show = tradeInCheckbox.checked;
 
   if (show && tradeInDetailsEl.innerHTML === '') {
@@ -2146,29 +2346,27 @@ export function toggleTradeInDetails() {
       allCategories
         .map((cat) => `<option value="${escapeHTML(cat.name)}">${escapeHTML(cat.name)}</option>`)
         .join('');
-
     tradeInDetailsEl.innerHTML = `
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div><label class="text-sm">Nombre Identificador</label><input type="text" id="trade-in-model" class="form-input w-full p-2 mt-1"></div>
                 <div><label class="text-sm">N/S</label><input type="text" id="trade-in-serial" class="form-input w-full p-2 mt-1"></div>
                 <div><label class="text-sm">Valor de Toma (USD)</label><input type="number" id="trade-in-value" class="form-input w-full p-2 mt-1" value="0"></div>
                 <div><label class="text-sm">Categoría</label><select id="trade-in-category" class="form-select w-full p-2 mt-1">${categoryOptions}</select></div>
+
                 <div><label class="text-sm">P. Venta Sugerido (USD)</label><input type="number" id="trade-in-sug-price" class="form-input w-full p-2 mt-1"></div>
+
                 <div><label class="text-sm">Detalles (Canje)</label><textarea id="trade-in-details-input" class="form-textarea w-full p-2 mt-1"></textarea></div>
             </div>
             <div id="trade-in-attributes-container" class="mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- Los atributos dinámicos aparecerán aquí -->
-            </div>
+                </div>
         `;
   }
 
   tradeInDetailsEl.classList.toggle('hidden', !show);
-
   ['trade-in-model', 'trade-in-serial', 'trade-in-value'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.required = show;
   });
-
   const tradeInValue = document.getElementById('trade-in-value');
   if (!show && tradeInValue) {
     tradeInValue.value = 0;
@@ -2188,11 +2386,9 @@ export function renderTradeInAttributes() {
   const categorySelect = document.getElementById('trade-in-category');
   const attributesContainer = document.getElementById('trade-in-attributes-container');
   if (!categorySelect || !attributesContainer) return;
-
   const selectedCategoryName = categorySelect.value;
   const allCategories = appState.categories || [];
   const selectedCategory = allCategories.find((c) => c.name === selectedCategoryName);
-
   if (selectedCategory && selectedCategory.attributes) {
     attributesContainer.innerHTML = selectedCategory.attributes
       .map((attr) => generateAttributeInputHTML(attr))
@@ -2203,6 +2399,7 @@ export function renderTradeInAttributes() {
 }
 export function formatCurrency(number, currency = 'ARS') {
   const num = number || 0;
+
   if (currency === 'USDT')
     return `${num.toLocaleString('es-AR', {
       minimumFractionDigits: 2,
@@ -2245,7 +2442,6 @@ export function switchTab(activeKey) {
     .forEach((section) =>
       section.classList.toggle('hidden', !section.id.startsWith(`section-${activeKey}`))
     );
-
   // FIX: Se asegura que la sub-pestaña correcta se active al cambiar de pestaña principal.
   if (activeKey === 'ventas') switchSubTab('ventas', 'nueva');
   if (activeKey === 'inventario') switchSubTab('inventario', 'stock');
@@ -2267,11 +2463,9 @@ export function switchSubTab(hubKey, activeKey) {
 export function showModal(content, title = 'Notificación', footerContent = null) {
   const modalContainer = document.getElementById('modal-container');
   if (!modalContainer) return;
-
   const footerHtml = footerContent
     ? `<div class="modal-footer flex justify-end gap-4">${footerContent}</div>`
     : `<div class="modal-footer"><button class="btn-primary close-modal-btn px-4 py-2">Cerrar</button></div>`;
-
   modalContainer.innerHTML = `
         <div id="app-modal" class="modal-backdrop">
             <div class="modal-content">
@@ -2279,13 +2473,13 @@ export function showModal(content, title = 'Notificación', footerContent = null
                     <h3>${title}</h3>
                     <button class="close-modal-btn text-2xl">&times;</button>
                 </div>
+
                 <div class="modal-body">
                     ${content}
                 </div>
                 ${footerHtml}
             </div>
         </div>`;
-
   modalContainer.querySelector('#app-modal')?.addEventListener('click', (e) => {
     if (e.target.id === 'app-modal' || e.target.closest('.close-modal-btn')) {
       modalContainer.innerHTML = '';
@@ -2318,10 +2512,11 @@ export function openConfirmModal(message, onConfirm) {
 export function openNoteModal(note = null) {
   const isEditing = note !== null;
   const title = isEditing ? 'Editar Nota' : 'Nueva Nota';
+
   const noteTitle = isEditing ? note.title : '';
   const noteContent = isEditing ? note.content : '';
-  const noteId = isEditing ? note.id : '';
 
+  const noteId = isEditing ? note.id : '';
   const content = `
         <form id="note-form" class="space-y-4" data-id="${noteId}">
             <div>
@@ -2329,12 +2524,14 @@ export function openNoteModal(note = null) {
                 <input type="text" id="note-title" class="form-input w-full mt-1" value="${escapeHTML(
                   noteTitle
                 )}" required>
+
             </div>
             <div>
                 <label for="note-content" class="block text-sm font-medium text-gray-700">Contenido</label>
                 <textarea id="note-content" rows="8" class="form-textarea w-full mt-1">${escapeHTML(
                   noteContent
                 )}</textarea>
+
             </div>
         </form>
     `;
@@ -2353,12 +2550,14 @@ export function openChangePasswordModal() {
                 <input type="password" id="current-password" class="form-input w-full mt-1" required>
             </div>
             <div>
+
                 <label for="new-password" class="block text-sm font-medium text-gray-700">Nueva Contraseña</label>
                 <input type="password" id="new-password" class="form-input w-full mt-1" placeholder="Mínimo 6 caracteres" required>
             </div>
             <div>
                 <label for="confirm-password" class="block text-sm font-medium text-gray-700">Confirmar Nueva Contraseña</label>
                 <input type="password" id="confirm-password" class="form-input w-full mt-1" required>
+
             </div>
         </form>
     `;
@@ -2401,75 +2600,85 @@ export function openAddClientModal() {
 export function openReservationModal(state) {
   const content = `
         <form id="reservation-form" class="space-y-6">
-            <!-- Client Selection -->
             <div class="space-y-2">
                 <h4 class="font-semibold">1. Cliente</h4>
+
                 <div class="relative">
                     <div id="reservation-selected-client-display" class="mb-2"></div>
                     <div id="reservation-client-search-container">
                          <input type="text" id="reservation-client-search-input" class="form-input w-full" placeholder="Buscar cliente...">
                          <div id="reservation-client-search-results" class="absolute z-20 w-full bg-white border rounded-md mt-1 hidden max-h-48 overflow-y-auto"></div>
+
                     </div>
                 </div>
             </div>
 
-            <!-- Stock Selection -->
             <div class="space-y-2">
+
                 <h4 class="font-semibold">2. Producto a Reservar</h4>
+
                  <div class="relative">
                     <div id="reservation-selected-item-display" class="mb-2"></div>
                     <div id="reservation-stock-search-container">
                         <input type="text" id="reservation-stock-search-input" class="form-input w-full" placeholder="Buscar producto disponible...">
                         <div id="reservation-stock-search-results" class="absolute z-10 w-full bg-white border rounded-md mt-1 hidden max-h-48 overflow-y-auto"></div>
+
                     </div>
                 </div>
             </div>
 
-            <!-- Deposit Information -->
             <div class="space-y-3 pt-4 border-t">
+
                 <h4 class="font-semibold">3. Seña</h4>
+
                 <div class="flex items-center">
                     <input id="reservation-has-deposit" type="checkbox" class="h-4 w-4">
                     <label for="reservation-has-deposit" class="ml-3">Se recibió seña</label>
                 </div>
                 <div id="reservation-deposit-details" class="hidden space-y-3 pl-4 border-l-2 ml-2">
+
                      <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm">Monto Seña</label>
                             <div class="flex items-center gap-2">
+
                                 <input type="number" id="reservation-deposit-amount" data-form-type="reservation-deposit" class="currency-input form-input w-full" value="0">
                                 <select id="reservation-deposit-currency" data-form-type="reservation-deposit" class="currency-select form-select">
-                                    <option value="USD">USD</option>
+                                     <option value="USD">USD</option>
+
                                     <option value="ARS">ARS</option>
                                 </select>
                             </div>
+
                             <p id="reservation-deposit-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>
                         </div>
                         <div>
+
                             <label class="block text-sm">Método de Pago</label>
                             <select id="reservation-deposit-method" class="form-select w-full">
                                 <option value="usd">Dólares (USD)</option>
+
                                 <option value="ars">Efectivo (ARS)</option>
                                 <option value="mp">Digital (ARS)</option>
                                 <option value="usdt">USDT</option>
+
                             </select>
                         </div>
                     </div>
                 </div>
             </div>
-             <!-- Notes -->
-            <div class="space-y-2 pt-4 border-t">
+
+             <div class="space-y-2 pt-4 border-t">
                  <h4 class="font-semibold">4. Notas Adicionales</h4>
+
                  <textarea id="reservation-notes" rows="2" class="form-textarea w-full"></textarea>
             </div>
         </form>
     `;
-
   const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="reservation-form" class="btn-primary px-4 py-2">Guardar Reserva</button>
     `;
-
   showModal(content, 'Crear Nueva Reserva', footer);
 }
 
@@ -2484,6 +2693,7 @@ export function openAddStockModal(state) {
                     <label class="block text-sm">Categoría</label>
                     <select id="stock-category-modal" class="form-select w-full" required>
                         <option value="">-- Seleccionar --</option>
+
                         ${allCategories
                           .map(
                             (cat) =>
@@ -2492,25 +2702,29 @@ export function openAddStockModal(state) {
                               )}</option>`
                           )
                           .join('')}
+
                     </select>
                 </div>
                 <div>
+
                     <label class="block text-sm">Nombre Identificador</label>
                     <input type="text" id="stock-model-modal" class="form-input w-full" required>
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label class="block text-sm">N/S</label><input type="text" id="stock-serial-modal" class="form-input w-full" required></div>
+
                 <div><label class="block text-sm">Cantidad</label><input type="number" id="stock-quantity-modal" class="form-input w-full" value="1" min="1" required></div>
             </div>
             <div class="border-t my-4"></div>
             <div id="dynamic-attributes-container-modal" class="space-y-4">
-                <!-- Atributos dinámicos aquí -->
+                
             </div>
             <div class="border-t my-4"></div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label class="block text-sm">Costo (USD)</label><input type="number" id="stock-cost-modal" class="form-input w-full" required></div>
                 <div><label class="block text-sm">P. Venta Sugerido (USD)</label><input type="number" id="stock-price-modal" class="form-input w-full"></div>
+
             </div>
             <div><label class="block text-sm">Detalles Adicionales</label><textarea id="stock-details-modal" class="form-textarea w-full"></textarea></div>
         </form>
@@ -2526,7 +2740,6 @@ export function openEditStockModal(item, state) {
   const { categories } = state;
   const allCategories = categories || [];
   const itemCategory = allCategories.find((c) => c.name === item.category);
-
   let content = `
         <form id="edit-stock-form" class="space-y-4" data-id="${item.id}">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2541,6 +2754,7 @@ export function openEditStockModal(item, state) {
                               }>${escapeHTML(cat.name)}</option>`
                           )
                           .join('')}
+
                     </select>
                 </div>
                 <div>
@@ -2548,15 +2762,18 @@ export function openEditStockModal(item, state) {
                     <input type="text" id="edit-stock-model" class="form-input w-full" value="${escapeHTML(
                       item.model
                     )}" required>
+
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                 <div><label>N/S</label><input type="text" id="edit-stock-serial" class="form-input w-full" value="${escapeHTML(
                   item.serialNumber
                 )}" required></div>
                 <div><label>Cantidad</label><input type="number" id="edit-stock-quantity" class="form-input w-full" value="${
                   item.quantity || 1
                 }" min="0" required></div>
+
             </div>
             <div class="border-t my-4"></div>
             <div id="dynamic-attributes-container-modal" class="space-y-4">
@@ -2565,15 +2782,18 @@ export function openEditStockModal(item, state) {
                     ?.map((attr) => generateAttributeInputHTML(attr, item.attributes?.[attr.name]))
                     .join('') || ''
                 }
+
             </div>
             <div class="border-t my-4"></div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label>Costo (USD)</label><input type="number" id="edit-stock-cost" class="form-input w-full" value="${
                   item.phoneCost || 0
                 }" required></div>
+
                 <div><label>P. Venta (USD)</label><input type="number" id="edit-stock-price" class="form-input w-full" value="${
                   item.suggestedSalePrice || 0
                 }"></div>
+
             </div>
             <div><label>Detalles</label><textarea id="edit-stock-details" class="form-textarea w-full">${escapeHTML(
               item.details || ''
@@ -2582,6 +2802,7 @@ export function openEditStockModal(item, state) {
     `;
   const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
+
         <button type="submit" form="edit-stock-form" class="btn-primary px-4 py-2">Guardar</button>
     `;
   showModal(content, `Editar ${item.model}`, footer);
@@ -2597,6 +2818,7 @@ export function openEditClientModal(client) {
   )}"></div><div><label class="block text-sm">Detalles</label><textarea id="edit-client-details" class="form-textarea w-full">${escapeHTML(
     client.details || ''
   )}</textarea></div></form>`;
+
   const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="edit-client-form" class="btn-primary px-4 py-2">Guardar</button>
@@ -2612,6 +2834,7 @@ export function openEditDebtModal(debt) {
   )}" required></div><div><label class="block text-sm">Descripción</label><input type="text" id="edit-debt-desc" class="form-input w-full" value="${escapeHTML(
     debt.description
   )}" required></div>
+
   <div>
         <label class="block text-sm">Monto</label>
         <div class="flex items-center gap-2">
@@ -2619,7 +2842,8 @@ export function openEditDebtModal(debt) {
               debt.amount
             }" required>
             <select id="edit-debt-currency" data-form-type="debt-edit" class="currency-select form-select">
-                <option value="USD" selected>USD</option>
+                 <option value="USD" selected>USD</option>
+
                 <option value="ARS">ARS</option>
             </select>
         </div>
@@ -2640,19 +2864,23 @@ export function openEditFixedExpenseModal(expense) {
               expense.description
             )}" required></div>
             <div class="grid grid-cols-2 gap-4 items-start">
-                 <div>
+                <div>
+
                     <label class="block text-sm">Monto</label>
                     <div class="flex items-center gap-2">
                         <input type="number" id="edit-fixed-expense-amount" data-form-type="fixed-expense-edit" class="currency-input form-input w-full p-2" value="${
                           expense.amount
                         }" required>
+
                         <select id="edit-fixed-expense-currency" data-form-type="fixed-expense-edit" class="currency-select form-select p-2">
                             <option value="USD" selected>USD</option>
                             <option value="ARS">ARS</option>
+
                         </select>
                     </div>
                     <p id="fixed-expense-edit-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>
                 </div>
+
                 <div><label class="block text-sm">Día de Pago (1-31)</label><input type="number" id="edit-fixed-expense-day" class="form-input w-full p-2" value="${
                   expense.paymentDay
                 }" required min="1" max="31"></div>
@@ -2689,6 +2917,7 @@ export function openEditSalespersonModal(salesperson) {
             <div><label class="block text-sm">Contacto (Teléfono/Email)</label><input type="text" id="edit-salesperson-contact-modal" class="form-input w-full" value="${escapeHTML(
               salesperson.contact || ''
             )}"></div>
+
             <div><label class="block text-sm">Tasa de Comisión (%)</label><input type="number" id="edit-salesperson-commission-modal" class="form-input w-full" value="${
               salesperson.commissionRate || 0
             }" required></div>
@@ -2724,6 +2953,7 @@ export function openEditProviderModal(provider) {
             <div><label class="block text-sm">Contacto (Teléfono/Email)</label><input type="text" id="edit-provider-contact-modal" class="form-input w-full" value="${escapeHTML(
               provider.contact || ''
             )}"></div>
+
             <div><label class="block text-sm">Notas</label><textarea id="edit-provider-notes-modal" class="form-textarea w-full">${escapeHTML(
               provider.notes || ''
             )}</textarea></div>
@@ -2745,37 +2975,45 @@ export function openExecutePaymentModal(expense, state) {
         </div>
         <div>
             <h4 class="font-semibold mb-3 text-center">1. Seleccionar Billetera de Origen</h4>
+
             <div id="payment-wallet-selector" class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 ${Object.entries(WALLET_CONFIG)
                   .filter(([key, config]) => !config.type)
                   .map(([key, config]) => {
                     const balance = capital[key] || 0;
+
                     const expenseAmountInCurrency =
                       config.currency === 'ARS' ? expense.amount * exchangeRate : expense.amount;
                     const hasEnoughFunds = balance >= expenseAmountInCurrency;
                     return `
+
                         <button class="payment-wallet-option w-full p-3 rounded-lg border-2 border-gray-200 text-left transition-colors ${
                           hasEnoughFunds
                             ? 'hover:border-green-500'
                             : 'opacity-50 cursor-not-allowed'
                         }"
+
                             data-wallet-type="${key}"
                             data-expense-id="${expense.id}"
                             ${!hasEnoughFunds ? 'disabled' : ''}>
+
                             <div class="flex justify-between items-center">
                                 <span class="font-semibold"><i class="${config.icon} mr-2"></i>${
                       config.name
                     }</span>
+
                                 <span class="font-mono text-sm">${formatCurrency(
                                   balance,
                                   config.currency
                                 )}</span>
+
                             </div>
                             ${
                               !hasEnoughFunds
                                 ? '<p class="text-xs text-red-500 mt-1">Fondos insuficientes</p>'
                                 : ''
                             }
+
                         </button>`;
                   })
                   .join('')}
@@ -2783,6 +3021,7 @@ export function openExecutePaymentModal(expense, state) {
         </div>
         <div class="payment-confirmation-actions hidden mt-6 text-center border-t pt-4">
             <h4 class="font-semibold mb-3 text-center">2. Confirmar Pago</h4>
+
             <button id="confirm-payment-btn" class="btn-primary w-full py-3 text-lg">Confirmar Pago</button>
         </div>
     `;
@@ -2800,11 +3039,13 @@ export function openExecuteDailyExpenseModal(expenseData, state) {
         </div>
         <div>
             <h4 class="font-semibold mb-3 text-center">1. Seleccionar Billetera de Origen</h4>
+
             <div id="daily-expense-wallet-selector" class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 ${Object.entries(WALLET_CONFIG)
                   .filter(([key, config]) => !config.type)
                   .map(([key, config]) => {
                     const balance = capital[key] || 0;
+
                     let hasEnoughFunds = false;
                     if (config.currency === 'ARS') {
                       hasEnoughFunds = balance >= expenseData.amount * exchangeRate;
@@ -2815,21 +3056,26 @@ export function openExecuteDailyExpenseModal(expenseData, state) {
                         <button class="execute-daily-expense-wallet-btn w-full p-3 rounded-lg border text-left ${
                           hasEnoughFunds ? 'hover:bg-green-50' : 'opacity-50 cursor-not-allowed'
                         }"
+
                             data-wallet-type="${key}" ${!hasEnoughFunds ? 'disabled' : ''}>
+
                             <div class="flex justify-between items-center">
                                 <span class="font-semibold"><i class="${config.icon} mr-2"></i>${
                       config.name
                     }</span>
+
                                 <span class="font-mono text-sm">${formatCurrency(
                                   balance,
                                   config.currency
                                 )}</span>
+
                             </div>
                             ${
                               !hasEnoughFunds
                                 ? '<p class="text-xs text-red-500 mt-1">Fondos insuficientes</p>'
                                 : ''
                             }
+
                         </button>`;
                   })
                   .join('')}
@@ -2837,6 +3083,7 @@ export function openExecuteDailyExpenseModal(expenseData, state) {
         </div>
         <div class="payment-confirmation-actions hidden mt-6 text-center border-t pt-4">
             <h4 class="font-semibold mb-3 text-center">2. Confirmar Pago</h4>
+
             <button id="confirm-daily-expense-payment-btn" class="btn-primary w-full py-3 text-lg" data-expense-data='${JSON.stringify(
               expenseData
             )}'>Confirmar Pago</button>
@@ -2850,7 +3097,6 @@ export function showSaleDetailModal(sale) {
   if (!sale) return;
   const modalContainer = document.getElementById('modal-container');
   if (!modalContainer) return;
-
   const itemsCost = (sale.items || []).reduce((sum, item) => sum + (item.phoneCost || 0), 0);
   const netProfit = (sale.total || 0) - itemsCost;
 
@@ -2875,35 +3121,40 @@ export function showSaleDetailModal(sale) {
                 <header class="p-4 border-b sticky top-0 bg-white z-10 flex justify-between items-center">
                     <h3 class="text-xl font-bold text-gray-800">Detalle de Venta</h3>
                     <button class="close-modal-btn text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+
                 </header>
                 <div class="p-6 space-y-5 overflow-y-auto bg-gray-50">
-                    <!-- Client and Date Info -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="bg-white p-3 rounded-lg border">
+
                             <p class="text-sm text-gray-500">Cliente</p>
                             <p class="font-bold text-lg text-gray-900">${escapeHTML(
                               sale.customerName
                             )}</p>
+
                         </div>
                         <div class="bg-white p-3 rounded-lg border">
                             <p class="text-sm text-gray-500">Fecha de Venta</p>
+
                             <p class="font-semibold text-gray-900">${
                               sale.soldAt ? sale.soldAt.toDate().toLocaleString('es-AR') : 'N/A'
                             }</p>
+
                         </div>
                     </div>
 
-                    <!-- Warranty Info -->
                     <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg text-center">
+
                         <p class="text-sm text-blue-800 font-semibold">Garantía</p>
                         ${warrantyHtml}
                     </div>
 
-                    <!-- Items -->
+                    
                     <div>
                         <h4 class="font-bold text-lg mb-2 text-gray-700">Productos Vendidos</h4>
                         <div class="space-y-2">
                             ${(sale.items || [])
+
                               .map((item, index) => {
                                 const attributesHTML =
                                   item.attributes && Object.keys(item.attributes).length > 0
@@ -2918,7 +3169,6 @@ export function showSaleDetailModal(sale) {
                                         )
                                         .join('')
                                     : '';
-
                                 return `
                                 <div class="bg-white border rounded-md overflow-hidden">
                                     <div class="sold-item-toggle flex justify-between items-center p-3 cursor-pointer hover:bg-gray-50">
@@ -2927,23 +3177,30 @@ export function showSaleDetailModal(sale) {
                                         } <span class="text-gray-500 text-sm">(${
                                   item.serialNumber
                                 })</span></span>
+
                                         <div class="flex items-center gap-4">
+
                                             <span class="font-mono font-semibold">${formatCurrency(
                                               item.salePrice,
                                               'USD'
                                             )}</span>
+
                                             <i class="fas fa-chevron-down text-gray-400 transition-transform"></i>
+
                                         </div>
                                     </div>
+
                                     <div class="sold-item-details hidden p-4 border-t bg-gray-50 text-sm space-y-2">
                                         ${
                                           attributesHTML
                                             ? `<div><h5 class="font-semibold mb-1">Atributos:</h5><div class="space-y-1">${attributesHTML}</div></div>`
                                             : ''
                                         }
+
                                         <div><h5 class="font-semibold">Detalles Adicionales:</h5><p class="text-gray-600">${escapeHTML(
                                           item.details || 'Sin detalles.'
                                         )}</p></div>
+
                                     </div>
                                 </div>`;
                               })
@@ -2951,40 +3208,46 @@ export function showSaleDetailModal(sale) {
                         </div>
                     </div>
 
-                    <!-- Financials -->
                     <div>
+
                         <h4 class="font-bold text-lg mb-2 text-gray-700">Resumen Financiero</h4>
                         <div class="space-y-2 bg-white p-4 rounded-lg border">
-                             <div class="flex justify-between"><span>Subtotal:</span> <span>${formatCurrency(
-                               sale.subtotal,
-                               'USD'
-                             )}</span></div>
-                             <div class="flex justify-between text-lg font-bold border-t pt-2 mt-2"><span>TOTAL VENTA:</span> <span>${formatCurrency(
-                               sale.total,
-                               'USD'
-                             )}</span></div>
+                            <div class="flex justify-between"><span>Subtotal:</span> <span>${formatCurrency(
+                              sale.subtotal,
+                              'USD'
+                            )}</span></div>
+
+                            <div class="flex justify-between text-lg font-bold border-t pt-2 mt-2"><span>TOTAL VENTA:</span> <span>${formatCurrency(
+                              sale.total,
+                              'USD'
+                            )}</span></div>
+
                         </div>
                         <div class="space-y-2 bg-green-50 p-4 rounded-lg mt-3 border border-green-200">
-                             <div class="flex justify-between"><span>Costo de Venta:</span> <span>-${formatCurrency(
-                               itemsCost,
-                               'USD'
-                             )}</span></div>
+                            <div class="flex justify-between"><span>Costo de Venta:</span> <span>-${formatCurrency(
+                              itemsCost,
+                              'USD'
+                            )}</span></div>
+
                              <div class="flex justify-between text-xl font-extrabold border-t-2 border-green-300 pt-2 mt-2">
                                  <span>GANANCIA:</span>
                                  <span class="${
                                    netProfit >= 0 ? 'text-green-700' : 'text-red-700'
                                  }">${formatCurrency(netProfit, 'USD')}</span>
+
                              </div>
                         </div>
                     </div>
 
-                    <!-- Payment & Notes -->
+
                     <div>
                         <h4 class="font-bold text-lg mb-2 text-gray-700">Detalles Adicionales</h4>
                         <div class="space-y-3 bg-white p-4 rounded-lg border">
+
                             <p><strong>Pagos (USD):</strong> ${Object.entries(
                               sale.paymentBreakdownUSD || {}
                             )
+
                               .map(
                                 ([key, val]) =>
                                   `${key.replace('_in_usd', '').toUpperCase()}: ${formatCurrency(
@@ -2993,6 +3256,7 @@ export function showSaleDetailModal(sale) {
                                   )}`
                               )
                               .join(' | ')}</p>
+
                             ${
                               sale.tradeInValueUSD
                                 ? `<div class="bg-blue-100 p-2 rounded-md mt-2 border border-blue-200"><p><strong>Canje:</strong> ${escapeHTML(
@@ -3003,16 +3267,17 @@ export function showSaleDetailModal(sale) {
                             <p class="mt-2"><strong>Notas:</strong> ${escapeHTML(
                               sale.notes || 'Sin notas'
                             )}</p>
+
                         </div>
                     </div>
                 </div>
                 <footer class="p-3 border-t bg-gray-100 sticky bottom-0 flex justify-end">
+
                         <button class="btn-primary close-modal-btn px-6 py-2">Cerrar</button>
                 </footer>
             </div>
         </div>
     `;
-
   modalContainer.innerHTML = modalHTML;
 
   const modalBackdrop = modalContainer.querySelector('#sale-detail-modal-backdrop');
@@ -3037,6 +3302,7 @@ export function showClientHistoryModal(clientId, state) {
   const salesHtml =
     clientSales.length > 0
       ? clientSales
+
           .map((sale) => {
             const profitUSD = (sale.items || []).reduce(
               (sum, item) => sum + (item.salePrice - item.phoneCost),
@@ -3070,6 +3336,7 @@ export function showItemDetailsModal(item) {
   const attributesHTML =
     item.attributes && Object.keys(item.attributes).length > 0
       ? Object.entries(item.attributes)
+
           .map(
             ([key, value]) =>
               `<div class="flex justify-between py-1"><span class="text-gray-600">${escapeHTML(
@@ -3088,20 +3355,22 @@ export function showItemDetailsModal(item) {
                 <div class="text-sm text-center text-gray-500 font-mono">${escapeHTML(
                   item.serialNumber
                 )}</div>
+
             </div>
             <div class="border-t pt-3">
                 <h4 class="font-semibold mb-2">Atributos</h4>
                 <div class="text-sm space-y-1">${attributesHTML}</div>
+
             </div>
              <div class="border-t pt-3">
                 <h4 class="font-semibold mb-2">Detalles Adicionales</h4>
                 <p class="text-sm text-gray-600">${escapeHTML(
                   item.details || 'Sin detalles adicionales.'
                 )}</p>
+
             </div>
         </div>
     `;
-
   showModal(content, 'Detalles del Producto');
 }
 
@@ -3117,28 +3386,31 @@ export function openSettleClientDebtModal(saleId, balance, state) {
               'USD'
             )}</p>
             <div>
+
                 <label class="block text-sm">Monto a Pagar</label>
                 <div class="flex items-center gap-2">
                     <input type="number" id="settle-debt-amount" data-form-type="settle-debt" class="currency-input form-input w-full" value="${balance}" required>
                     <select id="settle-debt-currency" data-form-type="settle-debt" class="currency-select form-select">
                         <option value="USD" selected>USD</option>
+
                         <option value="ARS">ARS</option>
                     </select>
                 </div>
                 <p id="settle-debt-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>
             </div>
+
             <div>
                 <label class="block text-sm">Ingresar a Billetera</label>
                 <select id="settle-debt-wallet" class="form-select w-full">
                     <option value="usd">Dólares (USD)</option>
                     <option value="ars">Efectivo (ARS)</option>
+
                     <option value="mp">Digital (ARS)</option>
                     <option value="usdt">USDT</option>
                 </select>
             </div>
         </form>
     `;
-
   const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="settle-client-debt-form" class="btn-primary px-4 py-2">Registrar Pago</button>
@@ -3152,6 +3424,7 @@ function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate,
   const ctx = ctxEl.getContext('2d');
   if (charts.performance) charts.performance.destroy();
   const timeUnit = (endDate - startDate) / (1000 * 3600 * 24) > 35 ? 'month' : 'day';
+
   const getGroupKey = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -3215,6 +3488,7 @@ function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate,
           backgroundColor: 'rgba(52, 199, 89, 0.7)',
           order: 1,
         },
+
         {
           label: 'Gastos',
           data: sortedGroups.map((g) => g.expenses),
@@ -3224,6 +3498,7 @@ function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate,
         {
           label: 'Ganancia Bruta',
           data: sortedGroups.map((g) => g.grossProfit),
+
           borderColor: '#00aaff',
           borderWidth: 2,
           type: 'line',
@@ -3234,6 +3509,7 @@ function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate,
         {
           label: 'Ganancia Neta',
           data: sortedGroups.map((g) => g.grossProfit - g.expenses),
+
           borderColor: '#5856d6',
           borderWidth: 2,
           type: 'line',
@@ -3299,7 +3575,6 @@ function renderExpenseBreakdownChart(saleCosts, executedFixed, daily) {
       },
     },
   });
-
   const summaryContainer = document.getElementById('expense-breakdown-summary');
   if (summaryContainer) {
     summaryContainer.innerHTML = `
@@ -3308,11 +3583,13 @@ function renderExpenseBreakdownChart(saleCosts, executedFixed, daily) {
                     <span><i class="fas fa-circle mr-2" style="color: #ff3b30;"></i>Pagos Fijos</span>
                     <span class="font-semibold">${formatCurrency(executedFixed, 'USD')}</span>
                 </li>
+
                 <li class="flex justify-between items-center py-1">
                     <span><i class="fas fa-circle mr-2" style="color: #ffcc00;"></i>Gastos Diarios</span>
                     <span class="font-semibold">${formatCurrency(daily, 'USD')}</span>
                 </li>
             </ul>
+
         `;
   }
 }
@@ -3380,6 +3657,7 @@ function renderSalesMetricsChart(salesInPeriod) {
           data: [totalSalesValue, totalNetProfit, avgSaleValue, avgNetProfit],
           backgroundColor: [
             'rgba(0, 122, 255, 0.7)',
+
             'rgba(88, 86, 214, 0.7)',
             'rgba(0, 122, 255, 0.5)',
             'rgba(88, 86, 214, 0.5)',
@@ -3390,6 +3668,7 @@ function renderSalesMetricsChart(salesInPeriod) {
     options: {
       responsive: true,
       plugins: { legend: { display: false } },
+
       scales: { x: { ticks: { font: { size: 10 } } } },
     },
   });
@@ -3399,7 +3678,6 @@ function renderCapitalGrowthChart(capitalHistory, startDate, endDate) {
   const ctxEl = document.getElementById('capital-growth-chart');
   if (!ctxEl) return;
   const ctx = ctxEl.getContext('2d');
-
   if (charts.capitalGrowth) {
     charts.capitalGrowth.destroy();
   }
@@ -3413,7 +3691,6 @@ function renderCapitalGrowthChart(capitalHistory, startDate, endDate) {
     const entryDate = entry.timestamp.toDate();
     return entryDate >= startDate && entryDate <= endDate;
   });
-
   if (filteredHistory.length === 0) {
     return;
   }
@@ -3429,6 +3706,7 @@ function renderCapitalGrowthChart(capitalHistory, startDate, endDate) {
           minute: '2-digit',
         })
       ),
+
       datasets: [
         {
           label: 'Capital Total (USD)',
@@ -3456,6 +3734,7 @@ function renderCapitalGrowthChart(capitalHistory, startDate, endDate) {
             },
             label: function (context) {
               let label = context.dataset.label || '';
+
               if (label) {
                 label += ': ';
               }
@@ -3486,7 +3765,6 @@ export function renderSalesAnalysis(state) {
   const { analysisPeriod, analysisCustomStartDate, analysisCustomEndDate } = ui.analysis;
   const container = document.getElementById('analysis-results-container');
   const selector = document.getElementById('analysis-selector');
-
   if (!container || !selector || !sales || !stock || !clients) return;
 
   document
@@ -3533,7 +3811,9 @@ export function renderSalesAnalysis(state) {
       startDate = analysisCustomStartDate
         ? new Date(analysisCustomStartDate + 'T00:00:00')
         : new Date(0);
+
       endDate = analysisCustomEndDate ? new Date(analysisCustomEndDate + 'T23:59:59') : new Date();
+
       break;
     default:
       startDate = new Date(0);
@@ -3544,7 +3824,6 @@ export function renderSalesAnalysis(state) {
     const saleDate = s.soldAt?.toDate() || new Date(s.saleDate + 'T12:00:00Z');
     return saleDate >= startDate && saleDate <= endDate;
   });
-
   const analysisType = selector.value;
   let contentHTML = '';
 
@@ -3553,6 +3832,7 @@ export function renderSalesAnalysis(state) {
       if (salesInPeriod.length === 0) {
         contentHTML =
           '<p class="text-center text-gray-500">No hay ventas en el período seleccionado.</p>';
+
         break;
       }
       const totalRevenue = salesInPeriod.reduce((sum, s) => sum + s.total, 0);
@@ -3560,7 +3840,6 @@ export function renderSalesAnalysis(state) {
         const itemsCost = (s.items || []).reduce((cost, i) => cost + (i.phoneCost || 0), 0);
         return sum + (s.total - itemsCost);
       }, 0);
-
       const salesByCategory = salesInPeriod
         .flatMap((s) => s.items)
         .reduce((acc, item) => {
@@ -3570,9 +3849,9 @@ export function renderSalesAnalysis(state) {
           }
           acc[category].count++;
           acc[category].revenue += item.salePrice || 0;
+
           return acc;
         }, {});
-
       contentHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div class="card p-4 text-center"><p class="text-sm text-gray-500">Ventas Totales</p><p class="text-2xl font-bold">${
@@ -3582,16 +3861,20 @@ export function renderSalesAnalysis(state) {
                       totalRevenue,
                       'USD'
                     )}</p></div>
+
                     <div class="card p-4 text-center"><p class="text-sm text-gray-500">Ganancia Neta Total</p><p class="text-2xl font-bold text-green-600">${formatCurrency(
                       totalNetProfit,
                       'USD'
                     )}</p></div>
+
                 </div>
                 <h4 class="text-lg font-semibold mb-2">Ventas por Categoría</h4>
+
                 <div class="overflow-x-auto"><table class="min-w-full text-sm">
                     <thead class="bg-gray-100"><tr>
                         <th class="p-2 text-left">Categoría</th><th class="p-2 text-center">Unidades</th><th class="p-2 text-right">Facturación</th>
                     </tr></thead>
+
                     <tbody>${Object.entries(salesByCategory)
                       .map(
                         ([cat, data]) => `
@@ -3601,10 +3884,12 @@ export function renderSalesAnalysis(state) {
                           data.revenue,
                           'USD'
                         )}</td></tr>
+
                     `
                       )
                       .join('')}</tbody>
                 </table></div>
+
             `;
       break;
 
@@ -3619,7 +3904,6 @@ export function renderSalesAnalysis(state) {
         acc[category].value += item.phoneCost || 0;
         return acc;
       }, {});
-
       contentHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div class="card p-4 text-center"><p class="text-sm text-gray-500">Unidades en Stock</p><p class="text-2xl font-bold">${
@@ -3629,12 +3913,15 @@ export function renderSalesAnalysis(state) {
                       totalStockValue,
                       'USD'
                     )}</p></div>
+
                 </div>
+
                 <h4 class="text-lg font-semibold mb-2">Stock por Categoría</h4>
                 <div class="overflow-x-auto"><table class="min-w-full text-sm">
                     <thead class="bg-gray-100"><tr>
                         <th class="p-2 text-left">Categoría</th><th class="p-2 text-center">Unidades</th><th class="p-2 text-right">Valor (USD)</th>
                     </tr></thead>
+
                     <tbody>${Object.entries(stockByCategory)
                       .map(
                         ([cat, data]) => `
@@ -3644,9 +3931,11 @@ export function renderSalesAnalysis(state) {
                           data.value,
                           'USD'
                         )}</td></tr>
+
                     `
                       )
                       .join('')}</tbody>
+
                 </table></div>
             `;
       break;
@@ -3655,6 +3944,7 @@ export function renderSalesAnalysis(state) {
       if (salesInPeriod.length === 0) {
         contentHTML =
           '<p class="text-center text-gray-500">No hay datos de clientes para el período seleccionado.</p>';
+
         break;
       }
       const salesByClient = salesInPeriod.reduce((acc, sale) => {
@@ -3665,16 +3955,15 @@ export function renderSalesAnalysis(state) {
         const itemsCost = (sale.items || []).reduce((cost, i) => cost + (i.phoneCost || 0), 0);
         acc[id].count++;
         acc[id].totalProfit += sale.total - itemsCost;
+
         return acc;
       }, {});
-
       const repeatClients = Object.values(salesByClient)
         .filter((c) => c.count > 1)
         .sort((a, b) => b.count - a.count);
       const topClients = Object.values(salesByClient)
         .sort((a, b) => b.totalProfit - a.totalProfit)
         .slice(0, 10);
-
       contentHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div class="card p-4 text-center"><p class="text-sm text-gray-500">Clientes Únicos (Período)</p><p class="text-2xl font-bold">${
@@ -3683,15 +3972,19 @@ export function renderSalesAnalysis(state) {
                     <div class="card p-4 text-center"><p class="text-sm text-gray-500">Clientes Recurrentes (Período)</p><p class="text-2xl font-bold">${
                       repeatClients.length
                     }</p></div>
+
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
                     <div>
                         <h4 class="text-lg font-semibold mb-2">Clientes con Más Compras (Período)</h4>
                         <div class="overflow-x-auto"><table class="min-w-full text-sm">
                             <thead class="bg-gray-100"><tr><th class="p-2 text-left">Nombre</th><th class="p-2 text-center">Compras</th></tr></thead>
+
                             <tbody>${
                               repeatClients.length > 0
                                 ? repeatClients
+
                                     .map(
                                       (c) =>
                                         `<tr class="border-b"><td class="p-2">${escapeHTML(
@@ -3704,12 +3997,15 @@ export function renderSalesAnalysis(state) {
                         </table></div>
                     </div>
                     <div>
+
                         <h4 class="text-lg font-semibold mb-2">Top 10 Clientes por Ganancia (Período)</h4>
                         <div class="overflow-x-auto"><table class="min-w-full text-sm">
                             <thead class="bg-gray-100"><tr><th class="p-2 text-left">Nombre</th><th class="p-2 text-right">Ganancia Generada</th></tr></thead>
+
                             <tbody>${
                               topClients.length > 0
                                 ? topClients
+
                                     .map(
                                       (c) =>
                                         `<tr class="border-b"><td class="p-2">${escapeHTML(
@@ -3724,6 +4020,7 @@ export function renderSalesAnalysis(state) {
                             }</tbody>
                         </table></div>
                     </div>
+
                 </div>
             `;
       break;

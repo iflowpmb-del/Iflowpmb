@@ -22,7 +22,8 @@ import {
   renderAddStockForm,
   renderSalesAnalysis,
   renderTradeInAttributes,
-  openSettleClientDebtModal,
+  openSettleClientDebtModal, // MODIFICADO: Importar nuevo modal
+  // ADDED: Importaciones de nuevos modales
   openReservationModal,
   openAddSalespersonModal,
   openEditSalespersonModal,
@@ -126,7 +127,7 @@ function handlePayFixedExpense(expenseId) {
  */
 function handleSettleProviderDebt(debtId) {
   const message =
-    'Esta acción eliminará la deuda de la lista. Recuerda ajustar manualmente el saldo de tus billeteras para reflejar el pago. ¿Deseas continuar?';
+    'Esta acción eliminará la deuda de la lista. Recuerda ajustar manually el saldo de tus billeteras para reflejar el pago. ¿Deseas continuar?';
   openConfirmModal(message, async () => {
     await deleteFromDb('debts', debtId);
     await logCapitalState(`Deuda a proveedor saldada`);
@@ -909,7 +910,6 @@ export function setupEventListeners() {
         'daily-expense-form-register',
         'debt-form',
         'add-attribute-form',
-        'settle-client-debt-form', // CORRECCIÓN: Agregado el ID del formulario para saldar deudas de clientes
       ].includes(form.id)
     ) {
       e.preventDefault();
@@ -1108,53 +1108,6 @@ export function setupEventListeners() {
           }
           break;
         }
-        case 'settle-client-debt-form': {
-          const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-          setButtonLoading(button, true);
-          try {
-            const saleId = form.dataset.saleId;
-            const amount = parseFloat(form.querySelector('#settle-debt-amount').value) || 0;
-            const currency = form.querySelector('#settle-debt-currency').value;
-            const wallet = form.querySelector('#settle-debt-wallet').value;
-            const amountInUSD = currency === 'ARS' ? amount / appState.exchangeRate : amount;
-
-            await runBatch(async (batch, db, userId) => {
-              const capitalRef = doc(db, `users/${userId}/capital`, 'summary');
-              const capitalDoc = appState.capital;
-              const newClientDebt = (capitalDoc.clientDebt || 0) - amountInUSD;
-              const newWalletValue = (capitalDoc[wallet] || 0) + amountInUSD;
-              batch.update(capitalRef, {
-                clientDebt: newClientDebt,
-                [wallet]: newWalletValue,
-              });
-
-              const saleRef = doc(db, `users/${userId}/sales`, saleId);
-              batch.update(saleRef, {
-                'paymentBreakdownUSD.debtSettled': amountInUSD,
-              });
-
-              const paymentRecordRef = doc(collection(db, `users/${userId}/daily_expenses`));
-              batch.set(paymentRecordRef, {
-                amount: amountInUSD,
-                date: new Date().toISOString().split('T')[0],
-                description: `Cobro de deuda de cliente.`,
-                isFixedPayment: false,
-                paidFrom: null,
-                receivedIn: wallet,
-                createdAt: serverTimestamp(),
-              });
-            });
-
-            document.getElementById('modal-container').innerHTML = '';
-            showModal('Pago de deuda de cliente registrado con éxito.');
-          } catch (error) {
-            console.error('Error al saldar deuda de cliente:', error);
-            showModal(`Error al procesar el pago: ${error.message}`);
-          } finally {
-            setButtonLoading(button, false);
-          }
-          break;
-        }
       }
     } catch (err) {
       console.error(`Error en el manejador de submit para el form #${form.id}:`, err);
@@ -1221,6 +1174,25 @@ export function setupEventListeners() {
     const { dataset } = element;
 
     const actionMap = {
+      // =================================================================================
+      // >>>>>>>>>> INICIO DE LA CORRECCIÓN <<<<<<<<<<
+      // Se añaden los manejadores para mostrar/ocultar los formularios de login y registro.
+      // =================================================================================
+      'show-register': () => {
+        document.getElementById('login-form')?.classList.add('hidden');
+        document.getElementById('register-form')?.classList.remove('hidden');
+        document.getElementById('show-register')?.classList.add('hidden');
+        document.getElementById('show-login')?.classList.remove('hidden');
+      },
+      'show-login': () => {
+        document.getElementById('login-form')?.classList.remove('hidden');
+        document.getElementById('register-form')?.classList.add('hidden');
+        document.getElementById('show-register')?.classList.remove('hidden');
+        document.getElementById('show-login')?.classList.add('hidden');
+      },
+      // =================================================================================
+      // >>>>>>>>>> FIN DE LA CORRECCIÓN <<<<<<<<<<
+      // =================================================================================
       'logout-from-trial-screen': () => signOut(auth),
       'change-password-btn': () => openChangePasswordModal(),
       'logout-button': () => signOut(auth),
@@ -1378,7 +1350,7 @@ Allí encontrarás un enlace para administrar tu compra y ver tus facturas.`,
         if (!category) return;
 
         const updatedAttributes = category.attributes.filter((attr) => attr.id !== dataset.attrId);
-        await updateData('categories', selectedCategoryId, { attributes: updatedAttributes });
+        await updateData('categories', category.id, { attributes: updatedAttributes });
       },
       'toggle-section-btn': () => {
         const section = dataset.section;
