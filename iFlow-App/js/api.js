@@ -30,7 +30,7 @@ export function loadAllData(userId) {
     profile: {
       type: 'doc',
       path: `users/${userId}/profile/main`,
-      default: { businessName: 'Mi Negocio', subscriptionStatus: 'active' }, // Estado por defecto
+      default: { businessName: 'Mi Negocio', subscriptionStatus: 'none' },
     },
     capital: {
       type: 'doc',
@@ -52,7 +52,7 @@ export function loadAllData(userId) {
       path: `users/${userId}/daily_expenses`,
       sorter: (a, b) => new Date(b.date) - new Date(a.date),
     },
-    providers: { type: 'collection', path: 'providers' },
+    providers: { type: 'collection', path: 'providers' }, // Proveedores públicos/recomendados
     notes: {
       type: 'collection',
       path: `users/${userId}/notes`,
@@ -63,6 +63,14 @@ export function loadAllData(userId) {
       path: `users/${userId}/capital_history`,
       sorter: (a, b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0),
     },
+    // ADDED: Nuevas colecciones para cargar
+    reservations: {
+      type: 'collection',
+      path: `users/${userId}/reservations`,
+      sorter: (a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0),
+    },
+    salespeople: { type: 'collection', path: `users/${userId}/salespeople` },
+    userProviders: { type: 'collection', path: `users/${userId}/userProviders` }, // Proveedores del usuario
   };
 
   let initialLoadsPending = Object.keys(collectionsToLoad).length;
@@ -94,7 +102,9 @@ export function loadAllData(userId) {
         query(categoriesCollectionRef),
         async (snapshot) => {
           if (snapshot.empty && initialLoadFlags.categories) {
-            console.log(`[API] La colección de categorías está vacía para el usuario ${userId}. Creando categorías por defecto.`);
+            console.log(
+              `[API] La colección de categorías está vacía para el usuario ${userId}. Creando categorías por defecto.`
+            );
             const batch = writeBatch(db);
             DEFAULT_CATEGORIES.forEach((category) => {
               const categoryRef = doc(db, `users/${userId}/categories`, category.id);
@@ -117,7 +127,8 @@ export function loadAllData(userId) {
       continue;
     }
 
-    const queryRef = config.type === 'doc' ? doc(db, config.path) : query(collection(db, config.path));
+    const queryRef =
+      config.type === 'doc' ? doc(db, config.path) : query(collection(db, config.path));
 
     const unsubscribe = onSnapshot(
       queryRef,
@@ -125,6 +136,18 @@ export function loadAllData(userId) {
         let data;
         if (config.type === 'doc') {
           data = snapshot.exists() ? { ...config.default, ...snapshot.data() } : config.default;
+          if (key === 'profile' && snapshot.exists() && !data.subscriptionStatus) {
+            console.warn(
+              `[API] Usuario antiguo detectado (${userId}). Actualizando perfil para iniciar período de prueba.`
+            );
+
+            const updatedFields = {
+              subscriptionStatus: 'trial',
+            };
+
+            setData('profile', 'main', updatedFields, true).catch(console.error);
+            data = { ...data, ...updatedFields };
+          }
         } else {
           data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
           if (config.sorter) data.sort(config.sorter);

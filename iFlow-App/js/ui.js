@@ -3,15 +3,26 @@ import { setData } from './api.js';
 import { Timestamp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 // =================================================================================
-// SECCIÓN 0: LÓGICA Y VISTAS DE SUSCRIPCIÓN (MODIFICADO)
+// SECCIÓN 0: LÓGICA Y VISTAS DE SUSCRIPCIÓN (SIN CAMBIOS)
 // =================================================================================
-
-// MODIFICACIÓN: Se eliminan las funciones getPaywallHTML y getStartTrialHTML
-// ya que no son necesarias sin el sistema de suscripción.
 
 // =================================================================================
 // SECCIÓN 1: RENDERIZADO PRINCIPAL
 // =================================================================================
+
+async function getDolarBlueRate() {
+  try {
+    const response = await fetch('https://dolarapi.com/v1/dolares/blue');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.venta; // Se usa el valor de venta para la conversión
+  } catch (error) {
+    console.error('Error al obtener la cotización del dólar blue:', error);
+    return null;
+  }
+}
 
 export function renderApp(state) {
   const { user, profile, isDataLoading } = state;
@@ -20,7 +31,7 @@ export function renderApp(state) {
   const mainContentWrapper = document.getElementById('main-content-wrapper');
   const loadingContainer = document.getElementById('loading-container');
   const header = document.querySelector('header');
-  const nav = document.querySelector('.mb-8.border-b');
+  const nav = document.querySelector('.tabs-container'); // FIX: Se cambió el selector para que coincida con el div contenedor.
 
   if (isDataLoading) {
     if (loadingContainer) loadingContainer.classList.remove('hidden');
@@ -32,9 +43,6 @@ export function renderApp(state) {
   }
 
   if (!mainContentWrapper || !header || !nav) return;
-
-  // MODIFICACIÓN: Se elimina toda la lógica de comprobación de 'subscriptionStatus'.
-  // Ahora se asume que todos los usuarios están 'active'.
 
   const userIdDisplay = document.getElementById('user-id-display');
   if (userIdDisplay) userIdDisplay.textContent = user.uid;
@@ -87,11 +95,13 @@ function renderAllSections(state) {
   renderCapitalSection(state);
   renderSalesSection(state);
   renderSalesHistory(state);
+  renderReservationsSection(state); // ADDED: Llamada a la función de renderizado de reservas
+  renderSalespeopleSection(state); // ADDED: Llamada a la función de renderizado de vendedores
   renderInventorySections(state);
   renderClientsSection(state);
   renderOperationsSections(state);
   renderReportsSections(state);
-  renderProvidersSection(state);
+  renderPublicProvidersSection(state); // FIX: Renombrada para claridad
 
   updateSaleBalance(state);
 
@@ -105,6 +115,7 @@ function renderInventorySections(state) {
   renderStockSection(state);
   renderAddStockForm(state);
   renderCategoryManagerSection(state);
+  renderUserProvidersSection(state); // ADDED: Llamada a la función de renderizado de proveedores del usuario
 }
 
 function renderOperationsSections(state) {
@@ -124,92 +135,95 @@ function renderReportsSections(state) {
 // =================================================================================
 
 function getAppSectionsHTML() {
-  return ` 
+  // FIX: Se reestructura el HTML para acomodar las nuevas secciones y corregir la jerarquía de pestañas.
+  return `
     <!-- ======================= SECCIÓN BILLETERAS ======================= -->
-    <div id="section-capital" class="main-section"> 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"> 
-            <div class="card p-6"><p class="text-lg text-gray-500">Capital Total</p><h3 id="capital-total" class="text-4xl font-bold"></h3></div> 
-            <div class="card p-6"><p class="text-lg text-gray-500">Capital Líquido</p><h3 id="capital-liquid" class="text-4xl font-bold text-teal-600"></h3></div> 
-            <div class="card p-6"><p class="text-lg text-gray-500">Valor en Stock</p><h3 id="capital-stock-value" class="text-4xl font-bold text-blue-600"></h3></div> 
-        </div> 
-        <div class="card p-6 md:p-8 mb-8"> 
-            <div class="flex justify-between items-center mb-6"> 
-                <h3 class="text-2xl font-semibold">Fondos y Deudas</h3> 
-                <button id="adjust-capital-btn" class="btn-secondary py-2 px-4 flex items-center"><i class="fas fa-edit mr-2"></i>Ajustar</button> 
-            </div> 
-            <div id="wallets-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div> 
-            <div class="border-t my-6"></div> 
-            <div id="debts-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-6"></div> 
-            <div class="border-t my-6"></div> 
+    <div id="section-capital" class="main-section">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="card p-6"><p class="text-lg text-gray-500">Capital Total</p><h3 id="capital-total" class="text-4xl font-bold"></h3></div>
+            <div class="card p-6"><p class="text-lg text-gray-500">Capital Líquido</p><h3 id="capital-liquid" class="text-4xl font-bold text-teal-600"></h3></div>
+            <div class="card p-6"><p class="text-lg text-gray-500">Valor en Stock</p><h3 id="capital-stock-value" class="text-4xl font-bold text-blue-600"></h3></div>
+        </div>
+        <div class="card p-6 md:p-8 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-semibold">Fondos y Deudas</h3>
+                <button id="adjust-capital-btn" class="btn-secondary py-2 px-4 flex items-center"><i class="fas fa-edit mr-2"></i>Ajustar</button>
+            </div>
+            <div id="wallets-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+            <div class="border-t my-6"></div>
+            <div id="debts-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-6"></div>
+            <div class="border-t my-6"></div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div>
-                    <h4 class="text-xl font-semibold mb-4">Detalle Deudas de Clientes</h4> 
-                    <div id="client-debts-list" class="space-y-3 mt-4"></div> 
+                    <h4 class="text-xl font-semibold mb-4">Detalle Deudas de Clientes</h4>
+                    <div id="client-debts-list" class="space-y-3 mt-4"></div>
                 </div>
                 <div>
-                    <h4 class="text-xl font-semibold mb-4">Detalle Deudas a Proveedores</h4> 
-                    <div id="our-debts-list" class="space-y-3 mt-4"></div> 
+                    <h4 class="text-xl font-semibold mb-4">Detalle Deudas a Proveedores</h4>
+                    <div id="our-debts-list" class="space-y-3 mt-4"></div>
                 </div>
             </div>
-        </div> 
-    </div> 
+        </div>
+    </div>
 
     <!-- ======================= SECCIÓN VENTAS ======================= -->
     <div id="section-ventas" class="hidden main-section">
-        <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap"> 
-            <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="ventas" data-sub-tab="nueva">Nueva Venta</button> 
+        <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap">
+            <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="ventas" data-sub-tab="nueva">Nueva Venta</button>
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="ventas" data-sub-tab="historial">Historial</button>
-        </div> 
+            <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="ventas" data-sub-tab="reservas">Reservas</button>
+            <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="ventas" data-sub-tab="vendedores">Vendedores</button>
+        </div>
 
         <div id="ventas-sub-nueva" class="ventas-sub-section hidden">
-            <div class="card p-6 md:p-8"> 
-                <form id="sale-form" class="space-y-6"> 
-                    <div class="space-y-4 p-4 border-b"> 
-                        <h3 class="text-xl font-semibold">1. Cliente</h3> 
-                        <div class="relative"> 
-                            <label class="block text-sm">Buscar Cliente</label> 
-                            <div class="flex items-center"> 
-                                <input type="text" id="client-search-input-sale" class="form-input w-full p-3" placeholder="Escribe para buscar..."> 
-                                <button type="button" id="add-client-from-sale-btn" class="ml-2 btn-secondary p-3"><i class="fas fa-plus"></i></button> 
-                            </div> 
-                            <div id="client-search-results" class="absolute z-20 w-full bg-white border rounded-md mt-1 hidden max-h-60 overflow-y-auto"></div> 
-                            <div id="selected-client-display" class="mt-2"></div> 
-                        </div> 
-                    </div> 
-                    <div class="space-y-4 p-4 border-b"> 
-                        <h3 class="text-xl font-semibold">2. Productos</h3> 
-                        <div class="relative"> 
-                            <label class="block text-sm">Buscar Producto en Stock</label> 
-                            <div class="flex items-center"> 
-                                <input type="text" id="stock-search-input-sale" class="form-input w-full p-3" placeholder="Escribe nombre o N/S para buscar..."> 
-                            </div> 
-                            <div id="stock-search-results-sale" class="absolute z-10 w-full bg-white border rounded-md mt-1 hidden max-h-60 overflow-y-auto"></div> 
-                        </div> 
-                        <div id="sale-items-list" class="mt-4 space-y-2"></div> 
-                    </div> 
-                    <div class="space-y-4 p-4 border-b"> 
-                        <h3 class="text-xl font-semibold">3. Pago</h3> 
-                        <div class="flex items-center"><input id="has-trade-in" type="checkbox" class="h-4 w-4"><label for="has-trade-in" class="ml-3">Recibir equipo en parte de pago</label></div> 
-                        <div id="trade-in-details" class="hidden my-4 space-y-4 border-l-4 pl-4 py-2"></div> 
-                        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4"> 
-                            <div><label class="text-sm">Efectivo (ARS) <span id="ars-usd-display" class="text-gray-500"></span></label><input type="number" data-payment="ars" class="payment-input form-input w-full p-2 mt-1" value="0"></div> 
-                            <div><label class="text-sm">Digital (ARS) <span id="mp-usd-display" class="text-gray-500"></span></label><input type="number" data-payment="mp" class="payment-input form-input w-full p-2 mt-1" value="0"></div> 
-                            <div><label class="text-sm">Dólares (USD)</label><input type="number" data-payment="usd" class="payment-input form-input w-full p-2 mt-1" value="0"></div> 
-                            <div><label class="text-sm">USDT</label><input type="number" data-payment="usdt" class="payment-input form-input w-full p-2 mt-1" value="0"></div> 
-                            <div><label class="text-sm">Deuda Cliente (USD)</label><input type="number" data-payment="clientDebt" class="payment-input form-input w-full p-2 mt-1" value="0"></div> 
-                        </div> 
-                    </div> 
-                    <div class="space-y-4 p-4"> 
-                        <h3 class="text-xl font-semibold">4. Cierre y Resumen</h3> 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6"> 
-                            <div><label class="block text-sm">Fecha de Venta</label><input type="date" id="sale-date" class="form-input w-full p-3" required></div> 
-                            <div><label class="block text-sm">Garantía (días)</label><input type="number" id="warranty-days" class="form-input w-full p-3" value="30" required></div> 
-                        </div> 
-                        <div><label class="block text-sm">Notas</label><textarea id="notes" rows="2" class="form-textarea w-full p-3"></textarea></div> 
-                        <div id="sale-summary" class="mt-4 p-4 rounded-lg bg-gray-100 space-y-2"></div> 
-                    </div> 
-                    <div><button type="submit" class="w-full btn-primary py-3 text-lg">Finalizar Venta</button></div> 
-                </form> 
+            <div class="card p-6 md:p-8">
+                <form id="sale-form" class="space-y-6">
+                    <div class="space-y-4 p-4 border-b">
+                        <h3 class="text-xl font-semibold">1. Cliente</h3>
+                        <div class="relative">
+                            <label class="block text-sm">Buscar Cliente</label>
+                            <div class="flex items-center">
+                                <input type="text" id="client-search-input-sale" class="form-input w-full p-3" placeholder="Escribe para buscar...">
+                                <button type="button" id="add-client-from-sale-btn" class="ml-2 btn-secondary p-3"><i class="fas fa-plus"></i></button>
+                            </div>
+                            <div id="client-search-results" class="absolute z-20 w-full bg-white border rounded-md mt-1 hidden max-h-60 overflow-y-auto"></div>
+                            <div id="selected-client-display" class="mt-2"></div>
+                        </div>
+                    </div>
+                    <div class="space-y-4 p-4 border-b">
+                        <h3 class="text-xl font-semibold">2. Productos</h3>
+                        <div class="relative">
+                            <label class="block text-sm">Buscar Producto en Stock</label>
+                            <div class="flex items-center">
+                                <input type="text" id="stock-search-input-sale" class="form-input w-full p-3" placeholder="Escribe nombre o N/S para buscar...">
+                            </div>
+                            <div id="stock-search-results-sale" class="absolute z-10 w-full bg-white border rounded-md mt-1 hidden max-h-60 overflow-y-auto"></div>
+                        </div>
+                        <div id="sale-items-list" class="mt-4 space-y-2"></div>
+                    </div>
+                    <div class="space-y-4 p-4 border-b">
+                        <h3 class="text-xl font-semibold">3. Pago</h3>
+                        <div class="flex items-center"><input id="has-trade-in" type="checkbox" class="h-4 w-4"><label for="has-trade-in" class="ml-3">Recibir equipo en parte de pago</label></div>
+                        <div id="trade-in-details" class="hidden my-4 space-y-4 border-l-4 pl-4 py-2"></div>
+                        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                            <div><label class="text-sm">Efectivo (ARS)</label><input type="number" data-payment="ars" class="payment-input form-input w-full p-2 mt-1" value="0"><p id="ars-usd-display" class="text-xs text-gray-500 h-4 mt-1"></p></div>
+                            <div><label class="text-sm">Digital (ARS)</label><input type="number" data-payment="mp" class="payment-input form-input w-full p-2 mt-1" value="0"><p id="mp-usd-display" class="text-xs text-gray-500 h-4 mt-1"></p></div>
+                            <div><label class="text-sm">Dólares (USD)</label><input type="number" data-payment="usd" class="payment-input form-input w-full p-2 mt-1" value="0"></div>
+                            <div><label class="text-sm">USDT</label><input type="number" data-payment="usdt" class="payment-input form-input w-full p-2 mt-1" value="0"></div>
+                            <div><label class="text-sm">Deuda Cliente (USD)</label><input type="number" data-payment="clientDebt" class="payment-input form-input w-full p-2 mt-1" value="0"></div>
+                        </div>
+                    </div>
+                    <div class="space-y-4 p-4">
+                        <h3 class="text-xl font-semibold">4. Cierre y Resumen</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div><label class="block text-sm">Fecha de Venta</label><input type="date" id="sale-date" class="form-input w-full p-3" required></div>
+                            <div><label class="block text-sm">Garantía (días)</label><input type="number" id="warranty-days" class="form-input w-full p-3" value="30" required></div>
+                        </div>
+                        <div><label class="block text-sm">Notas</label><textarea id="notes" rows="2" class="form-textarea w-full p-3"></textarea></div>
+                        <div id="sale-summary" class="mt-4 p-4 rounded-lg bg-gray-100 space-y-2"></div>
+                    </div>
+                    <div><button type="submit" class="w-full btn-primary py-3 text-lg">Finalizar Venta</button></div>
+                </form>
             </div>
         </div>
 
@@ -219,37 +233,68 @@ function getAppSectionsHTML() {
                     <input type="text" id="sales-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar por cliente, nombre, N/S...">
                     <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                 </div>
-                <div id="sales-list-container"></div> 
-                <div id="no-sales-message" class="text-center py-16 text-gray-500 hidden"><i class="fas fa-folder-open fa-3x mb-4"></i><p>Aún no has registrado ventas.</p></div> 
+                <div id="sales-list-container"></div>
+                <div id="no-sales-message" class="text-center py-16 text-gray-500 hidden"><i class="fas fa-folder-open fa-3x mb-4"></i><p>Aún no has registrado ventas.</p></div>
+            </div>
+        </div>
+
+        <div id="ventas-sub-reservas" class="ventas-sub-section hidden">
+            <div class="card p-6 md:p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-semibold">Gestión de Reservas</h3>
+                    <button id="add-reservation-btn" class="btn-primary py-2 px-4 flex items-center"><i class="fas fa-calendar-plus mr-2"></i>Nueva Reserva</button>
+                </div>
+                <div class="relative mb-4">
+                    <input type="text" id="reservations-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar por cliente o producto...">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+                <div id="reservations-list-container" class="space-y-4 mt-6"></div>
+                <div id="no-reservations-message" class="text-center py-8 text-gray-500 hidden"><i class="fas fa-calendar-times fa-3x mb-4"></i><p>No hay reservas activas.</p></div>
+            </div>
+        </div>
+
+        <div id="ventas-sub-vendedores" class="ventas-sub-section hidden">
+            <div class="card p-6 md:p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-semibold">Gestión de Vendedores</h3>
+                    <button id="add-salesperson-btn" class="btn-primary py-2 px-4 flex items-center"><i class="fas fa-user-plus mr-2"></i>Nuevo Vendedor</button>
+                </div>
+                <div class="relative mb-4">
+                    <input type="text" id="salespeople-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar vendedor...">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+                <div id="salespeople-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6"></div>
+                <div id="no-salespeople-message" class="text-center py-8 text-gray-500 hidden"><i class="fas fa-users-slash fa-3x mb-4"></i><p>No hay vendedores registrados.</p></div>
             </div>
         </div>
     </div>
 
-    <!-- ======================= SECCIÓN INVENTARIO (NUEVA) ======================= -->
-    <div id="section-inventario" class="hidden main-section">
-        <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap"> 
-            <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="inventario" data-sub-tab="stock">Stock</button> 
+    <!-- ======================= SECCIÓN INVENTARIO ======================= -->
+     <div id="section-inventario" class="hidden main-section">
+        <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap">
+            <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="inventario" data-sub-tab="stock">Stock</button>
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="inventario" data-sub-tab="registrar">Registrar Producto</button>
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="inventario" data-sub-tab="categorias">Categorías</button>
+            <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="inventario" data-sub-tab="proveedores">Mis Proveedores</button>
         </div>
 
-        <div id="inventario-sub-stock" class="inventario-sub-section hidden"> 
-            <div class="card p-6 md:p-8"> 
-                <h3 class="text-2xl font-semibold mb-6">Inventario Actual</h3> 
+        <div id="inventario-sub-stock" class="inventario-sub-section hidden">
+            <div class="card p-6 md:p-8">
+                <h3 class="text-2xl font-semibold mb-6">Inventario Actual</h3>
                 <div class="relative mb-6">
                     <input type="text" id="stock-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar por nombre, N/S, categoría...">
                     <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                 </div>
-                <div id="stock-list-container-consultas" class="space-y-8"></div> 
-                <div id="no-stock-message-consultas" class="text-center py-8 text-gray-500 hidden"><i class="fas fa-box-open fa-3x mb-4"></i><p>No hay productos en stock.</p></div> 
-            </div> 
-        </div> 
+                <div id="stock-list-container-consultas" class="space-y-8"></div>
+                <div id="no-stock-message-consultas" class="text-center py-8 text-gray-500 hidden"><i class="fas fa-box-open fa-3x mb-4"></i><p>No hay productos en stock.</p></div>
+            </div>
+        </div>
 
         <div id="inventario-sub-registrar" class="inventario-sub-section hidden">
-             <div class="card p-6 md:p-8"> 
-                <h3 class="text-2xl font-semibold mb-6">Registrar Nuevo Producto en Stock</h3> 
-                <form id="stock-form-register" class="space-y-4 bg-gray-50 p-6 rounded-lg border"></form> 
-            </div> 
+             <div class="card p-6 md:p-8">
+                <h3 class="text-2xl font-semibold mb-6">Registrar Nuevo Producto en Stock</h3>
+                <form id="stock-form-register" class="space-y-4 bg-gray-50 p-6 rounded-lg border"></form>
+            </div>
         </div>
 
         <div id="inventario-sub-categorias" class="inventario-sub-section hidden">
@@ -272,109 +317,151 @@ function getAppSectionsHTML() {
                 </div>
             </div>
         </div>
+
+        <div id="inventario-sub-proveedores" class="inventario-sub-section hidden">
+            <div class="card p-6 md:p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-semibold">Mis Proveedores</h3>
+                    <button id="add-provider-btn" class="btn-primary py-2 px-4 flex items-center"><i class="fas fa-truck mr-2"></i>Nuevo Proveedor</button>
+                </div>
+                <div class="relative mb-4">
+                    <input type="text" id="user-providers-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar proveedor...">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+                <div id="user-providers-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6"></div>
+                <div id="no-user-providers-message" class="text-center py-8 text-gray-500 hidden"><i class="fas fa-truck-loading fa-3x mb-4"></i><p>No has registrado proveedores.</p></div>
+            </div>
+        </div>
     </div>
 
-    <!-- ======================= SECCIÓN CLIENTES (NUEVA) ======================= -->
+    <!-- ======================= SECCIÓN CLIENTES ======================= -->
     <div id="section-clientes" class="hidden main-section">
-        <div class="card p-6 md:p-8"> 
-            <div class="flex justify-between items-center mb-6"> 
-                <h3 class="text-2xl font-semibold">Gestión de Clientes</h3> 
-                <button id="toggle-client-form-btn" class="btn-primary py-2 px-4 flex items-center"><i class="fas fa-user-plus mr-2"></i>Nuevo Cliente</button> 
+        <div class="card p-6 md:p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-semibold">Gestión de Clientes</h3>
+                <button id="toggle-client-form-btn" class="btn-primary py-2 px-4 flex items-center"><i class="fas fa-user-plus mr-2"></i>Nuevo Cliente</button>
             </div>
-            <div id="add-client-form-container" class="hidden mb-8"> 
-                <form id="client-form-register" class="space-y-4 bg-gray-50 p-6 rounded-lg border"> 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4"> 
-                        <div><label class="block text-sm">Nombre Completo</label><input type="text" id="client-name-reg" class="form-input w-full" required></div> 
-                        <div><label class="block text-sm">Teléfono</label><input type="text" id="client-phone-reg" class="form-input w-full"></div> 
-                    </div> 
-                    <div><label class="block text-sm">Detalles</label><textarea id="client-details-reg" class="form-textarea w-full"></textarea></div> 
-                    <button type="submit" class="btn-primary py-2 px-6">Añadir Cliente</button> 
-                </form> 
-            </div> 
-            <div class="relative"><input type="text" id="client-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar cliente..."><i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i></div> 
-            <div id="clients-list-consultas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6"></div> 
-            <div id="no-clients-message-consultas" class="text-center py-8 text-gray-500 hidden"><i class="fas fa-users-slash fa-3x mb-4"></i><p>No hay clientes registrados.</p></div> 
-        </div> 
+            <div id="add-client-form-container" class="hidden mb-8">
+                <form id="client-form-register" class="space-y-4 bg-gray-50 p-6 rounded-lg border">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-sm">Nombre Completo</label><input type="text" id="client-name-reg" class="form-input w-full" required></div>
+                        <div><label class="block text-sm">Teléfono</label><input type="text" id="client-phone-reg" class="form-input w-full"></div>
+                    </div>
+                    <div><label class="block text-sm">Detalles</label><textarea id="client-details-reg" class="form-textarea w-full"></textarea></div>
+                    <button type="submit" class="btn-primary py-2 px-6">Añadir Cliente</button>
+                </form>
+            </div>
+            <div class="relative"><input type="text" id="client-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar cliente..."><i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i></div>
+            <div id="clients-list-consultas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6"></div>
+            <div id="no-clients-message-consultas" class="text-center py-8 text-gray-500 hidden"><i class="fas fa-users-slash fa-3x mb-4"></i><p>No hay clientes registrados.</p></div>
+        </div>
     </div>
 
     <!-- ======================= SECCIÓN OPERACIONES ======================= -->
-    <div id="section-operaciones" class="hidden main-section"> 
-        <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap"> 
-            <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="operaciones" data-sub-tab="gastos">Gastos</button> 
-            <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="operaciones" data-sub-tab="deudas">Deudas</button> 
+     <div id="section-operaciones" class="hidden main-section">
+        <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap">
+            <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="operaciones" data-sub-tab="gastos">Gastos</button>
+            <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="operaciones" data-sub-tab="deudas">Deudas</button>
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="operaciones" data-sub-tab="notas">Notas</button>
-        </div> 
-        <div id="operaciones-sub-gastos" class="operaciones-sub-section hidden"> 
+        </div>
+        <div id="operaciones-sub-gastos" class="operaciones-sub-section hidden">
             <div class="card p-6 md:p-8">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-2xl font-semibold">Gestión de Gastos</h3>
                     <button class="toggle-section-btn text-gray-400 hover:text-gray-600 p-2" data-section="gastos"><i class="fas fa-chevron-up"></i></button>
                 </div>
-                <div id="collapsible-content-gastos" class="space-y-8"> 
-                    <div class="p-6 border rounded-lg"> 
-                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Añadir Gastos</h3> 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8"> 
-                            <form id="fixed-expense-form-register" class="space-y-3 p-4 border rounded-lg"> 
-                                <p class="font-medium">Gasto Fijo Mensual</p> 
-                                <div><label for="fixed-expense-description-reg" class="block text-sm">Descripción</label><input type="text" id="fixed-expense-description-reg" class="form-input w-full p-2 mt-1" required></div> 
-                                <div><label for="fixed-expense-amount-reg" class="block text-sm">Monto (USD)</label><input type="number" id="fixed-expense-amount-reg" class="form-input w-full p-2 mt-1" required></div> 
-                                <div><label for="fixed-expense-day-reg" class="block text-sm">Día de Pago (1-31)</label><input type="number" id="fixed-expense-day-reg" class="form-input w-full p-2 mt-1" required min="1" max="31"></div> 
-                                <button type="submit" class="w-full btn-primary py-2">Añadir Gasto Fijo</button> 
-                            </form> 
-                            <form id="daily-expense-form-register" class="space-y-3 p-4 border rounded-lg"> 
-                                <p class="font-medium">Gasto Diario/Variable</p> 
-                                <div><label for="daily-expense-description-reg" class="block text-sm">Descripción</label><input type="text" id="daily-expense-description-reg" class="form-input w-full p-2 mt-1" required></div> 
-                                <div><label for="daily-expense-amount-reg" class="block text-sm">Monto (USD)</label><input type="number" id="daily-expense-amount-reg" class="form-input w-full p-2 mt-1" required></div> 
-                                <div><label for="daily-expense-date-reg" class="block text-sm">Fecha</label><input type="date" id="daily-expense-date-reg" class="form-input w-full p-2 mt-1" required></div> 
-                                <button type="submit" class="w-full btn-primary py-2">Añadir y Pagar Gasto</button> 
-                            </form> 
-                        </div> 
-                    </div> 
-                    <div class="p-6 border rounded-lg"> 
-                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Gastos Fijos Pendientes</h3> 
-                        <div id="fixed-expenses-list-consultas" class="space-y-3"></div> 
-                    </div> 
-                    <div class="p-6 border rounded-lg"> 
-                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Historial de Pagos</h3> 
+                <div id="collapsible-content-gastos" class="space-y-8">
+                    <div class="p-6 border rounded-lg">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Añadir Gastos</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <form id="fixed-expense-form-register" class="space-y-3 p-4 border rounded-lg">
+                                <p class="font-medium">Gasto Fijo Mensual</p>
+                                <div><label for="fixed-expense-description-reg" class="block text-sm">Descripción</label><input type="text" id="fixed-expense-description-reg" class="form-input w-full p-2 mt-1" required></div>
+                                <div>
+                                    <label class="block text-sm">Monto</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="number" id="fixed-expense-amount-reg" data-form-type="fixed-expense-reg" class="currency-input form-input w-full p-2" required>
+                                        <select id="fixed-expense-currency-reg" data-form-type="fixed-expense-reg" class="currency-select form-select p-2">
+                                            <option value="USD">USD</option>
+                                            <option value="ARS">ARS</option>
+                                        </select>
+                                    </div>
+                                    <p id="fixed-expense-reg-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>
+                                </div>
+                                <div><label for="fixed-expense-day-reg" class="block text-sm">Día de Pago (1-31)</label><input type="number" id="fixed-expense-day-reg" class="form-input w-full p-2 mt-1" required min="1" max="31"></div>
+                                <button type="submit" class="w-full btn-primary py-2">Añadir Gasto Fijo</button>
+                            </form>
+                            <form id="daily-expense-form-register" class="space-y-3 p-4 border rounded-lg">
+                                <p class="font-medium">Gasto Diario/Variable</p>
+                                <div><label for="daily-expense-description-reg" class="block text-sm">Descripción</label><input type="text" id="daily-expense-description-reg" class="form-input w-full p-2 mt-1" required></div>
+                                <div>
+                                    <label class="block text-sm">Monto</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="number" id="daily-expense-amount-reg" data-form-type="daily-expense-reg" class="currency-input form-input w-full p-2" required>
+                                        <select id="daily-expense-currency-reg" data-form-type="daily-expense-reg" class="currency-select form-select p-2">
+                                            <option value="USD">USD</option>
+                                            <option value="ARS">ARS</option>
+                                        </select>
+                                    </div>
+                                    <p id="daily-expense-reg-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>
+                                </div>
+                                <div><label for="daily-expense-date-reg" class="block text-sm">Fecha</label><input type="date" id="daily-expense-date-reg" class="form-input w-full p-2 mt-1" required></div>
+                                <button type="submit" class="w-full btn-primary py-2">Añadir y Pagar Gasto</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="p-6 border rounded-lg">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Gastos Fijos Pendientes</h3>
+                        <div id="fixed-expenses-list-consultas" class="space-y-3"></div>
+                    </div>
+                    <div class="p-6 border rounded-lg">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Historial de Pagos</h3>
                         <div class="relative mb-4">
                             <input type="text" id="expenses-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar por descripción...">
                             <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                         </div>
-                        <div id="payment-history-list" class="space-y-3 max-h-[500px] overflow-y-auto"></div> 
-                    </div> 
-                </div> 
+                        <div id="payment-history-list" class="space-y-3 max-h-[500px] overflow-y-auto"></div>
+                    </div>
+                </div>
             </div>
-        </div> 
-        <div id="operaciones-sub-deudas" class="operaciones-sub-section hidden"> 
-            <div class="card p-6 md:p-8"> 
-                <div class="flex justify-between items-center mb-6"> 
-                    <h3 class="text-2xl font-semibold">Gestión de Deudas (Proveedores)</h3> 
+        </div>
+        <div id="operaciones-sub-deudas" class="operaciones-sub-section hidden">
+            <div class="card p-6 md:p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-semibold">Gestión de Deudas (Proveedores)</h3>
                     <button class="toggle-section-btn text-gray-400 hover:text-gray-600 p-2" data-section="deudas"><i class="fas fa-chevron-up"></i></button>
                 </div>
                 <div id="collapsible-content-deudas">
-                    <button id="toggle-debt-form-btn" class="btn-primary py-2 px-4 flex items-center mb-6"><i class="fas fa-plus mr-2"></i>Nueva Deuda</button> 
-                    <div id="add-debt-form-container" class="hidden mb-8"> 
-                        <form id="debt-form" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end bg-gray-50 p-6 rounded-lg border"> 
-                            <div> 
-                                <label for="debtor-name" class="block text-sm font-medium text-gray-700">Nombre del Acreedor</label> 
-                                <input type="text" id="debtor-name" class="mt-1 form-input w-full p-2" required> 
-                            </div> 
-                            <div> 
-                                <label for="debt-desc" class="block text-sm font-medium text-gray-700">Descripción</label> 
-                                <input type="text" id="debt-desc" class="mt-1 form-input w-full p-2" required> 
-                            </div> 
-                            <div> 
-                                <label for="debt-amount" class="block text-sm font-medium text-gray-700">Monto (USD)</label> 
-                                <input type="number" id="debt-amount" class="mt-1 form-input w-full p-2" required> 
-                            </div> 
-                            <div class="sm:col-span-2 md:col-span-3"> 
-                                <button type="submit" class="btn-primary w-full py-2">Añadir Deuda</button> 
-                            </div> 
-                        </form> 
-                    </div> 
-                    <div id="debts-list-consultas" class="space-y-3"></div> 
+                    <button id="toggle-debt-form-btn" class="btn-primary py-2 px-4 flex items-center mb-6"><i class="fas fa-plus mr-2"></i>Nueva Deuda</button>
+                    <div id="add-debt-form-container" class="hidden mb-8">
+                        <form id="debt-form" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-start bg-gray-50 p-6 rounded-lg border">
+                            <div>
+                                <label for="debtor-name" class="block text-sm font-medium text-gray-700">Nombre del Acreedor</label>
+                                <input type="text" id="debtor-name" class="mt-1 form-input w-full p-2" required>
+                            </div>
+                            <div>
+                                <label for="debt-desc" class="block text-sm font-medium text-gray-700">Descripción</label>
+                                <input type="text" id="debt-desc" class="mt-1 form-input w-full p-2" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Monto</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="debt-amount" data-form-type="debt-create" class="currency-input mt-1 form-input w-full p-2" required>
+                                    <select id="debt-currency" data-form-type="debt-create" class="currency-select mt-1 form-select p-2">
+                                        <option value="USD">USD</option>
+                                        <option value="ARS">ARS</option>
+                                    </select>
+                                </div>
+                                <p id="debt-create-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>
+                            </div>
+                            <div class="sm:col-span-2 md:col-span-3">
+                                <button type="submit" class="btn-primary w-full py-2">Añadir Deuda</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div id="debts-list-consultas" class="space-y-3"></div>
                 </div>
-            </div> 
+            </div>
         </div>
         <div id="operaciones-sub-notas" class="operaciones-sub-section hidden">
             <div class="card p-6 md:p-8">
@@ -395,13 +482,13 @@ function getAppSectionsHTML() {
             </div>
         </div>
     </div>
-    
-    <!-- ======================= SECCIÓN REPORTES (NUEVA) ======================= -->
+
+    <!-- ======================= SECCIÓN REPORTES ======================= -->
     <div id="section-reportes" class="hidden main-section">
-        <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap"> 
-            <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="reportes" data-sub-tab="dashboard">Dashboard</button> 
+        <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap">
+            <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="reportes" data-sub-tab="dashboard">Dashboard</button>
             <button class="sub-tab-btn btn-secondary py-2 px-4" data-hub="reportes" data-sub-tab="analisis">Análisis</button>
-        </div> 
+        </div>
 
         <div id="reportes-sub-dashboard" class="reportes-sub-section hidden">
             <div class="space-y-8">
@@ -469,21 +556,21 @@ function getAppSectionsHTML() {
         </div>
     </div>
 
-    <!-- ======================= SECCIÓN PROVEEDORES ======================= -->
-    <div id="section-providers" class="hidden main-section">
+    <!-- ======================= SECCIÓN PROVEEDORES PÚBLICOS ======================= -->
+    <div id="section-public-providers" class="hidden main-section">
         <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div>
                 <h2 class="text-3xl font-bold text-gray-800">Proveedores Recomendados</h2>
                 <p class="text-gray-500">Listas de precios y contacto directo de proveedores verificados.</p>
             </div>
             <div class="relative w-full md:w-auto">
-                <input type="text" id="providers-search-input" class="form-input w-full md:w-72 p-3 pl-10" placeholder="Buscar proveedor...">
+                <input type="text" id="public-providers-search-input" class="form-input w-full md:w-72 p-3 pl-10" placeholder="Buscar proveedor...">
                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
             </div>
         </div>
-        <div id="providers-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div id="public-providers-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         </div>
-        <div id="no-providers-message" class="text-center py-16 text-gray-500 hidden">
+        <div id="no-public-providers-message" class="text-center py-16 text-gray-500 hidden">
             <i class="fas fa-store-slash fa-3x mb-4"></i>
             <p>Aún no hay proveedores disponibles.</p>
         </div>
@@ -529,7 +616,7 @@ function renderNotesSection(state) {
   );
 
   noNotesMessage.classList.toggle('hidden', state.notes.length > 0);
-  container.classList.toggle('hidden', filteredNotes.length === 0 && !searchTerm);
+  container.classList.toggle('hidden', filteredNotes.length === 0 && searchTerm);
 
   if (filteredNotes.length === 0) {
     if (searchTerm) {
@@ -614,12 +701,14 @@ function formatTimeAgo(timestamp) {
   return 'hace unos segundos';
 }
 
-function renderProvidersSection(state) {
+function renderPublicProvidersSection(state) {
+  // FIX: Renombrada de renderProvidersSection a renderPublicProvidersSection para evitar conflictos.
+  // FIX: Actualizados los IDs de los elementos para que sean únicos.
   if (!state.providers) return;
 
-  const container = document.getElementById('providers-list-container');
-  const noProvidersMessage = document.getElementById('no-providers-message');
-  const searchInput = document.getElementById('providers-search-input');
+  const container = document.getElementById('public-providers-list-container');
+  const noProvidersMessage = document.getElementById('no-public-providers-message');
+  const searchInput = document.getElementById('public-providers-search-input');
 
   if (!container || !noProvidersMessage || !searchInput) return;
 
@@ -706,7 +795,6 @@ function renderProvidersSection(state) {
       priceListHtml = '<p class="text-center text-gray-400 py-4">No hay productos en la lista.</p>';
     }
 
-    // <<<--- MODIFICADO: Se añade el input de búsqueda a cada tarjeta ---
     providerCard.innerHTML = `
             <div class="p-6">
                 <div class="flex items-start mb-4">
@@ -728,7 +816,7 @@ function renderProvidersSection(state) {
                 <div class="flex justify-center gap-4 my-4">
                     <a href="${whatsappLink}" target="_blank" class="btn-primary flex-1 text-center py-2 px-4 flex items-center justify-center gap-2"><i class="fab fa-whatsapp"></i> WhatsApp</a>
                     <a href="${instagramLink}" target="_blank" class="btn-secondary flex-1 text-center py-2 px-4 flex items-center justify-center gap-2">
-                        <i class="fab fa-instagram"></i> 
+                        <i class="fab fa-instagram"></i>
                         <span>@${escapeHTML(provider.instagram)}</span>
                     </a>
                 </div>
@@ -782,7 +870,7 @@ function renderSalesHistory(state) {
     return searchInClient || searchInItems;
   });
   noSalesMessage.classList.toggle('hidden', state.sales.length > 0);
-  container.classList.toggle('hidden', filteredSales.length === 0 && !searchTerm);
+  container.classList.toggle('hidden', filteredSales.length === 0 && searchTerm);
   if (filteredSales.length === 0) {
     if (searchTerm) {
       container.innerHTML = `<p class="text-center text-gray-500 py-8">No se encontraron ventas para "${escapeHTML(
@@ -848,33 +936,33 @@ function renderSaleCard(sale) {
     daysSinceSaleHtml = `<span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full" title="Días desde la venta">${diffDays} día(s) (Garantía)</span>`;
   }
 
-  return ` 
+  return `
         <div class="sale-card border p-4 rounded-lg hover:shadow-md transition-shadow" data-sale-id="${
           sale.id
-        }"> 
-            <div class="flex justify-between items-start cursor-pointer" data-action="open-details"> 
-                <div> 
-                    <p class="font-bold text-lg">${escapeHTML(sale.customerName)}</p> 
+        }">
+            <div class="flex justify-between items-start cursor-pointer" data-action="open-details">
+                <div>
+                    <p class="font-bold text-lg">${escapeHTML(sale.customerName)}</p>
                     <p class="text-sm text-gray-500">${(sale.items || [])
                       .map((i) => escapeHTML(i.model))
-                      .join(', ')}</p> 
-                </div> 
-                <div class="text-right flex-shrink-0 ml-4"> 
-                    <p class="text-xl font-bold">${formatCurrency(sale.total, 'USD')}</p> 
+                      .join(', ')}</p>
+                </div>
+                <div class="text-right flex-shrink-0 ml-4">
+                    <p class="text-xl font-bold">${formatCurrency(sale.total, 'USD')}</p>
                     <p class="text-sm ${
                       profit >= 0 ? 'text-green-600' : 'text-red-600'
-                    }">Ganancia: ${formatCurrency(profit, 'USD')}</p> 
-                </div> 
-            </div> 
-            <div class="mt-3 pt-3 border-t flex justify-between items-center"> 
+                    }">Ganancia: ${formatCurrency(profit, 'USD')}</p>
+                </div>
+            </div>
+            <div class="mt-3 pt-3 border-t flex justify-between items-center">
                 ${daysSinceSaleHtml}
-                <div class="flex gap-2"> 
+                <div class="flex gap-2">
                     <button class="delete-sale-btn btn-danger text-xs py-1 px-2 rounded" data-sale-id="${
                       sale.id
-                    }">Anular</button> 
-                </div> 
-            </div> 
-        </div> 
+                    }">Anular</button>
+                </div>
+            </div>
+        </div>
     `;
 }
 
@@ -968,23 +1056,23 @@ function renderClientDebtsList(state) {
       ? `<p class="text-gray-500 text-center py-4">No hay deudas de clientes.</p>`
       : clientDebts
           .map(
-            (debt) => ` 
-            <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center border"> 
-                <div> 
-                    <p class="font-semibold">${escapeHTML(debt.customerName)}</p> 
+            (debt) => `
+            <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center border">
+                <div>
+                    <p class="font-semibold">${escapeHTML(debt.customerName)}</p>
                     <p class="text-xs text-gray-500">${(debt.items || [])
                       .map((i) => i.model)
-                      .join(', ')}</p> 
-                </div> 
-                <div class="flex items-center gap-2"> 
+                      .join(', ')}</p>
+                </div>
+                <div class="flex items-center gap-2">
                     <p class="font-bold text-yellow-500">${formatCurrency(
                       debt.balanceUSD,
                       'USD'
-                    )}</p> 
+                    )}</p>
                     <button class="settle-client-debt-btn btn-primary text-xs py-1 px-2" data-sale-id="${
                       debt.id
-                    }" data-balance="${debt.balanceUSD}">Saldar</button> 
-                </div> 
+                    }" data-balance="${debt.balanceUSD}">Saldar</button>
+                </div>
             </div>`
           )
           .join('');
@@ -997,18 +1085,18 @@ function renderOurDebtsList(state) {
       ? `<p class="text-gray-500 text-center py-4">No hay deudas a proveedores.</p>`
       : state.debts
           .map(
-            (debt) => ` 
-            <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center border"> 
-                <div> 
-                    <p class="font-semibold">${escapeHTML(debt.debtorName)}</p> 
-                    <p class="text-xs text-gray-500">${escapeHTML(debt.description)}</p> 
-                </div> 
-                <div class="flex items-center gap-2"> 
-                    <p class="font-bold text-red-500">${formatCurrency(debt.amount, 'USD')}</p> 
+            (debt) => `
+            <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center border">
+                <div>
+                    <p class="font-semibold">${escapeHTML(debt.debtorName)}</p>
+                    <p class="text-xs text-gray-500">${escapeHTML(debt.description)}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <p class="font-bold text-red-500">${formatCurrency(debt.amount, 'USD')}</p>
                     <button class="settle-our-debt-btn btn-primary text-xs py-1 px-2" data-debt-id="${
                       debt.id
-                    }">Saldar</button> 
-                </div> 
+                    }">Saldar</button>
+                </div>
             </div>`
           )
           .join('');
@@ -1133,22 +1221,22 @@ function renderExpensesSection(state) {
 function renderPaymentHistoryItem(expense) {
   const walletInfo = WALLET_CONFIG[expense.paidFrom] || {};
   const walletIcon = walletInfo.icon || 'fa-solid fa-question-circle';
-  return ` 
-        <div class="bg-white p-3 rounded-lg flex justify-between items-center border shadow-sm"> 
-            <div> 
-                <p>${escapeHTML(expense.description)}</p> 
-                <div class="text-xs text-gray-500 flex items-center mt-1"> 
-                    <i class="${walletIcon} mr-2"></i> 
-                    <span>${formatDate(expense.date)}</span> 
-                </div> 
-            </div> 
-            <div class="flex items-center gap-4"> 
-                <p class="font-semibold">${formatCurrency(expense.amount, 'USD')}</p> 
+  return `
+        <div class="bg-white p-3 rounded-lg flex justify-between items-center border shadow-sm">
+            <div>
+                <p>${escapeHTML(expense.description)}</p>
+                <div class="text-xs text-gray-500 flex items-center mt-1">
+                    <i class="${walletIcon} mr-2"></i>
+                    <span>${formatDate(expense.date)}</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <p class="font-semibold">${formatCurrency(expense.amount, 'USD')}</p>
                 <button class="delete-daily-expense-btn p-2 text-gray-400 hover:text-red-500" data-id="${
                   expense.id
-                }"><i class="fas fa-trash"></i></button> 
-            </div> 
-        </div> 
+                }"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
     `;
 }
 
@@ -1322,9 +1410,20 @@ function renderStockSection(state) {
                                         .join(', ') +
                                       (Object.keys(item.attributes).length > 2 ? '...' : '')
                                     : 'Sin atributos';
+
+                                const isReserved = item.status === 'reservado';
+                                const rowClass = isReserved
+                                  ? 'opacity-50 bg-gray-100'
+                                  : 'hover:bg-gray-50';
+                                const reservedTag = isReserved
+                                  ? '<span class="ml-2 text-xs bg-yellow-400 text-yellow-900 font-bold px-2 py-1 rounded-full">Reservado</span>'
+                                  : '';
+
                                 return `
-                                <tr class="border-b border-gray-200 hover:bg-gray-50">
-                                    <td class="p-2 font-semibold">${escapeHTML(item.model)}</td>
+                                <tr class="border-b border-gray-200 ${rowClass}">
+                                    <td class="p-2 font-semibold">${escapeHTML(
+                                      item.model
+                                    )} ${reservedTag}</td>
                                     <td class="p-2 font-mono text-sm">${escapeHTML(
                                       item.serialNumber
                                     )}</td>
@@ -1422,6 +1521,7 @@ function renderSalesSection(state) {
     const itemsInCartIds = (sale.items || []).map((i) => i.id);
     const filteredStock = stock.filter(
       (item) =>
+        item.status !== 'reservado' &&
         (item.quantity || 0) > 0 &&
         !itemsInCartIds.includes(item.id) &&
         ((item.model || '').toLowerCase().includes(sale.stockSearchTerm.toLowerCase()) ||
@@ -1467,31 +1567,31 @@ function renderSalesSection(state) {
     saleItemsList.innerHTML = sale.items
       .map((item, index) => {
         const profit = (item.salePrice || 0) - (item.phoneCost || 0);
-        return ` 
-            <div class="p-3 bg-white border rounded-lg flex flex-col gap-2"> 
-                <div class="flex items-center justify-between gap-4"> 
+        return `
+            <div class="p-3 bg-white border rounded-lg flex flex-col gap-2">
+                <div class="flex items-center justify-between gap-4">
                     <div class="flex-grow flex items-center gap-2">
                         <button type="button" class="view-item-details-btn text-blue-500 hover:text-blue-700" data-item-index="${index}"><i class="fas fa-info-circle"></i></button>
                         <div>
-                            <p class="font-semibold">${escapeHTML(item.model)}</p> 
-                            <p class="text-xs text-gray-500">${escapeHTML(item.serialNumber)}</p> 
+                            <p class="font-semibold">${escapeHTML(item.model)}</p>
+                            <p class="text-xs text-gray-500">${escapeHTML(item.serialNumber)}</p>
                         </div>
-                    </div> 
-                    <div class="flex items-center gap-2"> 
-                        <label class="text-sm">Precio:</label> 
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm">Precio:</label>
                         <input type="number" value="${
                           item.salePrice || item.suggestedSalePrice || 0
-                        }" class="form-input p-1 w-24 text-right sale-item-price" data-index="${index}"> 
-                    </div> 
-                    <button type="button" class="remove-sale-item-btn text-red-500 hover:text-red-700" data-index="${index}"><i class="fas fa-trash"></i></button> 
-                </div> 
-                <div class="flex justify-between items-center text-xs text-gray-600 border-t pt-2 mt-2"> 
-                    <span>Costo: ${formatCurrency(item.phoneCost || 0, 'USD')}</span> 
+                        }" class="form-input p-1 w-24 text-right sale-item-price" data-index="${index}">
+                    </div>
+                    <button type="button" class="remove-sale-item-btn text-red-500 hover:text-red-700" data-index="${index}"><i class="fas fa-trash"></i></button>
+                </div>
+                <div class="flex justify-between items-center text-xs text-gray-600 border-t pt-2 mt-2">
+                    <span>Costo: ${formatCurrency(item.phoneCost || 0, 'USD')}</span>
                     <span class="font-bold ${
                       profit >= 0 ? 'text-green-600' : 'text-red-600'
-                    }">Ganancia: ${formatCurrency(profit, 'USD')}</span> 
-                </div> 
-            </div> 
+                    }">Ganancia: ${formatCurrency(profit, 'USD')}</span>
+                </div>
+            </div>
             `;
       })
       .join('');
@@ -1657,6 +1757,66 @@ function renderDashboardSection(state) {
   renderCapitalGrowthChart(capitalHistory, startDate, endDate);
 }
 
+// ADDED: Nueva función para renderizar la sección de proveedores del usuario
+function renderUserProvidersSection(state) {
+  if (!state.userProviders) return;
+  const { userProviders, userProvidersSearchTerm } = state;
+  const container = document.getElementById('user-providers-list-container');
+  const noMessage = document.getElementById('no-user-providers-message');
+  const searchInput = document.getElementById('user-providers-search-input');
+
+  if (!container || !noMessage || !searchInput) return;
+
+  if (searchInput.value !== userProvidersSearchTerm) {
+    searchInput.value = userProvidersSearchTerm;
+  }
+
+  const searchTerm = (userProvidersSearchTerm || '').toLowerCase();
+  const filteredProviders = userProviders.filter(
+    (p) =>
+      (p.name || '').toLowerCase().includes(searchTerm) ||
+      (p.contact || '').toLowerCase().includes(searchTerm)
+  );
+
+  noMessage.classList.toggle('hidden', userProviders.length > 0);
+  container.innerHTML = '';
+
+  if (filteredProviders.length === 0) {
+    if (searchTerm) {
+      container.innerHTML = `<p class="text-center text-gray-500 py-8 col-span-full">No se encontraron proveedores para "${escapeHTML(
+        searchTerm
+      )}".</p>`;
+    }
+    return;
+  }
+
+  container.innerHTML = filteredProviders
+    .map(
+      (provider) => `
+        <div class="card p-4 flex flex-col justify-between">
+            <div>
+                <p class="font-bold text-lg">${escapeHTML(provider.name)}</p>
+                <p class="text-sm text-gray-500">${escapeHTML(
+                  provider.contact || 'Sin contacto'
+                )}</p>
+                <p class="text-xs text-gray-400 mt-2">${escapeHTML(
+                  provider.notes || 'Sin notas'
+                )}</p>
+            </div>
+            <div class="flex items-center justify-end mt-4">
+                <button class="edit-provider-btn text-gray-400 hover:text-blue-500" data-provider='${JSON.stringify(
+                  provider
+                )}'><i class="fas fa-edit"></i></button>
+                <button class="delete-provider-btn ml-2 text-gray-400 hover:text-red-500" data-id="${
+                  provider.id
+                }" data-name="${escapeHTML(provider.name)}"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+    `
+    )
+    .join('');
+}
+
 function renderCategoryManagerSection(state) {
   const { categories, categoryManager } = state;
   if (!categories) return;
@@ -1797,9 +1957,13 @@ export function updateSaleBalance(state) {
     if (type === 'ars' || type === 'mp') {
       totalPaidViaMethods += value / exchangeRate;
       const displayElement = document.getElementById(`${type}-usd-display`);
-      if (displayElement)
-        displayElement.textContent =
-          value > 0 ? `(${formatCurrency(value / exchangeRate, 'USD')})` : '';
+      if (displayElement) {
+        if (value > 0) {
+          displayElement.textContent = `~ ${formatCurrency(value / exchangeRate, 'USD')}`;
+        } else {
+          displayElement.textContent = '';
+        }
+      }
     } else {
       totalPaidViaMethods += value;
     }
@@ -1808,11 +1972,11 @@ export function updateSaleBalance(state) {
   const totalReceived = totalPaidViaMethods + tradeInValueUSD;
   const balance = totalSalePrice - totalReceived;
 
-  summaryEl.innerHTML = ` 
+  summaryEl.innerHTML = `
         <div class="flex justify-between items-center text-sm"><span>Subtotal:</span> <span class="font-medium">${formatCurrency(
           subtotal,
           'USD'
-        )}</span></div> 
+        )}</span></div>
         ${
           tradeInValueUSD > 0
             ? `<div class="flex justify-between items-center text-sm"><span>Canje (Crédito):</span> <span class="font-medium text-blue-600">-${formatCurrency(
@@ -1821,25 +1985,151 @@ export function updateSaleBalance(state) {
               )}</span></div>`
             : ''
         }
-        <div class="border-t my-2"></div> 
+        <div class="border-t my-2"></div>
         <div class="flex justify-between items-center font-bold text-lg"><span>Total a Pagar:</span> <span>${formatCurrency(
           totalSalePrice - tradeInValueUSD,
           'USD'
-        )}</span></div> 
+        )}</span></div>
         <div class="flex justify-between items-center text-sm"><span>Total Pagado (Métodos):</span> <span>${formatCurrency(
           totalPaidViaMethods,
           'USD'
-        )}</span></div> 
+        )}</span></div>
         <div class="flex justify-between items-center font-bold text-xl ${
           balance > -0.01 && balance < 0.01 ? 'text-green-600' : 'text-red-600'
-        }"> 
-            <span>Balance:</span> <span>${formatCurrency(balance, 'USD')}</span> 
-        </div> 
+        }">
+            <span>Balance:</span> <span>${formatCurrency(balance, 'USD')}</span>
+        </div>
         <div class="border-t my-2 pt-2"></div>
         <div class="flex justify-between items-center text-sm"><span>Ganancia (Venta):</span> <span class="font-bold ${
           netProfit >= 0 ? 'text-green-600' : 'text-red-600'
-        }">${formatCurrency(netProfit, 'USD')}</span></div> 
+        }">${formatCurrency(netProfit, 'USD')}</span></div>
     `;
+}
+
+// ADDED: Función para renderizar la sección de reservas
+function renderReservationsSection(state) {
+  if (!state.reservations) return;
+
+  const container = document.getElementById('reservations-list-container');
+  const noMessage = document.getElementById('no-reservations-message');
+  const searchInput = document.getElementById('reservations-search-input');
+
+  if (!container || !noMessage || !searchInput) return;
+
+  if (searchInput.value !== state.reservationsSearchTerm) {
+    searchInput.value = state.reservationsSearchTerm;
+  }
+
+  const searchTerm = (state.reservationsSearchTerm || '').toLowerCase();
+  const filteredReservations = state.reservations.filter(
+    (res) =>
+      (res.customerName || '').toLowerCase().includes(searchTerm) ||
+      (res.item?.model || '').toLowerCase().includes(searchTerm)
+  );
+
+  noMessage.classList.toggle('hidden', state.reservations.length > 0);
+  container.classList.toggle('hidden', filteredReservations.length === 0 && searchTerm.length > 0);
+
+  if (filteredReservations.length === 0) {
+    if (searchTerm) {
+      container.innerHTML = `<p class="text-center text-gray-500 py-8">No se encontraron reservas para "${escapeHTML(
+        searchTerm
+      )}".</p>`;
+    } else {
+      container.innerHTML = '';
+    }
+    return;
+  }
+
+  container.innerHTML = filteredReservations
+    .map((res) => {
+      const depositText = res.hasDeposit
+        ? `<span class="font-semibold text-green-700">${formatCurrency(
+            res.depositAmount,
+            'USD'
+          )} (${res.depositPaymentMethod.toUpperCase()})</span>`
+        : '<span class="text-gray-500">No</span>';
+
+      return `
+        <div class="bg-white p-4 rounded-lg border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div class="flex-grow">
+                <p class="font-bold text-lg">${escapeHTML(
+                  res.item?.model || 'Producto no encontrado'
+                )}</p>
+                <p class="text-sm text-gray-600">Para: <span class="font-semibold">${escapeHTML(
+                  res.customerName
+                )}</span></p>
+                <p class="text-xs text-gray-500">Reservado el: ${formatDateTime(res.createdAt)}</p>
+            </div>
+            <div class="flex-shrink-0 text-left md:text-right">
+                <p class="text-sm">Seña: ${depositText}</p>
+            </div>
+            <div class="flex-shrink-0 flex items-center gap-2 w-full md:w-auto">
+                <button class="cancel-reservation-btn btn-danger py-2 px-3 text-sm flex-1 md:flex-none" data-id="${
+                  res.id
+                }"><i class="fas fa-times mr-1"></i> Cancelar</button>
+                <button class="finalize-sale-from-reservation-btn btn-primary py-2 px-3 text-sm flex-1 md:flex-none" data-id="${
+                  res.id
+                }"><i class="fas fa-check mr-1"></i> Finalizar Venta</button>
+            </div>
+        </div>
+        `;
+    })
+    .join('');
+}
+
+// ADDED: Nueva función para renderizar la sección de vendedores
+function renderSalespeopleSection(state) {
+  if (!state.salespeople) return;
+  const { salespeople, salespeopleSearchTerm } = state;
+  const container = document.getElementById('salespeople-list-container');
+  const noMessage = document.getElementById('no-salespeople-message');
+  const searchInput = document.getElementById('salespeople-search-input');
+
+  if (!container || !noMessage || !searchInput) return;
+
+  if (searchInput.value !== salespeopleSearchTerm) {
+    searchInput.value = salespeopleSearchTerm;
+  }
+
+  const searchTerm = (salespeopleSearchTerm || '').toLowerCase();
+  const filteredSalespeople = salespeople.filter((p) =>
+    (p.name || '').toLowerCase().includes(searchTerm)
+  );
+
+  noMessage.classList.toggle('hidden', salespeople.length > 0);
+  container.innerHTML = '';
+
+  if (filteredSalespeople.length === 0) {
+    if (searchTerm) {
+      container.innerHTML = `<p class="text-center text-gray-500 py-8 col-span-full">No se encontraron vendedores para "${escapeHTML(
+        searchTerm
+      )}".</p>`;
+    }
+    return;
+  }
+
+  container.innerHTML = filteredSalespeople
+    .map(
+      (person) => `
+        <div class="card p-4 flex flex-col justify-between">
+            <div>
+                <p class="font-bold text-lg">${escapeHTML(person.name)}</p>
+                <p class="text-sm text-gray-500">${escapeHTML(person.contact || 'Sin contacto')}</p>
+                <p class="text-xs text-green-600 mt-2">Comisión: ${person.commissionRate || 0}%</p>
+            </div>
+            <div class="flex items-center justify-end mt-4">
+                <button class="edit-salesperson-btn text-gray-400 hover:text-blue-500" data-salesperson='${JSON.stringify(
+                  person
+                )}'><i class="fas fa-edit"></i></button>
+                <button class="delete-salesperson-btn ml-2 text-gray-400 hover:text-red-500" data-id="${
+                  person.id
+                }" data-name="${escapeHTML(person.name)}"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+    `
+    )
+    .join('');
 }
 
 export function toggleTradeInDetails() {
@@ -1857,11 +2147,11 @@ export function toggleTradeInDetails() {
         .map((cat) => `<option value="${escapeHTML(cat.name)}">${escapeHTML(cat.name)}</option>`)
         .join('');
 
-    tradeInDetailsEl.innerHTML = ` 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"> 
-                <div><label class="text-sm">Nombre Identificador</label><input type="text" id="trade-in-model" class="form-input w-full p-2 mt-1"></div> 
-                <div><label class="text-sm">N/S</label><input type="text" id="trade-in-serial" class="form-input w-full p-2 mt-1"></div> 
-                <div><label class="text-sm">Valor de Toma (USD)</label><input type="number" id="trade-in-value" class="form-input w-full p-2 mt-1" value="0"></div> 
+    tradeInDetailsEl.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div><label class="text-sm">Nombre Identificador</label><input type="text" id="trade-in-model" class="form-input w-full p-2 mt-1"></div>
+                <div><label class="text-sm">N/S</label><input type="text" id="trade-in-serial" class="form-input w-full p-2 mt-1"></div>
+                <div><label class="text-sm">Valor de Toma (USD)</label><input type="number" id="trade-in-value" class="form-input w-full p-2 mt-1" value="0"></div>
                 <div><label class="text-sm">Categoría</label><select id="trade-in-category" class="form-select w-full p-2 mt-1">${categoryOptions}</select></div>
                 <div><label class="text-sm">P. Venta Sugerido (USD)</label><input type="number" id="trade-in-sug-price" class="form-input w-full p-2 mt-1"></div>
                 <div><label class="text-sm">Detalles (Canje)</label><textarea id="trade-in-details-input" class="form-textarea w-full p-2 mt-1"></textarea></div>
@@ -1953,9 +2243,10 @@ export function switchTab(activeKey) {
   document
     .querySelectorAll('.main-section')
     .forEach((section) =>
-      section.classList.toggle('hidden', section.id !== `section-${activeKey}`)
+      section.classList.toggle('hidden', !section.id.startsWith(`section-${activeKey}`))
     );
 
+  // FIX: Se asegura que la sub-pestaña correcta se active al cambiar de pestaña principal.
   if (activeKey === 'ventas') switchSubTab('ventas', 'nueva');
   if (activeKey === 'inventario') switchSubTab('inventario', 'stock');
   if (activeKey === 'operaciones') switchSubTab('operaciones', 'gastos');
@@ -2106,6 +2397,82 @@ export function openAddClientModal() {
   showModal(content, 'Añadir Nuevo Cliente', footer);
 }
 
+// ADDED: Función para abrir el modal de nueva reserva
+export function openReservationModal(state) {
+  const content = `
+        <form id="reservation-form" class="space-y-6">
+            <!-- Client Selection -->
+            <div class="space-y-2">
+                <h4 class="font-semibold">1. Cliente</h4>
+                <div class="relative">
+                    <div id="reservation-selected-client-display" class="mb-2"></div>
+                    <div id="reservation-client-search-container">
+                         <input type="text" id="reservation-client-search-input" class="form-input w-full" placeholder="Buscar cliente...">
+                         <div id="reservation-client-search-results" class="absolute z-20 w-full bg-white border rounded-md mt-1 hidden max-h-48 overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock Selection -->
+            <div class="space-y-2">
+                <h4 class="font-semibold">2. Producto a Reservar</h4>
+                 <div class="relative">
+                    <div id="reservation-selected-item-display" class="mb-2"></div>
+                    <div id="reservation-stock-search-container">
+                        <input type="text" id="reservation-stock-search-input" class="form-input w-full" placeholder="Buscar producto disponible...">
+                        <div id="reservation-stock-search-results" class="absolute z-10 w-full bg-white border rounded-md mt-1 hidden max-h-48 overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deposit Information -->
+            <div class="space-y-3 pt-4 border-t">
+                <h4 class="font-semibold">3. Seña</h4>
+                <div class="flex items-center">
+                    <input id="reservation-has-deposit" type="checkbox" class="h-4 w-4">
+                    <label for="reservation-has-deposit" class="ml-3">Se recibió seña</label>
+                </div>
+                <div id="reservation-deposit-details" class="hidden space-y-3 pl-4 border-l-2 ml-2">
+                     <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm">Monto Seña</label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" id="reservation-deposit-amount" data-form-type="reservation-deposit" class="currency-input form-input w-full" value="0">
+                                <select id="reservation-deposit-currency" data-form-type="reservation-deposit" class="currency-select form-select">
+                                    <option value="USD">USD</option>
+                                    <option value="ARS">ARS</option>
+                                </select>
+                            </div>
+                            <p id="reservation-deposit-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm">Método de Pago</label>
+                            <select id="reservation-deposit-method" class="form-select w-full">
+                                <option value="usd">Dólares (USD)</option>
+                                <option value="ars">Efectivo (ARS)</option>
+                                <option value="mp">Digital (ARS)</option>
+                                <option value="usdt">USDT</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+             <!-- Notes -->
+            <div class="space-y-2 pt-4 border-t">
+                 <h4 class="font-semibold">4. Notas Adicionales</h4>
+                 <textarea id="reservation-notes" rows="2" class="form-textarea w-full"></textarea>
+            </div>
+        </form>
+    `;
+
+  const footer = `
+        <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
+        <button type="submit" form="reservation-form" class="btn-primary px-4 py-2">Guardar Reserva</button>
+    `;
+
+  showModal(content, 'Crear Nueva Reserva', footer);
+}
+
 export function openAddStockModal(state) {
   const { categories } = state;
   const allCategories = categories || [];
@@ -2244,9 +2611,21 @@ export function openEditDebtModal(debt) {
     debt.debtorName
   )}" required></div><div><label class="block text-sm">Descripción</label><input type="text" id="edit-debt-desc" class="form-input w-full" value="${escapeHTML(
     debt.description
-  )}" required></div><div><label class="block text-sm">Monto (USD)</label><input type="number" id="edit-debt-amount" class="form-input w-full" value="${
-    debt.amount
-  }" required></div></form>`;
+  )}" required></div>
+  <div>
+        <label class="block text-sm">Monto</label>
+        <div class="flex items-center gap-2">
+            <input type="number" id="edit-debt-amount" data-form-type="debt-edit" class="currency-input form-input w-full" value="${
+              debt.amount
+            }" required>
+            <select id="edit-debt-currency" data-form-type="debt-edit" class="currency-select form-select">
+                <option value="USD" selected>USD</option>
+                <option value="ARS">ARS</option>
+            </select>
+        </div>
+        <p id="debt-edit-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>
+    </div>
+  </form>`;
   const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="edit-debt-form" class="btn-primary px-4 py-2">Guardar</button>
@@ -2255,25 +2634,105 @@ export function openEditDebtModal(debt) {
 }
 
 export function openEditFixedExpenseModal(expense) {
-  const content = ` 
-        <form id="edit-fixed-expense-form" class="space-y-4" data-id="${expense.id}"> 
+  const content = `
+        <form id="edit-fixed-expense-form" class="space-y-4" data-id="${expense.id}">
             <div><label class="block text-sm">Descripción</label><input type="text" id="edit-fixed-expense-description" class="form-input w-full p-2" value="${escapeHTML(
               expense.description
-            )}" required></div> 
-            <div class="grid grid-cols-2 gap-4"> 
-                <div><label class="block text-sm">Monto (USD)</label><input type="number" id="edit-fixed-expense-amount" class="form-input w-full p-2" value="${
-                  expense.amount
-                }" required></div> 
+            )}" required></div>
+            <div class="grid grid-cols-2 gap-4 items-start">
+                 <div>
+                    <label class="block text-sm">Monto</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="edit-fixed-expense-amount" data-form-type="fixed-expense-edit" class="currency-input form-input w-full p-2" value="${
+                          expense.amount
+                        }" required>
+                        <select id="edit-fixed-expense-currency" data-form-type="fixed-expense-edit" class="currency-select form-select p-2">
+                            <option value="USD" selected>USD</option>
+                            <option value="ARS">ARS</option>
+                        </select>
+                    </div>
+                    <p id="fixed-expense-edit-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>
+                </div>
                 <div><label class="block text-sm">Día de Pago (1-31)</label><input type="number" id="edit-fixed-expense-day" class="form-input w-full p-2" value="${
                   expense.paymentDay
-                }" required min="1" max="31"></div> 
-            </div> 
+                }" required min="1" max="31"></div>
+            </div>
         </form>`;
   const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="edit-fixed-expense-form" class="btn-primary px-4 py-2">Guardar Cambios</button>
     `;
   showModal(content, `Editar Gasto Fijo`, footer);
+}
+
+// ADDED: Funciones para modales de Vendedores
+export function openAddSalespersonModal() {
+  const content = `
+        <form id="salesperson-form-modal" class="space-y-4">
+            <div><label class="block text-sm">Nombre</label><input type="text" id="salesperson-name-modal" class="form-input w-full" required></div>
+            <div><label class="block text-sm">Contacto (Teléfono/Email)</label><input type="text" id="salesperson-contact-modal" class="form-input w-full"></div>
+            <div><label class="block text-sm">Tasa de Comisión (%)</label><input type="number" id="salesperson-commission-modal" class="form-input w-full" value="0" required></div>
+        </form>`;
+  const footer = `
+        <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
+        <button type="submit" form="salesperson-form-modal" class="btn-primary px-4 py-2">Guardar</button>
+    `;
+  showModal(content, 'Añadir Nuevo Vendedor', footer);
+}
+
+export function openEditSalespersonModal(salesperson) {
+  const content = `
+        <form id="edit-salesperson-form-modal" class="space-y-4" data-id="${salesperson.id}">
+            <div><label class="block text-sm">Nombre</label><input type="text" id="edit-salesperson-name-modal" class="form-input w-full" value="${escapeHTML(
+              salesperson.name
+            )}" required></div>
+            <div><label class="block text-sm">Contacto (Teléfono/Email)</label><input type="text" id="edit-salesperson-contact-modal" class="form-input w-full" value="${escapeHTML(
+              salesperson.contact || ''
+            )}"></div>
+            <div><label class="block text-sm">Tasa de Comisión (%)</label><input type="number" id="edit-salesperson-commission-modal" class="form-input w-full" value="${
+              salesperson.commissionRate || 0
+            }" required></div>
+        </form>`;
+  const footer = `
+        <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
+        <button type="submit" form="edit-salesperson-form-modal" class="btn-primary px-4 py-2">Guardar Cambios</button>
+    `;
+  showModal(content, 'Editar Vendedor', footer);
+}
+
+// ADDED: Funciones para modales de Proveedores del Usuario
+export function openAddProviderModal() {
+  const content = `
+        <form id="provider-form-modal" class="space-y-4">
+            <div><label class="block text-sm">Nombre del Proveedor</label><input type="text" id="provider-name-modal" class="form-input w-full" required></div>
+            <div><label class="block text-sm">Contacto (Teléfono/Email)</label><input type="text" id="provider-contact-modal" class="form-input w-full"></div>
+            <div><label class="block text-sm">Notas</label><textarea id="provider-notes-modal" class="form-textarea w-full"></textarea></div>
+        </form>`;
+  const footer = `
+        <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
+        <button type="submit" form="provider-form-modal" class="btn-primary px-4 py-2">Guardar Proveedor</button>
+    `;
+  showModal(content, 'Añadir Nuevo Proveedor', footer);
+}
+
+export function openEditProviderModal(provider) {
+  const content = `
+        <form id="edit-provider-form-modal" class="space-y-4" data-id="${provider.id}">
+            <div><label class="block text-sm">Nombre del Proveedor</label><input type="text" id="edit-provider-name-modal" class="form-input w-full" value="${escapeHTML(
+              provider.name
+            )}" required></div>
+            <div><label class="block text-sm">Contacto (Teléfono/Email)</label><input type="text" id="edit-provider-contact-modal" class="form-input w-full" value="${escapeHTML(
+              provider.contact || ''
+            )}"></div>
+            <div><label class="block text-sm">Notas</label><textarea id="edit-provider-notes-modal" class="form-textarea w-full">${escapeHTML(
+              provider.notes || ''
+            )}</textarea></div>
+        </form>`;
+  const footer = `
+        <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
+        <button type="submit" form="edit-provider-form-modal" class="btn-primary px-4 py-2">Guardar Cambios</button>
+    `;
+  showModal(content, 'Editar Proveedor', footer);
 }
 
 export function openExecutePaymentModal(expense, state) {
@@ -2299,9 +2758,9 @@ export function openExecutePaymentModal(expense, state) {
                           hasEnoughFunds
                             ? 'hover:border-green-500'
                             : 'opacity-50 cursor-not-allowed'
-                        }" 
-                            data-wallet-type="${key}" 
-                            data-expense-id="${expense.id}" 
+                        }"
+                            data-wallet-type="${key}"
+                            data-expense-id="${expense.id}"
                             ${!hasEnoughFunds ? 'disabled' : ''}>
                             <div class="flex justify-between items-center">
                                 <span class="font-semibold"><i class="${config.icon} mr-2"></i>${
@@ -2333,15 +2792,15 @@ export function openExecutePaymentModal(expense, state) {
 
 export function openExecuteDailyExpenseModal(expenseData, state) {
   const { capital, exchangeRate } = state;
-  const content = ` 
-        <div class="text-center"> 
-            <p class="mb-2">Pagar Gasto Diario:</p> 
-            <h3 class="text-2xl font-bold mb-4">${escapeHTML(expenseData.description)}</h3> 
-            <p class="text-3xl font-bold mb-6">${formatCurrency(expenseData.amount, 'USD')}</p> 
-        </div> 
-        <div> 
-            <h4 class="font-semibold mb-3 text-center">1. Seleccionar Billetera de Origen</h4> 
-            <div id="daily-expense-wallet-selector" class="grid grid-cols-1 md:grid-cols-2 gap-3"> 
+  const content = `
+        <div class="text-center">
+            <p class="mb-2">Pagar Gasto Diario:</p>
+            <h3 class="text-2xl font-bold mb-4">${escapeHTML(expenseData.description)}</h3>
+            <p class="text-3xl font-bold mb-6">${formatCurrency(expenseData.amount, 'USD')}</p>
+        </div>
+        <div>
+            <h4 class="font-semibold mb-3 text-center">1. Seleccionar Billetera de Origen</h4>
+            <div id="daily-expense-wallet-selector" class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 ${Object.entries(WALLET_CONFIG)
                   .filter(([key, config]) => !config.type)
                   .map(([key, config]) => {
@@ -2352,29 +2811,29 @@ export function openExecuteDailyExpenseModal(expenseData, state) {
                     } else {
                       hasEnoughFunds = balance >= expenseData.amount;
                     }
-                    return ` 
+                    return `
                         <button class="execute-daily-expense-wallet-btn w-full p-3 rounded-lg border text-left ${
                           hasEnoughFunds ? 'hover:bg-green-50' : 'opacity-50 cursor-not-allowed'
-                        }" 
-                            data-wallet-type="${key}" ${!hasEnoughFunds ? 'disabled' : ''}> 
-                            <div class="flex justify-between items-center"> 
+                        }"
+                            data-wallet-type="${key}" ${!hasEnoughFunds ? 'disabled' : ''}>
+                            <div class="flex justify-between items-center">
                                 <span class="font-semibold"><i class="${config.icon} mr-2"></i>${
                       config.name
-                    }</span> 
+                    }</span>
                                 <span class="font-mono text-sm">${formatCurrency(
                                   balance,
                                   config.currency
-                                )}</span> 
-                            </div> 
+                                )}</span>
+                            </div>
                             ${
                               !hasEnoughFunds
                                 ? '<p class="text-xs text-red-500 mt-1">Fondos insuficientes</p>'
                                 : ''
-                            } 
+                            }
                         </button>`;
                   })
-                  .join('')} 
-            </div> 
+                  .join('')}
+            </div>
         </div>
         <div class="payment-confirmation-actions hidden mt-6 text-center border-t pt-4">
             <h4 class="font-semibold mb-3 text-center">2. Confirmar Pago</h4>
@@ -2645,6 +3104,48 @@ export function showItemDetailsModal(item) {
 
   showModal(content, 'Detalles del Producto');
 }
+
+export function openSettleClientDebtModal(saleId, balance, state) {
+  const sale = state.sales.find((s) => s.id === saleId);
+  if (!sale) return;
+
+  const content = `
+        <form id="settle-client-debt-form" class="space-y-4" data-sale-id="${saleId}">
+            <p>Saldar deuda de <strong>${escapeHTML(sale.customerName)}</strong>.</p>
+            <p class="text-2xl font-bold text-center text-yellow-600">${formatCurrency(
+              balance,
+              'USD'
+            )}</p>
+            <div>
+                <label class="block text-sm">Monto a Pagar</label>
+                <div class="flex items-center gap-2">
+                    <input type="number" id="settle-debt-amount" data-form-type="settle-debt" class="currency-input form-input w-full" value="${balance}" required>
+                    <select id="settle-debt-currency" data-form-type="settle-debt" class="currency-select form-select">
+                        <option value="USD" selected>USD</option>
+                        <option value="ARS">ARS</option>
+                    </select>
+                </div>
+                <p id="settle-debt-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>
+            </div>
+            <div>
+                <label class="block text-sm">Ingresar a Billetera</label>
+                <select id="settle-debt-wallet" class="form-select w-full">
+                    <option value="usd">Dólares (USD)</option>
+                    <option value="ars">Efectivo (ARS)</option>
+                    <option value="mp">Digital (ARS)</option>
+                    <option value="usdt">USDT</option>
+                </select>
+            </div>
+        </form>
+    `;
+
+  const footer = `
+        <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
+        <button type="submit" form="settle-client-debt-form" class="btn-primary px-4 py-2">Registrar Pago</button>
+    `;
+  showModal(content, 'Registrar Pago de Deuda', footer);
+}
+
 function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate, endDate) {
   const ctxEl = document.getElementById('performance-chart');
   if (!ctxEl) return;
@@ -2921,14 +3422,12 @@ function renderCapitalGrowthChart(capitalHistory, startDate, endDate) {
     type: 'line',
     data: {
       labels: filteredHistory.map((entry) =>
-        entry.timestamp
-          .toDate()
-          .toLocaleDateString('es-AR', {
-            day: '2-digit',
-            month: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-          })
+        entry.timestamp.toDate().toLocaleDateString('es-AR', {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
       ),
       datasets: [
         {

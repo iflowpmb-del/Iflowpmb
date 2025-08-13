@@ -16,13 +16,18 @@ import {
   openExecutePaymentModal,
   updateSaleBalance,
   openExecuteDailyExpenseModal,
-  openAddStockModal,
   openChangePasswordModal,
   openNoteModal,
   showItemDetailsModal,
   renderAddStockForm,
   renderSalesAnalysis,
   renderTradeInAttributes,
+  openSettleClientDebtModal,
+  openReservationModal,
+  openAddSalespersonModal,
+  openEditSalespersonModal,
+  openAddProviderModal,
+  openEditProviderModal,
 } from './ui.js';
 import { appState, setState, WALLET_CONFIG } from './state.js';
 import { addData, deleteFromDb, updateData, setData, runBatch } from './api.js';
@@ -121,7 +126,7 @@ function handlePayFixedExpense(expenseId) {
  */
 function handleSettleProviderDebt(debtId) {
   const message =
-    'Esta acción eliminará la deuda de la lista. Recuerda ajustar manually el saldo de tus billeteras para reflejar el pago. ¿Deseas continuar?';
+    'Esta acción eliminará la deuda de la lista. Recuerda ajustar manualmente el saldo de tus billeteras para reflejar el pago. ¿Deseas continuar?';
   openConfirmModal(message, async () => {
     await deleteFromDb('debts', debtId);
     await logCapitalState(`Deuda a proveedor saldada`);
@@ -129,39 +134,10 @@ function handleSettleProviderDebt(debtId) {
 }
 
 /**
- * Maneja el saldado de la deuda de un cliente.
+ * MODIFICADO: Abre el modal para registrar el pago de la deuda de un cliente.
  */
 function handleSettleClientDebt(saleId, balance) {
-  const message = `Vas a saldar una deuda de ${formatCurrency(
-    balance,
-    'USD'
-  )}. La deuda total se reducirá automáticamente. Recuerda agregar este ingreso manualmente a la billetera correspondiente (ej. Dólares, Efectivo). ¿Continuar?`;
-
-  openConfirmModal(message, async () => {
-    try {
-      await runBatch(async (batch, db, userId) => {
-        const sale = appState.sales.find((s) => s.id === saleId);
-        if (!sale) throw new Error('Error: No se encontró la venta asociada a la deuda.');
-        const saleRef = doc(db, `users/${userId}/sales`, saleId);
-        const payments = sale.paymentBreakdownUSD || {};
-        const alreadySettled = payments.debtSettled || 0;
-        payments.debtSettled = alreadySettled + balance;
-        batch.update(saleRef, { paymentBreakdownUSD: payments });
-
-        const capitalRef = doc(db, `users/${userId}/capital`, 'summary');
-        const currentTotalDebt = appState.capital.clientDebt || 0;
-        const newTotalDebt = currentTotalDebt - balance;
-        batch.update(capitalRef, { clientDebt: newTotalDebt < 0 ? 0 : newTotalDebt });
-      });
-      await logCapitalState(
-        `Cobro deuda de ${appState.sales.find((s) => s.id === saleId)?.customerName || 'cliente'}`
-      );
-      showModal('Deuda saldada y total de la billetera actualizado. La lista se refrescará.');
-    } catch (error) {
-      console.error('Error al saldar la deuda del cliente:', error);
-      showModal(`Ocurrió un error al procesar la operación: ${error.message}`);
-    }
-  });
+  openSettleClientDebtModal(saleId, balance, appState);
 }
 
 /**
@@ -277,7 +253,20 @@ async function handleFinalPaymentConfirmation(confirmButton) {
  * Inicia el flujo de suscripción mostrando un modal de advertencia.
  */
 function handleStartSubscriptionFlow() {
-  // MODIFICACIÓN: Esta función ya no es necesaria, pero la dejamos vacía para no romper llamadas.
+  const user = appState.user;
+  if (!user) return;
+
+  const content = `
+<p class="mb-4">Serás redirigido para configurar tu pago.</p>
+<p class="mb-6">Por favor, asegúrate de usar el mismo email con el que te registraste:</p>
+<p class="mb-6 font-bold text-center bg-gray-100 p-2 rounded">${user.email}</p>
+<p class="text-sm text-gray-500">Si este no es el correo correcto, puedes volver al inicio para ingresar con otra cuenta.</p>
+`;
+  const footer = `
+<button type="button" id="logout-from-subscription-modal" class="btn-secondary px-4 py-2">Volver al Inicio</button>
+<button id="confirm-gumroad-redirect" class="btn-primary px-4 py-2">Entendido, ir al Checkout</button>
+`;
+  showModal(content, 'Atención', footer);
 }
 
 /**
@@ -487,9 +476,13 @@ async function handleAddFixedExpense(form) {
   const button = form.querySelector('button[type="submit"]');
   setButtonLoading(button, true, 'Añadiendo...');
   try {
+    const amount = parseFloat(form.querySelector('#fixed-expense-amount-reg').value) || 0;
+    const currency = form.querySelector('#fixed-expense-currency-reg').value;
+    const amountInUSD = currency === 'ARS' ? amount / appState.exchangeRate : amount;
+
     const newExpense = {
       description: form.querySelector('#fixed-expense-description-reg').value.trim(),
-      amount: parseFloat(form.querySelector('#fixed-expense-amount-reg').value) || 0,
+      amount: amountInUSD,
       paymentDay: parseInt(form.querySelector('#fixed-expense-day-reg').value, 10),
       createdAt: serverTimestamp(),
     };
@@ -502,9 +495,13 @@ async function handleAddFixedExpense(form) {
 }
 
 function handleAddDailyExpense(form) {
+  const amount = parseFloat(form.querySelector('#daily-expense-amount-reg').value) || 0;
+  const currency = form.querySelector('#daily-expense-currency-reg').value;
+  const amountInUSD = currency === 'ARS' ? amount / appState.exchangeRate : amount;
+
   const expenseData = {
     description: form.querySelector('#daily-expense-description-reg').value.trim(),
-    amount: parseFloat(form.querySelector('#daily-expense-amount-reg').value) || 0,
+    amount: amountInUSD,
     date: form.querySelector('#daily-expense-date-reg').value,
   };
   if (!expenseData.date) {
@@ -518,10 +515,14 @@ async function handleAddDebt(form) {
   const button = form.querySelector('button[type="submit"]');
   setButtonLoading(button, true, 'Añadiendo...');
   try {
+    const amount = parseFloat(form.querySelector('#debt-amount').value) || 0;
+    const currency = form.querySelector('#debt-currency').value;
+    const amountInUSD = currency === 'ARS' ? amount / appState.exchangeRate : amount;
+
     const newDebt = {
       debtorName: form.querySelector('#debtor-name').value.trim(),
       description: form.querySelector('#debt-desc').value.trim(),
-      amount: parseFloat(form.querySelector('#debt-amount').value) || 0,
+      amount: amountInUSD,
       createdAt: serverTimestamp(),
     };
     await addData('debts', newDebt);
@@ -846,10 +847,14 @@ async function handleEditDebt(form) {
   setButtonLoading(button, true);
   try {
     const debtId = form.dataset.id;
+    const amount = parseFloat(form.querySelector('#edit-debt-amount').value) || 0;
+    const currency = form.querySelector('#edit-debt-currency').value;
+    const amountInUSD = currency === 'ARS' ? amount / appState.exchangeRate : amount;
+
     const updatedData = {
       debtorName: form.querySelector('#edit-debtor-name').value.trim(),
       description: form.querySelector('#edit-debt-desc').value.trim(),
-      amount: parseFloat(form.querySelector('#edit-debt-amount').value) || 0,
+      amount: amountInUSD,
     };
     await updateData('debts', debtId, updatedData);
     document.getElementById('modal-container').innerHTML = '';
@@ -866,9 +871,13 @@ async function handleEditFixedExpense(form) {
   setButtonLoading(button, true);
   try {
     const expenseId = form.dataset.id;
+    const amount = parseFloat(form.querySelector('#edit-fixed-expense-amount').value) || 0;
+    const currency = form.querySelector('#edit-fixed-expense-currency').value;
+    const amountInUSD = currency === 'ARS' ? amount / appState.exchangeRate : amount;
+
     const updatedData = {
       description: form.querySelector('#edit-fixed-expense-description').value.trim(),
-      amount: parseFloat(form.querySelector('#edit-fixed-expense-amount').value) || 0,
+      amount: amountInUSD,
       paymentDay: parseInt(form.querySelector('#edit-fixed-expense-day').value, 10),
     };
     await updateData('fixed_expenses', expenseId, updatedData);
@@ -900,6 +909,7 @@ export function setupEventListeners() {
         'daily-expense-form-register',
         'debt-form',
         'add-attribute-form',
+        'settle-client-debt-form', // CORRECCIÓN: Agregado el ID del formulario para saldar deudas de clientes
       ].includes(form.id)
     ) {
       e.preventDefault();
@@ -1015,6 +1025,136 @@ export function setupEventListeners() {
           form.reset();
           break;
         }
+        // ADDED: Cases for new forms
+        case 'salesperson-form-modal': {
+          const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
+          setButtonLoading(button, true);
+          try {
+            const salespersonData = {
+              name: form.querySelector('#salesperson-name-modal').value.trim(),
+              contact: form.querySelector('#salesperson-contact-modal').value.trim(),
+              commissionRate:
+                parseFloat(form.querySelector('#salesperson-commission-modal').value) || 0,
+              createdAt: serverTimestamp(),
+            };
+            await addData('salespeople', salespersonData);
+            document.getElementById('modal-container').innerHTML = '';
+            showModal('Vendedor añadido con éxito.');
+          } catch (err) {
+            showModal(`Error al guardar el vendedor: ${err.message}`);
+          } finally {
+            setButtonLoading(button, false);
+          }
+          break;
+        }
+        case 'edit-salesperson-form-modal': {
+          const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
+          setButtonLoading(button, true);
+          try {
+            const salespersonId = form.dataset.id;
+            const updatedData = {
+              name: form.querySelector('#edit-salesperson-name-modal').value.trim(),
+              contact: form.querySelector('#edit-salesperson-contact-modal').value.trim(),
+              commissionRate:
+                parseFloat(form.querySelector('#edit-salesperson-commission-modal').value) || 0,
+            };
+            await updateData('salespeople', salespersonId, updatedData);
+            document.getElementById('modal-container').innerHTML = '';
+            showModal('Vendedor actualizado con éxito.');
+          } catch (err) {
+            showModal(`Error al actualizar el vendedor: ${err.message}`);
+          } finally {
+            setButtonLoading(button, false);
+          }
+          break;
+        }
+        case 'provider-form-modal': {
+          const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
+          setButtonLoading(button, true);
+          try {
+            const providerData = {
+              name: form.querySelector('#provider-name-modal').value.trim(),
+              contact: form.querySelector('#provider-contact-modal').value.trim(),
+              notes: form.querySelector('#provider-notes-modal').value.trim(),
+              createdAt: serverTimestamp(),
+            };
+            await addData('userProviders', providerData);
+            document.getElementById('modal-container').innerHTML = '';
+            showModal('Proveedor añadido con éxito.');
+          } catch (err) {
+            showModal(`Error al guardar el proveedor: ${err.message}`);
+          } finally {
+            setButtonLoading(button, false);
+          }
+          break;
+        }
+        case 'edit-provider-form-modal': {
+          const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
+          setButtonLoading(button, true);
+          try {
+            const providerId = form.dataset.id;
+            const updatedData = {
+              name: form.querySelector('#edit-provider-name-modal').value.trim(),
+              contact: form.querySelector('#edit-provider-contact-modal').value.trim(),
+              notes: form.querySelector('#edit-provider-notes-modal').value.trim(),
+            };
+            await updateData('userProviders', providerId, updatedData);
+            document.getElementById('modal-container').innerHTML = '';
+            showModal('Proveedor actualizado con éxito.');
+          } catch (err) {
+            showModal(`Error al actualizar el proveedor: ${err.message}`);
+          } finally {
+            setButtonLoading(button, false);
+          }
+          break;
+        }
+        case 'settle-client-debt-form': {
+          const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
+          setButtonLoading(button, true);
+          try {
+            const saleId = form.dataset.saleId;
+            const amount = parseFloat(form.querySelector('#settle-debt-amount').value) || 0;
+            const currency = form.querySelector('#settle-debt-currency').value;
+            const wallet = form.querySelector('#settle-debt-wallet').value;
+            const amountInUSD = currency === 'ARS' ? amount / appState.exchangeRate : amount;
+
+            await runBatch(async (batch, db, userId) => {
+              const capitalRef = doc(db, `users/${userId}/capital`, 'summary');
+              const capitalDoc = appState.capital;
+              const newClientDebt = (capitalDoc.clientDebt || 0) - amountInUSD;
+              const newWalletValue = (capitalDoc[wallet] || 0) + amountInUSD;
+              batch.update(capitalRef, {
+                clientDebt: newClientDebt,
+                [wallet]: newWalletValue,
+              });
+
+              const saleRef = doc(db, `users/${userId}/sales`, saleId);
+              batch.update(saleRef, {
+                'paymentBreakdownUSD.debtSettled': amountInUSD,
+              });
+
+              const paymentRecordRef = doc(collection(db, `users/${userId}/daily_expenses`));
+              batch.set(paymentRecordRef, {
+                amount: amountInUSD,
+                date: new Date().toISOString().split('T')[0],
+                description: `Cobro de deuda de cliente.`,
+                isFixedPayment: false,
+                paidFrom: null,
+                receivedIn: wallet,
+                createdAt: serverTimestamp(),
+              });
+            });
+
+            document.getElementById('modal-container').innerHTML = '';
+            showModal('Pago de deuda de cliente registrado con éxito.');
+          } catch (error) {
+            console.error('Error al saldar deuda de cliente:', error);
+            showModal(`Error al procesar el pago: ${error.message}`);
+          } finally {
+            setButtonLoading(button, false);
+          }
+          break;
+        }
       }
     } catch (err) {
       console.error(`Error en el manejador de submit para el form #${form.id}:`, err);
@@ -1073,23 +1213,6 @@ export function setupEventListeners() {
       return;
     }
 
-    // =================================================================================
-    // >>>>>>>>>> INICIO DE LA CORRECCIÓN <<<<<<<<<<
-    // Se añade el manejador para los botones de login/registro.
-    // =================================================================================
-    if (element.id === 'show-register' || element.id === 'show-login') {
-      const loginForm = document.getElementById('login-form');
-      const registerForm = document.getElementById('register-form');
-      if (loginForm && registerForm) {
-        loginForm.classList.toggle('hidden');
-        registerForm.classList.toggle('hidden');
-      }
-      return; // Se detiene la ejecución para no interferir con otra lógica.
-    }
-    // =================================================================================
-    // >>>>>>>>>> FIN DE LA CORRECCIÓN <<<<<<<<<<
-    // =================================================================================
-
     if (element.id === 'user-menu-button') {
       document.getElementById('user-menu-dropdown')?.classList.toggle('hidden');
       return;
@@ -1098,12 +1221,15 @@ export function setupEventListeners() {
     const { dataset } = element;
 
     const actionMap = {
+      'logout-from-trial-screen': () => signOut(auth),
       'change-password-btn': () => openChangePasswordModal(),
       'logout-button': () => signOut(auth),
       'manage-subscription-btn': () => {
         showModal(
-          `Actualmente, la gestión de la cuenta se realiza directamente a través de la aplicación.`,
-          'Gestionar Cuenta'
+          `Para gestionar tu suscripción (cambiar método de pago, cancelar, etc.), por favor revisa el email de confirmación que recibiste de <b>Gumroad</b>.
+<br><br>
+Allí encontrarás un enlace para administrar tu compra y ver tus facturas.`,
+          'Gestionar Suscripción'
         );
       },
       'edit-business-name-icon': () => {
@@ -1115,6 +1241,37 @@ export function setupEventListeners() {
           input.value = display.textContent.trim();
           input.focus();
         }
+      },
+      'start-trial-btn': () => handleStartSubscriptionFlow(),
+      'subscribe-now-btn': () => handleStartSubscriptionFlow(),
+      'cancel-validation-btn': () =>
+        setData('profile', 'main', { subscriptionStatus: 'pending_trial_setup' }, true),
+      'logout-from-subscription-modal': () => {
+        document.getElementById('modal-container').innerHTML = '';
+        signOut(auth);
+      },
+      'confirm-gumroad-redirect': async (button) => {
+        const user = appState.user;
+        if (!user) return;
+
+        const gumroadLink = `https://pacomatic.gumroad.com/l/scnaca?user_id=${user.uid}&email=${user.email}`;
+        const paymentWindow = window.open(gumroadLink, '_blank');
+        if (!paymentWindow) {
+          showModal(
+            'Tu navegador ha bloqueado la ventana de pago. Por favor, deshabilita el bloqueador de pop-ups para este sitio e inténtalo de nuevo.'
+          );
+          return;
+        }
+
+        document.getElementById('modal-container').innerHTML = '';
+        setButtonLoading(button, true, 'Redirigiendo...');
+        await setData(
+          'profile',
+          'main',
+          { subscriptionStatus: 'pending_payment_validation' },
+          true
+        );
+        setButtonLoading(button, false);
       },
       'toggle-sale-form-btn': () =>
         document.getElementById('add-sale-form-container')?.classList.toggle('hidden'),
@@ -1185,6 +1342,10 @@ export function setupEventListeners() {
           }
         );
       },
+      // ADDED: Handlers for new buttons
+      'add-reservation-btn': () => openReservationModal(appState),
+      'add-salesperson-btn': () => openAddSalespersonModal(),
+      'add-provider-btn': () => openAddProviderModal(),
     };
 
     if (actionMap[element.id]) {
@@ -1217,7 +1378,7 @@ export function setupEventListeners() {
         if (!category) return;
 
         const updatedAttributes = category.attributes.filter((attr) => attr.id !== dataset.attrId);
-        await updateData('categories', category.id, { attributes: updatedAttributes });
+        await updateData('categories', selectedCategoryId, { attributes: updatedAttributes });
       },
       'toggle-section-btn': () => {
         const section = dataset.section;
@@ -1303,6 +1464,31 @@ export function setupEventListeners() {
         const item = appState.sale.items[itemIndex];
         if (item) showItemDetailsModal(item);
       },
+      // ADDED: Handlers for new classes
+      'edit-salesperson-btn': () => openEditSalespersonModal(JSON.parse(dataset.salesperson)),
+      'delete-salesperson-btn': () => {
+        openConfirmModal(`¿Seguro que quieres eliminar a ${dataset.name}?`, () =>
+          deleteFromDb('salespeople', dataset.id)
+        );
+      },
+      'edit-provider-btn': () => openEditProviderModal(JSON.parse(dataset.provider)),
+      'delete-provider-btn': () => {
+        openConfirmModal(`¿Seguro que quieres eliminar a ${dataset.name}?`, () =>
+          deleteFromDb('userProviders', dataset.id)
+        );
+      },
+      'cancel-reservation-btn': () => {
+        openConfirmModal(
+          '¿Seguro que quieres cancelar esta reserva? El producto volverá al stock.',
+          () =>
+            // Lógica para cancelar la reserva
+            console.log('Cancelando reserva', dataset.id)
+        );
+      },
+      'finalize-sale-from-reservation-btn': () => {
+        showModal('Función para finalizar venta desde reserva aún no implementada.');
+        console.log('Finalizando venta desde reserva', dataset.id);
+      },
     };
 
     for (const className in classActionMap) {
@@ -1313,11 +1499,36 @@ export function setupEventListeners() {
     }
   });
 
+  // MODIFICADO: Añadido un helper y nuevos listeners para la conversión de moneda
+  const updateCurrencyConversionDisplay = (formType) => {
+    const amountInput = document.querySelector(`.currency-input[data-form-type="${formType}"]`);
+    const currencySelect = document.querySelector(`.currency-select[data-form-type="${formType}"]`);
+    const conversionEl = document.getElementById(`${formType}-conversion`);
+
+    if (!amountInput || !currencySelect || !conversionEl) return;
+
+    const amount = parseFloat(amountInput.value) || 0;
+    const currency = currencySelect.value;
+    const { exchangeRate } = appState;
+
+    if (currency === 'ARS' && amount > 0) {
+      conversionEl.textContent = `~ ${formatCurrency(amount / exchangeRate, 'USD')}`;
+    } else {
+      conversionEl.textContent = '';
+    }
+  };
+
   document.body.addEventListener('input', (e) => {
     const target = e.target;
+
+    // Listener para la conversión en tiempo real
+    if (target.classList.contains('currency-input')) {
+      updateCurrencyConversionDisplay(target.dataset.formType);
+      return;
+    }
+
     if (!target.id && !target.classList.contains('provider-price-list-search')) return;
 
-    // <<<--- NUEVO: Lógica para el buscador de la lista de precios del proveedor ---
     if (target.classList.contains('provider-price-list-search')) {
       const searchTerm = target.value.toLowerCase();
       const providerCard = target.closest('.card');
@@ -1356,16 +1567,26 @@ export function setupEventListeners() {
       'stock-search-input': () => setState({ stockSearchTerm: target.value }),
       'client-search-input': () => setState({ clientSearchTerm: target.value }),
       'sales-search-input': () => setState({ salesSearchTerm: target.value }),
-      'providers-search-input': () => setState({ providersSearchTerm: target.value }),
       'expenses-search-input': () => setState({ expensesSearchTerm: target.value }),
       'notes-search-input': () => setState({ notesSearchTerm: target.value }),
       'sales-analysis-search': () => renderSalesAnalysis(appState),
+      // ADDED: Handlers for new search inputs
+      'public-providers-search-input': () => setState({ providersSearchTerm: target.value }),
+      'user-providers-search-input': () => setState({ userProvidersSearchTerm: target.value }),
+      'salespeople-search-input': () => setState({ salespeopleSearchTerm: target.value }),
+      'reservations-search-input': () => setState({ reservationsSearchTerm: target.value }),
     };
     if (actionMap[target.id]) actionMap[target.id]();
   });
 
   document.body.addEventListener('change', (e) => {
     const target = e.target;
+
+    // Listener para la conversión al cambiar de moneda
+    if (target.classList.contains('currency-select')) {
+      updateCurrencyConversionDisplay(target.dataset.formType);
+      return;
+    }
 
     if (target.id === 'analysis-selector') {
       renderSalesAnalysis(appState);
