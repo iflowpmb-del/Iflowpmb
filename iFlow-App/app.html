@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>iFlow: Gestión Pro</title>
 
-    <!-- PWA Manifest and   Theme Color -->
+    <!-- PWA Manifest and Theme Color -->
     <link rel="manifest" href="/manifest.json" />
     <link
       rel="apple-touch-icon"
@@ -26,6 +26,8 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
     />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- CAMBIO: Se añade el adaptador de fecha para Chart.js. Esto es CRUCIAL para los gráficos de tiempo. -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <style>
       body {
         font-family: 'Inter', sans-serif;
@@ -194,7 +196,6 @@
         }
       }
 
-      /* <<<--- ESTILOS AÑADIDOS PARA LAS FLECHAS DE SCROLL --- */
       .tabs-container {
         position: relative;
       }
@@ -230,7 +231,6 @@
         opacity: 0;
         pointer-events: none;
       }
-      /* Ocultar scrollbar horizontal */
       .hide-scrollbar {
         -ms-overflow-style: none; /* IE and Edge */
         scrollbar-width: none; /* Firefox */
@@ -239,33 +239,93 @@
         display: none; /* Chrome, Safari, Opera */
       }
 
-      /* ESTILOS PARA EL BOTÓN DE WHATSAPP AÑADIDOS */
       #whatsapp-support-button {
-        position: fixed; /* Lo mantiene fijo en la pantalla */
-        bottom: 25px; /* Distancia desde abajo */
-        right: 25px; /* Distancia desde la derecha */
-        width: 60px; /* Ancho del botón */
-        height: 60px; /* Alto del botón */
-        background-color: #25d366; /* Color de WhatsApp */
-        color: #ffffff; /* Color del ícono (blanco) */
-        border-radius: 50%; /* Lo hace circular */
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        width: 60px;
+        height: 60px;
+        background-color: #25d366;
+        color: #ffffff;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 30px; /* Tamaño del ícono */
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* Sombra para efecto flotante */
-        z-index: 1000; /* Se asegura que esté por encima de todo */
-        transition: transform 0.2s ease-in-out; /* Animación suave */
+        font-size: 30px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        transition: transform 0.2s ease-in-out;
       }
 
       #whatsapp-support-button:hover {
-        transform: scale(1.1); /* Agranda el botón al pasar el mouse */
+        transform: scale(1.1);
       }
-      /* FIN ESTILOS BOTÓN WHATSAPP */
+
+      body.is-loading * {
+        pointer-events: none;
+      }
+      body.is-loading .modal-backdrop,
+      body.is-loading .modal-backdrop * {
+        pointer-events: auto;
+      }
+
+      /* =============================================================== */
+      /* INICIO DE MODIFICACIÓN: ESTILOS PARA INVENTARIO RESPONSIVE      */
+      /* =============================================================== */
+
+      /* --- Vista Móvil (por defecto): Tarjetas --- */
+      .stock-list-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+      }
+      .stock-table-header,
+      .stock-item-row {
+        display: none; /* Oculta la tabla en móvil */
+      }
+
+      /* --- Vista Escritorio (a partir de 1024px): Tabla --- */
+      @media (min-width: 1024px) {
+        .stock-list-grid {
+          display: none; /* Oculta las tarjetas en escritorio */
+        }
+        .stock-table-header,
+        .stock-item-row {
+          display: table-row; /* Muestra las filas de la tabla */
+        }
+        .stock-table-container {
+          display: table;
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .stock-table-header {
+          display: table-header-group;
+          background-color: #f9fafb;
+          font-weight: 600;
+          color: #4b5563;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .stock-table-header th {
+          padding: 0.75rem 1rem;
+          text-align: left;
+        }
+        .stock-item-row {
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .stock-item-row:hover {
+          background-color: #f9fafb;
+        }
+        .stock-item-row td {
+          padding: 1rem;
+          vertical-align: middle;
+        }
+      }
+      /* =============================================================== */
+      /* FIN DE MODIFICACIÓN                                             */
+      /* =============================================================== */
     </style>
   </head>
   <body class="antialiased">
-    <!-- BOTÓN DE WHATSAPP AÑADIDO -->
     <a
       id="whatsapp-support-button"
       href="https://wa.me/5492241576696"
@@ -274,7 +334,6 @@
     >
       <i class="fab fa-whatsapp"></i>
     </a>
-    <!-- FIN BOTÓN DE WHATSAPP -->
 
     <!-- Initial Loading Spinner -->
     <div
@@ -351,51 +410,79 @@
     <!-- App Content Template -->
     <template id="all-app-content-template">
       <div class="container mx-auto p-4 md:p-8 max-w-7xl">
-        <!-- Header -->
-        <header
-          class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4"
-        >
-          <div id="business-name-header" class="group">
+        <header class="flex flex-wrap justify-between items-start mb-10 gap-y-4">
+          <div id="business-name-header" class="group w-2/3 lg:w-1/2">
             <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 flex items-center gap-3">
-              <i class="fas fa-dollar-sign text-green-600"></i>
-              <span id="business-name-display">iFlow</span>
-              <input
-                type="text"
-                id="business-name-input"
-                class="hidden text-3xl md:text-4xl font-extrabold text-gray-900 bg-transparent border-b-2 border-green-500 focus:outline-none w-auto"
-              />
+              <i class="fas fa-dollar-sign text-green-600 flex-shrink-0"></i>
+              <div class="flex-grow min-w-0">
+                <span id="business-name-display" class="truncate block">iFlow</span>
+                <input
+                  type="text"
+                  id="business-name-input"
+                  class="hidden text-3xl md:text-4xl font-extrabold text-gray-900 bg-transparent border-b-2 border-green-500 focus:outline-none w-full"
+                />
+              </div>
               <i
                 id="edit-business-name-icon"
-                class="fas fa-pencil-alt text-gray-400 text-xl cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                class="fas fa-pencil-alt text-gray-400 text-xl cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
               ></i>
             </h1>
           </div>
-          <div
-            class="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-4 sm:gap-6"
-          >
-            <div>
-              <object
-                type="text/html"
-                data="dolar.html"
-                style="width: 100%; max-width: 300px"
-              ></object>
-            </div>
+
+          <div class="w-1/3 lg:w-1/2 flex justify-end">
             <div class="relative">
               <button
                 id="user-menu-button"
-                class="flex items-center gap-2 text-right p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                class="bg-white border border-gray-200 rounded-xl p-2 shadow-sm flex items-center gap-3 hover:bg-gray-50 transition-colors"
               >
-                <p
-                  id="user-email-display"
-                  class="text-sm text-gray-600 truncate max-w-[150px]"
-                  title="Usuario conectado"
-                ></p>
-                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                <div class="text-right">
+                  <p id="dolar-widget-effective-rate" class="font-bold text-green-600">$ --</p>
+                  <p id="user-email-display" class="text-xs text-gray-500 truncate max-w-[120px]">
+                    Cargando...
+                  </p>
+                </div>
+                <i class="fas fa-user-circle text-2xl text-gray-400"></i>
               </button>
+
               <div
                 id="user-menu-dropdown"
-                class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border z-10"
+                class="hidden absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-xl border z-10"
               >
+                <div id="dolar-widget-container" class="p-3 border-b">
+                  <div class="flex justify-between items-center mb-2">
+                    <h4 class="font-bold text-gray-800 text-sm">Dólar de Referencia</h4>
+                    <span
+                      id="dolar-widget-status"
+                      class="text-xs text-gray-400 flex items-center gap-1.5"
+                    >
+                      <i class="fas fa-circle text-gray-300 animate-pulse"></i>
+                      <span>Cargando...</span>
+                    </span>
+                  </div>
+                  <div class="space-y-1 text-xs">
+                    <div class="flex justify-between items-center">
+                      <span class="text-gray-500">Compra:</span>
+                      <span id="dolar-widget-market-buy-rate" class="font-semibold text-gray-700"
+                        >--</span
+                      >
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-gray-500">Venta:</span>
+                      <span id="dolar-widget-market-rate" class="font-semibold text-gray-700"
+                        >--</span
+                      >
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-gray-500">Ajuste:</span>
+                      <input
+                        type="number"
+                        id="dolar-widget-offset-input"
+                        class="form-input p-1 w-16 text-right font-semibold border-gray-300 focus:border-green-500 focus:ring-green-500 focus:ring-opacity-50"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                </div>
                 <a
                   href="#"
                   id="manage-subscription-btn"
@@ -420,7 +507,6 @@
         </header>
 
         <!-- Main Tabs Navigation -->
-        <!-- <<<--- MODIFICADO: Se añade el div contenedor para las flechas --- -->
         <div class="mb-8 border-b border-gray-200 tabs-container">
           <div id="scroll-arrow-left" class="scroll-arrow left hidden">
             <i class="fas fa-chevron-left"></i>
@@ -499,16 +585,13 @@
     <!-- Main JS Module -->
     <script type="module" src="./js/main.js"></script>
 
-    <!-- <<<--- SCRIPT AÑADIDO PARA MANEJAR LA LÓGICA DE LAS FLECHAS --- -->
     <script>
       document.addEventListener('DOMContentLoaded', () => {
-        // Usamos un MutationObserver para asegurarnos de que el script se ejecute
-        // solo cuando el template de la app se haya cargado en el DOM.
         const observer = new MutationObserver((mutationsList, observer) => {
           const nav = document.getElementById('main-tabs-nav');
           if (nav) {
             setupTabScrolling();
-            observer.disconnect(); // Dejamos de observar una vez que lo encontramos
+            observer.disconnect();
           }
         });
 
@@ -527,17 +610,13 @@
 
         const updateArrows = () => {
           const { scrollLeft, scrollWidth, clientWidth } = nav;
-          // Muestra la flecha izquierda si no estamos al principio
           leftArrow.classList.toggle('hidden', scrollLeft <= 0);
-          // Muestra la flecha derecha si hay más contenido para scrollear
           rightArrow.classList.toggle('hidden', scrollLeft + clientWidth >= scrollWidth - 1);
         };
 
-        // Event listeners para actualizar las flechas
         nav.addEventListener('scroll', updateArrows);
         window.addEventListener('resize', updateArrows);
 
-        // Event listeners para los clics en las flechas
         leftArrow.addEventListener('click', () => {
           nav.scrollBy({ left: -200, behavior: 'smooth' });
         });
@@ -545,8 +624,6 @@
           nav.scrollBy({ left: 200, behavior: 'smooth' });
         });
 
-        // Llamada inicial para establecer el estado correcto de las flechas
-        // Usamos un pequeño timeout para darle tiempo al navegador a calcular las dimensiones
         setTimeout(updateArrows, 100);
       }
     </script>
