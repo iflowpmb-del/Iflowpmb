@@ -33,7 +33,11 @@ import {
   openEditFixedExpenseModal,
   openNoteModal,
 } from './ui/operaciones.ui.js';
+<<<<<<< HEAD
 import { renderSalesAnalysis } from './ui/reportes.ui.js';
+=======
+import { renderIntelligentAnalysisSection } from './ui/reportes.ui.js';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 import { openAddProviderModal, openEditProviderModal } from './ui/proveedores.ui.js';
 import { appState, setState, WALLET_CONFIG, DEFAULT_CATEGORIES } from './state.js';
 import { addData, deleteFromDb, updateData, setData, runBatch } from './api.js';
@@ -50,7 +54,11 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+<<<<<<< HEAD
 import { auth } from './firebase-config.js';
+=======
+import { auth, db } from './firebase-config.js';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
 // Variable para el temporizador del ajuste del dólar (debounce)
 let dolarOffsetTimer;
@@ -89,6 +97,7 @@ async function logCapitalState(reason) {
   }
 }
 
+<<<<<<< HEAD
 function setButtonLoading(button, isLoading, loadingText = 'Guardando...') {
   if (!button) return;
   const body = document.body;
@@ -101,13 +110,34 @@ function setButtonLoading(button, isLoading, loadingText = 'Guardando...') {
     body.classList.remove('is-loading');
     if (button.dataset.originalText) {
       button.innerHTML = button.dataset.originalText;
+=======
+/**
+ * Gestiona el estado de carga global de la aplicación.
+ * @param {boolean} isLoading - True para mostrar el overlay, false para ocultarlo.
+ * @param {HTMLElement|null} button - El botón que inició la acción (opcional).
+ * @param {string} loadingText - El texto a mostrar en el botón mientras carga (opcional).
+ */
+function setGlobalLoading(isLoading, button = null, loadingText = 'Guardando...') {
+  setState({ isGlobalLoading: isLoading });
+
+  if (button) {
+    if (isLoading) {
+      button.dataset.originalText = button.innerHTML;
+      button.disabled = true;
+      button.innerHTML = `<i class="fas fa-spinner spinner mr-2"></i> ${loadingText}`;
+    } else {
+      if (button.dataset.originalText) {
+        button.innerHTML = button.dataset.originalText;
+      }
+      button.disabled = false;
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     }
-    button.disabled = false;
   }
 }
 
 function handleManualDelete(collectionName, docId, entityName) {
   const message = `Esta acción eliminará ${entityName} de la lista. Recuerda que debes revertir o ajustar manualmente cualquier cambio de capital asociado. ¿Deseas continuar?`;
+<<<<<<< HEAD
   openConfirmModal(message, () => deleteFromDb(collectionName, docId));
 }
 
@@ -325,6 +355,255 @@ function handleSettleClientDebt(saleId, balance) {
   }
 }
 
+=======
+  openConfirmModal(message, async () => {
+    setGlobalLoading(true);
+    try {
+        await deleteFromDb(collectionName, docId);
+        showModal(`${entityName} eliminado con éxito.`);
+    } catch (error) {
+        showModal(`Error al eliminar: ${error.message}`, 'Error');
+    } finally {
+        setGlobalLoading(false);
+    }
+  });
+}
+
+async function handleProcessPayment(form) {
+  const button = form.querySelector('button[type="submit"]');
+  setGlobalLoading(true, button, 'Procesando...');
+  try {
+    const { paymentType, targetId, totalAmount, expenseData: expenseDataJSON } = form.dataset;
+    const totalAmountDue = parseFloat(totalAmount);
+    const { capital, exchangeRate, user, dailyExpenses, fixedExpenses } = appState;
+
+    const paymentInputs = form.querySelectorAll('.payment-input-modal');
+    const paymentBreakdownOriginal = {};
+    let totalPaidInUSD = 0;
+
+    paymentInputs.forEach((input) => {
+      const value = parseFloat(input.value) || 0;
+      if (value > 0) {
+        const walletType = input.dataset.wallet;
+        paymentBreakdownOriginal[walletType] = value;
+        const isArs = walletType === 'ars' || walletType === 'mp';
+        totalPaidInUSD += isArs ? value / exchangeRate : value;
+      }
+    });
+    if (totalPaidInUSD <= 0) {
+      throw new Error('Debes ingresar un monto a pagar.');
+    }
+
+    if (totalPaidInUSD > totalAmountDue + 0.01) {
+      throw new Error('El monto pagado no puede ser mayor que el total adeudado.');
+    }
+
+    await runBatch(async (batch, db, userId) => {
+      const capitalRef = doc(db, `users/${userId}/capital`, 'summary');
+      const capitalUpdates = {};
+
+      const basePaymentRecord = {
+        userId: user.uid,
+        amountUSD: totalPaidInUSD,
+        breakdown: paymentBreakdownOriginal,
+        createdAt: serverTimestamp(),
+        exchangeRateAtPayment: exchangeRate,
+      };
+
+      switch (paymentType) {
+        case 'settleClientDebt': {
+          const saleRef = doc(db, `users/${userId}/sales`, targetId);
+          const sale = appState.sales.find((s) => s.id === targetId);
+          const currentSettled = sale.debtSettled || 0;
+          const newSettledAmount = currentSettled + totalPaidInUSD;
+
+          batch.update(saleRef, { debtSettled: newSettledAmount });
+
+          const paymentRecordRef = doc(collection(db, `users/${userId}/sales/${targetId}/payments`));
+          batch.set(paymentRecordRef, basePaymentRecord);
+
+          for (const walletType in paymentBreakdownOriginal) {
+            const paymentValue = paymentBreakdownOriginal[walletType];
+            capitalUpdates[walletType] = (capital[walletType] || 0) + paymentValue;
+          }
+          batch.update(capitalRef, capitalUpdates);
+          break;
+        }
+
+        case 'settleProviderDebt': {
+          const debtRef = doc(db, `users/${userId}/debts`, targetId);
+          const debt = appState.debts.find((d) => d.id === debtId);
+          const newAmount = debt.amount - totalPaidInUSD;
+          if (newAmount < 0.01) {
+            batch.update(debtRef, { 
+                amount: 0, 
+                status: 'saldada', 
+                settledAt: serverTimestamp() 
+            });
+          } else {
+            batch.update(debtRef, { amount: newAmount });
+          }
+
+          const paymentRecordRef = doc(collection(db, `users/${userId}/debts/${targetId}/payments`));
+          batch.set(paymentRecordRef, basePaymentRecord);
+          for (const walletType in paymentBreakdownOriginal) {
+            const paymentValue = paymentBreakdownOriginal[walletType];
+            capitalUpdates[walletType] = (capital[walletType] || 0) - paymentValue;
+          }
+          batch.update(capitalRef, capitalUpdates);
+          break;
+        }
+
+        case 'payFixedExpense': {
+          const expense = fixedExpenses.find((exp) => exp.id === targetId);
+          if (!expense) throw new Error('Gasto fijo no encontrado.');
+          
+          const currentMonthID = `${new Date().getFullYear()}-${String(
+            new Date().getMonth() + 1
+          ).padStart(2, '0')}`;
+
+          // 1. Registrar el pago como un gasto diario para el historial general
+          const dailyExpenseRef = doc(collection(db, `users/${userId}/daily_expenses`));
+          batch.set(dailyExpenseRef, {
+            amountUSD: totalPaidInUSD,
+            date: new Date().toISOString().split('T')[0],
+            description: `Pago de gasto fijo: ${expense.description}`,
+            isFixedPayment: true,
+            paidFromBreakdown: paymentBreakdownOriginal,
+            createdAt: serverTimestamp(),
+            exchangeRateAtPayment: exchangeRate,
+            originalAmount: expense.amount,
+            originalCurrency: expense.currency,
+            fixedExpenseParentId: targetId, // Vínculo con el gasto fijo padre
+          });
+
+          // 2. Actualizar las billeteras
+          for (const walletType in paymentBreakdownOriginal) {
+            const paymentValue = paymentBreakdownOriginal[walletType];
+            capitalUpdates[walletType] = (capital[walletType] || 0) - paymentValue;
+          }
+          batch.update(capitalRef, capitalUpdates);
+          
+          // 3. Verificar si el gasto del mes ya se completó con este pago
+          const expenseTotalInUSD = expense.currency === 'ARS' ? expense.amount / exchangeRate : expense.amount;
+          
+          const paymentsThisMonth = dailyExpenses.filter(p => 
+              p.fixedExpenseParentId === targetId && 
+              p.date.startsWith(currentMonthID)
+          );
+          const totalPaidBeforeThis = paymentsThisMonth.reduce((sum, p) => sum + p.amountUSD, 0);
+          const newTotalPaid = totalPaidBeforeThis + totalPaidInUSD;
+
+          if (newTotalPaid >= expenseTotalInUSD - 0.01) {
+              const fixedExpenseRef = doc(db, `users/${userId}/fixed_expenses`, targetId);
+              batch.update(fixedExpenseRef, { lastPaidMonth: currentMonthID });
+          }
+          break;
+        }
+
+        case 'payDailyExpense': {
+          const expenseData = JSON.parse(expenseDataJSON);
+          if (Math.abs(totalPaidInUSD - expenseData.amountUSD) > 0.01) {
+            throw new Error('El monto pagado para el gasto diario debe ser exacto.');
+          }
+
+          const dailyExpenseRef = doc(collection(db, `users/${userId}/daily_expenses`));
+          batch.set(dailyExpenseRef, {
+            ...expenseData,
+            isFixedPayment: false,
+            paidFromBreakdown: paymentBreakdownOriginal,
+            createdAt: serverTimestamp(),
+            exchangeRateAtPayment: exchangeRate,
+            originalAmount: expenseData.originalAmount,
+            originalCurrency: expenseData.originalCurrency,
+          });
+          for (const walletType in paymentBreakdownOriginal) {
+            const paymentValue = paymentBreakdownOriginal[walletType];
+            capitalUpdates[walletType] = (capital[walletType] || 0) - paymentValue;
+          }
+          batch.update(capitalRef, capitalUpdates);
+          break;
+        }
+      }
+    });
+
+    await logCapitalState(`Procesado pago de tipo: ${paymentType}`);
+    document.getElementById('modal-container').innerHTML = '';
+    showModal('Pago registrado con éxito.');
+  } catch (error) {
+    console.error('Error al procesar el pago:', error);
+    showModal(`No se pudo procesar el pago: ${error.message}`, 'Error');
+  } finally {
+    setGlobalLoading(false, button);
+  }
+}
+
+async function handlePayFixedExpense(expenseId) {
+    const { fixedExpenses, dailyExpenses, exchangeRate, user } = appState;
+    const expense = fixedExpenses.find((exp) => exp.id === expenseId);
+    if (!expense) {
+        return showModal('No se pudo encontrar el gasto fijo seleccionado.', 'Error');
+    }
+
+    const amountInUSD = expense.currency === 'ARS' ? expense.amount / exchangeRate : expense.amount;
+    const currentMonthID = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    
+    // Filtrar los pagos ya realizados para este gasto en el mes actual
+    const paymentsThisMonth = dailyExpenses.filter(p => 
+        p.fixedExpenseParentId === expenseId && 
+        p.date.startsWith(currentMonthID)
+    );
+
+    const totalPaidThisMonth = paymentsThisMonth.reduce((sum, p) => sum + p.amountUSD, 0);
+    const remainingAmount = amountInUSD - totalPaidThisMonth;
+
+    if (remainingAmount < 0.01) {
+        return showModal('Este gasto ya ha sido cubierto para el mes actual.', 'Información');
+    }
+
+    openPaymentModal({
+        paymentType: 'payFixedExpense',
+        targetId: expense.id,
+        totalAmount: remainingAmount,
+        entityName: `Gasto Fijo: ${expense.description}`,
+        allowPartial: true, // Permitir pagos parciales
+    });
+}
+
+
+function handleSettleProviderDebt(debtId) {
+  const debt = appState.debts.find((d) => d.id === debtId);
+  if (debt) {
+    openPaymentModal({
+      paymentType: 'settleProviderDebt',
+      targetId: debt.id,
+      totalAmount: debt.amount,
+      entityName: `Deuda a ${debt.debtorName}`,
+      allowPartial: true,
+      paymentHistoryCollection: `users/${appState.user.uid}/debts/${debtId}/payments`,
+    });
+  } else {
+    showModal('No se pudo encontrar la deuda seleccionada.', 'Error');
+  }
+}
+
+function handleSettleClientDebt(saleId, balance) {
+  const sale = appState.sales.find((s) => s.id === saleId);
+  if (sale) {
+    openPaymentModal({
+      paymentType: 'settleClientDebt',
+      targetId: sale.id,
+      totalAmount: balance,
+      entityName: `Deuda de ${sale.customerName}`,
+      allowPartial: true,
+      paymentHistoryCollection: `users/${appState.user.uid}/sales/${saleId}/payments`,
+    });
+  } else {
+    showModal('No se pudo encontrar la venta asociada a la deuda.', 'Error');
+  }
+}
+
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 function handleAddDailyExpense(form) {
   const amount = parseFloat(form.querySelector('#daily-expense-amount-reg').value) || 0;
   const currency = form.querySelector('#daily-expense-currency-reg').value;
@@ -353,7 +632,7 @@ function handleAddDailyExpense(form) {
 
 async function handleAdjustCapital(form, reason) {
   const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-  setButtonLoading(button, true);
+  setGlobalLoading(true, button);
   try {
     const capitalData = {};
     const inputs = form.querySelectorAll('input[type="number"]');
@@ -363,14 +642,18 @@ async function handleAdjustCapital(form, reason) {
     });
     await setData('capital', 'summary', capitalData);
     await logCapitalState(`Ajuste Manual: ${reason}`);
+<<<<<<< HEAD
     const modalContainer = document.getElementById('modal-container');
     if (modalContainer) modalContainer.innerHTML = '';
+=======
+    document.getElementById('modal-container').innerHTML = '';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     showModal('Saldos de capital actualizados con éxito.');
   } catch (error) {
     console.error('Error al ajustar el capital:', error);
     showModal(`Ocurrió un error al guardar los saldos: ${error.message}`);
   } finally {
-    setButtonLoading(button, false);
+    setGlobalLoading(false, button);
   }
 }
 
@@ -402,6 +685,7 @@ async function handleAnnulSale(saleId) {
         El producto recibido como canje (si hubo) <strong>NO</strong> se eliminará del stock.<br><br>
         Esta acción no se puede deshacer.`;
   openConfirmModal(message, async () => {
+    setGlobalLoading(true);
     try {
       await runBatch((batch, db, userId) => {
         if (sale.items && sale.items.length > 0) {
@@ -432,12 +716,18 @@ async function handleAnnulSale(saleId) {
     } catch (error) {
       console.error('Error al anular la venta:', error);
       showModal(`Ocurrió un error al anular la venta: ${error.message}`, 'Error');
+    } finally {
+        setGlobalLoading(false);
     }
   });
 }
 
 async function handleFinalizeSaleFromReservation(reservationId) {
+<<<<<<< HEAD
   const { reservations, clients, stock } = appState;
+=======
+  const { reservations, clients } = appState;
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   const reservation = reservations.find((r) => r.id === reservationId);
 
   if (!reservation) {
@@ -477,8 +767,12 @@ async function handleFinalizeSaleFromReservation(reservationId) {
     },
   });
 
+<<<<<<< HEAD
   const modalContainer = document.getElementById('modal-container');
   if (modalContainer) modalContainer.innerHTML = '';
+=======
+  document.getElementById('modal-container').innerHTML = '';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
   switchTab('ventas');
   switchSubTab('ventas', 'nueva');
@@ -494,11 +788,15 @@ function getStockItemDataFromForm(formElement, formSuffix) {
       let value = input.type === 'checkbox' ? input.checked : input.value.trim();
       if (value !== '' && value !== null && value !== false) {
         attributes[attrName] = value;
+<<<<<<< HEAD
         if (
           ['Producto', 'Configuración', 'Especificación', 'Almacenamiento', 'RAM', 'Tipo'].includes(
             attrName
           )
         ) {
+=======
+        if (['Producto', 'Configuración', 'Especificación', 'Almacenamiento', 'RAM', 'Tipo'].includes(attrName)) {
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           modelParts.push(value);
         }
       }
@@ -508,6 +806,7 @@ function getStockItemDataFromForm(formElement, formSuffix) {
   const modelName = modelParts.length > 0 ? modelParts.join(' ') : 'Producto Personalizado';
 
   const stockItemData = {
+<<<<<<< HEAD
     category: formElement.querySelector(
       `#stock-category-${formSuffix}, #edit-stock-category, #trade-in-category`
     ).value,
@@ -542,14 +841,29 @@ function getStockItemDataFromForm(formElement, formSuffix) {
     providerId:
       formElement.querySelector(`#stock-provider-${formSuffix}, #edit-stock-provider`)?.value ||
       'no-asignar',
+=======
+    category: formElement.querySelector(`#stock-category-${formSuffix}, #edit-stock-category, #trade-in-category`).value,
+    model: modelName,
+    serialNumber: (formElement.querySelector(`#stock-serial-${formSuffix}, #edit-stock-serial, #trade-in-serial`)?.value || '').trim().toUpperCase(),
+    phoneCost: parseFloat(formElement.querySelector(`#stock-cost-${formSuffix}, #edit-stock-cost, #trade-in-value`)?.value) || 0,
+    suggestedSalePrice: parseFloat(formElement.querySelector(`#stock-price-${formSuffix}, #edit-stock-price, #trade-in-sug-price`)?.value) || 0,
+    quantity: parseInt(formElement.querySelector(`#stock-quantity-${formSuffix}, #edit-stock-quantity`)?.value, 10) || 1,
+    details: formElement.querySelector(`#stock-details-${formSuffix}, #edit-stock-details, #trade-in-details-input`)?.value.trim() || '',
+    attributes: attributes,
+    providerId: formElement.querySelector(`#stock-provider-${formSuffix}, #edit-stock-provider`)?.value || 'no-asignar',
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   };
 
   if (stockItemData.providerId !== 'no-asignar' && stockItemData.providerId !== 'parte-de-pago') {
     const provider = appState.userProviders.find((p) => p.id === stockItemData.providerId);
     stockItemData.providerName = provider ? provider.name : '';
   } else {
+<<<<<<< HEAD
     stockItemData.providerName =
       stockItemData.providerId === 'parte-de-pago' ? 'Parte de pago/Otro' : '';
+=======
+    stockItemData.providerName = stockItemData.providerId === 'parte-de-pago' ? 'Parte de pago/Otro' : '';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   }
 
   return stockItemData;
@@ -558,7 +872,7 @@ function getStockItemDataFromForm(formElement, formSuffix) {
 async function saveStockItem(form, docId = null) {
   const isEditing = !!docId;
   const button = form.querySelector('button[type="submit"]');
-  setButtonLoading(button, true, isEditing ? 'Actualizando...' : 'Añadiendo...');
+  setGlobalLoading(true, button, isEditing ? 'Actualizando...' : 'Añadiendo...');
 
   try {
     const formSuffix = isEditing ? 'edit' : 'reg';
@@ -582,13 +896,13 @@ async function saveStockItem(form, docId = null) {
     console.error('Error al guardar en stock:', error);
     showModal(`Error al guardar el producto: ${error.message}`);
   } finally {
-    setButtonLoading(button, false);
+    setGlobalLoading(false, button);
   }
 }
 
 async function handleAddClient(form) {
   const button = form.querySelector('button[type="submit"]');
-  setButtonLoading(button, true, 'Añadiendo...');
+  setGlobalLoading(true, button, 'Añadiendo...');
   try {
     const newClient = {
       name: form.querySelector('#client-name-reg').value.trim(),
@@ -601,13 +915,13 @@ async function handleAddClient(form) {
     form.reset();
     document.getElementById('add-client-form-container').classList.add('hidden');
   } finally {
-    setButtonLoading(button, false);
+    setGlobalLoading(false, button);
   }
 }
 
 async function handleAddFixedExpense(form) {
   const button = form.querySelector('button[type="submit"]');
-  setButtonLoading(button, true, 'Añadiendo...');
+  setGlobalLoading(true, button, 'Añadiendo...');
   try {
     const amount = parseFloat(form.querySelector('#fixed-expense-amount-reg').value) || 0;
     const currency = form.querySelector('#fixed-expense-currency-reg').value;
@@ -623,13 +937,13 @@ async function handleAddFixedExpense(form) {
     showModal('Gasto fijo añadido con éxito.');
     form.reset();
   } finally {
-    setButtonLoading(button, false);
+    setGlobalLoading(false, button);
   }
 }
 
 async function handleAddDebt(form) {
   const button = form.querySelector('button[type="submit"]');
-  setButtonLoading(button, true, 'Añadiendo...');
+  setGlobalLoading(true, button, 'Añadiendo...');
   try {
     const amount = parseFloat(form.querySelector('#debt-amount').value) || 0;
     const currency = form.querySelector('#debt-currency').value;
@@ -639,6 +953,7 @@ async function handleAddDebt(form) {
       description: form.querySelector('#debt-desc').value.trim(),
       amount: amountInUSD,
       createdAt: serverTimestamp(),
+<<<<<<< HEAD
       // =================================================================================
       // INICIO DE MODIFICACIÓN: Se añade el estado inicial a las deudas
       // =================================================================================
@@ -646,6 +961,9 @@ async function handleAddDebt(form) {
       // =================================================================================
       // FIN DE MODIFICACIÓN
       // =================================================================================
+=======
+      status: 'pendiente',
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     };
     await addData('debts', newDebt);
     await logCapitalState(`Nueva deuda a ${newDebt.debtorName}`);
@@ -653,13 +971,13 @@ async function handleAddDebt(form) {
     form.reset();
     document.getElementById('add-debt-form-container').classList.add('hidden');
   } finally {
-    setButtonLoading(button, false);
+    setGlobalLoading(false, button);
   }
 }
 
 async function handleModalClient(form) {
   const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-  setButtonLoading(button, true);
+  setGlobalLoading(true, button);
   try {
     const newClient = {
       name: form.querySelector('#client-name-modal').value.trim(),
@@ -672,13 +990,13 @@ async function handleModalClient(form) {
     document.getElementById('modal-container').innerHTML = '';
     showModal('Cliente creado y seleccionado para la venta.');
   } finally {
-    setButtonLoading(button, false);
+    setGlobalLoading(false, button);
   }
 }
 
 async function handleModalStock(form) {
   const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-  setButtonLoading(button, true);
+  setGlobalLoading(true, button);
   try {
     const attributes = {};
     form.querySelectorAll('[id^="attr_"]').forEach((input) => {
@@ -726,7 +1044,7 @@ async function handleModalStock(form) {
     console.error('Error al añadir stock desde modal:', error);
     showModal(`Error: ${error.message}`);
   } finally {
-    setButtonLoading(button, false);
+    setGlobalLoading(false, button);
   }
 }
 
@@ -758,7 +1076,7 @@ async function handleSaveExchangeRate() {
 
 async function handleChangePassword(form) {
   const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-  setButtonLoading(button, true);
+  setGlobalLoading(true, button);
   try {
     const currentPassword = form.querySelector('#current-password').value;
     const newPassword = form.querySelector('#new-password').value;
@@ -781,8 +1099,7 @@ async function handleChangePassword(form) {
     const credential = EmailAuthProvider.credential(user.email, currentPassword);
     await reauthenticateWithCredential(user, credential);
     await updatePassword(user, newPassword);
-    const modalContainer = document.getElementById('modal-container');
-    if (modalContainer) modalContainer.innerHTML = '';
+    document.getElementById('modal-container').innerHTML = '';
     showModal('Tu contraseña ha sido actualizada con éxito.', 'Éxito');
   } catch (error) {
     let friendlyMessage = 'Ocurrió un error. Inténtalo de nuevo.';
@@ -791,21 +1108,20 @@ async function handleChangePassword(form) {
     }
     showModal(friendlyMessage, 'Error de Autenticación');
   } finally {
-    setButtonLoading(button, false);
+    setGlobalLoading(false, button);
   }
 }
 
 async function handleSaveSale() {
   const form = document.getElementById('sale-form');
   const button = form.querySelector('button[type="submit"]');
-  setButtonLoading(button, true, 'Finalizando...');
+  setGlobalLoading(true, button, 'Finalizando...');
   try {
     const { sale, exchangeRate, stock, salespeople } = appState;
     const { reservationId } = sale;
 
     if (!sale.selectedClient || !sale.items || sale.items.length === 0) {
-      showModal('Debes seleccionar un cliente y al menos un producto.');
-      return;
+      throw new Error('Debes seleccionar un cliente y al menos un producto.');
     }
     const totalSalePrice =
       (sale.items || []).reduce((sum, item) => sum + (item.salePrice || 0), 0) -
@@ -822,8 +1138,7 @@ async function handleSaveSale() {
     totalPaid += tradeInValue;
 
     if (Math.abs(totalSalePrice - totalPaid) > 0.01) {
-      showModal('El balance debe ser cero para finalizar la venta. Ajusta los montos de pago.');
-      return;
+      throw new Error('El balance debe ser cero para finalizar la venta. Ajusta los montos de pago.');
     }
 
     const salespersonId = document.getElementById('salesperson-selector').value;
@@ -872,13 +1187,25 @@ async function handleSaveSale() {
         commissionUSD: commissionUSD,
         exchangeRateAtSale: exchangeRate,
       };
+<<<<<<< HEAD
+=======
+      
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       sale.items.forEach((item) => {
         const stockItemRef = doc(db, `users/${userId}/stock`, item.id);
         const originalStockItem = stock.find((s) => s.id === item.id);
         const currentQuantity = originalStockItem ? originalStockItem.quantity || 1 : 1;
 
+<<<<<<< HEAD
         if (currentQuantity > 1 && originalStockItem.status !== 'reservado') {
           batch.update(stockItemRef, { quantity: currentQuantity - 1 });
+=======
+        if (currentQuantity > 1) {
+          batch.update(stockItemRef, { 
+            quantity: currentQuantity - 1,
+            status: 'disponible'
+          });
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         } else {
           batch.delete(stockItemRef);
         }
@@ -887,6 +1214,7 @@ async function handleSaveSale() {
       if (document.getElementById('has-trade-in').checked && tradeInValue > 0) {
         const tradeInContainer = document.getElementById('trade-in-details');
         if (tradeInContainer) {
+<<<<<<< HEAD
           const tradeInItem = getStockItemDataFromForm(tradeInContainer, 'tradein');
           tradeInItem.createdAt = serverTimestamp();
           tradeInItem.providerId = 'parte-de-pago';
@@ -895,6 +1223,16 @@ async function handleSaveSale() {
           saleData.tradeIn = { ...tradeInItem };
           saleData.tradeInValueUSD = tradeInItem.phoneCost;
           batch.set(doc(collection(db, `users/${userId}/stock`)), tradeInItem);
+=======
+            const tradeInItem = getStockItemDataFromForm(tradeInContainer, 'tradein');
+            tradeInItem.createdAt = serverTimestamp();
+            tradeInItem.providerId = 'parte-de-pago';
+            tradeInItem.providerName = 'Parte de pago/Otro';
+
+            saleData.tradeIn = { ...tradeInItem };
+            saleData.tradeInValueUSD = tradeInItem.phoneCost;
+            batch.set(doc(collection(db, `users/${userId}/stock`)), tradeInItem);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         }
       }
 
@@ -941,13 +1279,13 @@ async function handleSaveSale() {
     console.error('Error detallado al procesar venta:', error);
     showModal(`Error al procesar la venta: ${error.message}`);
   } finally {
-    setButtonLoading(button, false);
+    setGlobalLoading(false, button);
   }
 }
 
 async function handleEditClient(form) {
   const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-  setButtonLoading(button, true);
+  setGlobalLoading(true, button);
   try {
     const clientId = form.dataset.id;
     const updatedData = {
@@ -961,13 +1299,13 @@ async function handleEditClient(form) {
   } catch (error) {
     showModal(`Error al actualizar el cliente: ${error.message}`);
   } finally {
-    setButtonLoading(button, false);
+    setGlobalLoading(false, button);
   }
 }
 
 async function handleEditDebt(form) {
   const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-  setButtonLoading(button, true);
+  setGlobalLoading(true, button);
   try {
     const debtId = form.dataset.id;
     const amount = parseFloat(form.querySelector('#edit-debt-amount').value) || 0;
@@ -984,13 +1322,13 @@ async function handleEditDebt(form) {
   } catch (error) {
     showModal(`Error al actualizar la deuda: ${error.message}`);
   } finally {
-    setButtonLoading(button, false);
+    setGlobalLoading(false, button);
   }
 }
 
 async function handleEditFixedExpense(form) {
   const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-  setButtonLoading(button, true);
+  setGlobalLoading(true, button);
   try {
     const expenseId = form.dataset.id;
     const amount = parseFloat(form.querySelector('#edit-fixed-expense-amount').value) || 0;
@@ -1008,7 +1346,7 @@ async function handleEditFixedExpense(form) {
   } catch (error) {
     showModal(`Error al actualizar el gasto: ${error.message}`);
   } finally {
-    setButtonLoading(button, false);
+    setGlobalLoading(false, button);
   }
 }
 
@@ -1035,7 +1373,11 @@ export function setupEventListeners() {
         'edit-attribute-form',
         'reservation-form',
         'edit-product-options-form',
+<<<<<<< HEAD
         'add-dependent-attribute-form', // <-- NUEVO FORMULARIO
+=======
+        'add-dependent-attribute-form',
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       ].includes(form.id)
     ) {
       e.preventDefault();
@@ -1050,14 +1392,14 @@ export function setupEventListeners() {
           const email = form.querySelector('input[type="email"]').value;
           const password = form.querySelector('input[type="password"]').value;
           const button = form.querySelector('button[type="submit"]');
-          setButtonLoading(button, true, 'Ingresando...');
+          setGlobalLoading(true, button, 'Ingresando...');
           try {
             if (form.id === 'login-form') await handleLogin(email, password);
             else await handleRegistration(email, password);
           } catch (err) {
             // El error ya se muestra en un modal, no es necesario hacer nada aquí.
           } finally {
-            setButtonLoading(button, false);
+            setGlobalLoading(false, button);
           }
           break;
         }
@@ -1104,7 +1446,7 @@ export function setupEventListeners() {
         }
         case 'note-form': {
           const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-          setButtonLoading(button, true);
+          setGlobalLoading(true, button);
           try {
             const noteData = {
               title: form.querySelector('#note-title').value.trim(),
@@ -1123,7 +1465,7 @@ export function setupEventListeners() {
           } catch (err) {
             showModal(`Error al guardar la nota: ${err.message}`);
           } finally {
-            setButtonLoading(button, false);
+            setGlobalLoading(false, button);
           }
           break;
         }
@@ -1163,7 +1505,11 @@ export function setupEventListeners() {
         }
         case 'edit-attribute-form': {
           const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
+<<<<<<< HEAD
           setButtonLoading(button, true);
+=======
+          setGlobalLoading(true, button);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           try {
             const { categoryId, attrId } = form.dataset;
             const category = appState.categories.find((c) => c.id === categoryId);
@@ -1194,13 +1540,17 @@ export function setupEventListeners() {
           } catch (err) {
             showModal(`Error al actualizar el atributo: ${err.message}`);
           } finally {
+<<<<<<< HEAD
             setButtonLoading(button, false);
+=======
+            setGlobalLoading(false, button);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           }
           break;
         }
         case 'salesperson-form-modal': {
           const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-          setButtonLoading(button, true);
+          setGlobalLoading(true, button);
           try {
             const salespersonData = {
               name: form.querySelector('#salesperson-name-modal').value.trim(),
@@ -1213,13 +1563,13 @@ export function setupEventListeners() {
           } catch (err) {
             showModal(`Error al guardar el vendedor: ${err.message}`);
           } finally {
-            setButtonLoading(button, false);
+            setGlobalLoading(false, button);
           }
           break;
         }
         case 'edit-salesperson-form-modal': {
           const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-          setButtonLoading(button, true);
+          setGlobalLoading(true, button);
           try {
             const salespersonId = form.dataset.id;
             const updatedData = {
@@ -1232,13 +1582,13 @@ export function setupEventListeners() {
           } catch (err) {
             showModal(`Error al actualizar el vendedor: ${err.message}`);
           } finally {
-            setButtonLoading(button, false);
+            setGlobalLoading(false, button);
           }
           break;
         }
         case 'provider-form-modal': {
           const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-          setButtonLoading(button, true);
+          setGlobalLoading(true, button);
           try {
             const providerData = {
               name: form.querySelector('#provider-name-modal').value.trim(),
@@ -1252,13 +1602,13 @@ export function setupEventListeners() {
           } catch (err) {
             showModal(`Error al guardar el proveedor: ${err.message}`);
           } finally {
-            setButtonLoading(button, false);
+            setGlobalLoading(false, button);
           }
           break;
         }
         case 'edit-provider-form-modal': {
           const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-          setButtonLoading(button, true);
+          setGlobalLoading(true, button);
           try {
             const providerId = form.dataset.id;
             const updatedData = {
@@ -1272,11 +1622,12 @@ export function setupEventListeners() {
           } catch (err) {
             showModal(`Error al actualizar el proveedor: ${err.message}`);
           } finally {
-            setButtonLoading(button, false);
+            setGlobalLoading(false, button);
           }
           break;
         }
         case 'reservation-form': {
+<<<<<<< HEAD
           const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
           setButtonLoading(button, true, 'Guardando...');
           try {
@@ -1415,6 +1766,130 @@ export function setupEventListeners() {
         // =================================================================================
         // FIN DE MODIFICACIÓN
         // =================================================================================
+=======
+            const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
+            setGlobalLoading(true, button, 'Guardando...');
+            try {
+                const { reservationForm, exchangeRate, capital } = appState;
+                if (!reservationForm.selectedClient || !reservationForm.selectedItem) {
+                    throw new Error('Debes seleccionar un cliente y un producto.');
+                }
+
+                const paymentInputs = form.querySelectorAll('.payment-input-reservation');
+                const paymentBreakdownOriginal = {};
+                let totalDepositUSD = 0;
+
+                paymentInputs.forEach(input => {
+                    const value = parseFloat(input.value) || 0;
+                    if (value > 0) {
+                        const walletType = input.dataset.payment;
+                        paymentBreakdownOriginal[walletType] = value;
+                        const isArs = walletType === 'ars' || walletType === 'mp';
+                        totalDepositUSD += isArs ? value / exchangeRate : value;
+                    }
+                });
+
+                const hasDeposit = totalDepositUSD > 0;
+
+                const reservationData = {
+                    clientId: reservationForm.selectedClient.id,
+                    customerName: reservationForm.selectedClient.name,
+                    itemId: reservationForm.selectedItem.id,
+                    item: reservationForm.selectedItem,
+                    hasDeposit,
+                    depositAmountUSD: totalDepositUSD,
+                    depositPaymentBreakdown: paymentBreakdownOriginal,
+                    notes: form.querySelector('#reservation-notes').value.trim(),
+                    createdAt: serverTimestamp(),
+                    status: 'active',
+                };
+
+                await runBatch(async (batch, db, userId) => {
+                    const reservationRef = doc(collection(db, `users/${userId}/reservations`));
+                    batch.set(reservationRef, reservationData);
+
+                    const stockItemRef = doc(db, `users/${userId}/stock`, reservationForm.selectedItem.id);
+                    batch.update(stockItemRef, { status: 'reservado' });
+
+                    if (hasDeposit) {
+                        const capitalRef = doc(db, `users/${userId}/capital`, 'summary');
+                        const capitalUpdates = {};
+                        for (const walletType in paymentBreakdownOriginal) {
+                            const paymentValue = paymentBreakdownOriginal[walletType];
+                            capitalUpdates[walletType] = (capital[walletType] || 0) + paymentValue;
+                        }
+                        batch.update(capitalRef, capitalUpdates);
+                    }
+                });
+
+                await logCapitalState(`Reserva creada para ${reservationForm.selectedClient.name}`);
+                document.getElementById('modal-container').innerHTML = '';
+                showModal('Reserva creada con éxito.');
+
+            } catch (error) {
+                showModal(`Error al guardar la reserva: ${error.message}`, 'Error');
+            } finally {
+                setGlobalLoading(false, button);
+            }
+            break;
+        }
+        case 'edit-product-options-form': {
+            const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
+            setGlobalLoading(true, button);
+            try {
+                const { categoryId, productAttributeId, productName } = form.dataset;
+                const category = appState.categories.find(c => c.id === categoryId);
+                if (!category) throw new Error('Categoría no encontrada.');
+
+                const updatedAttributes = JSON.parse(JSON.stringify(category.attributes));
+
+                form.querySelectorAll('.dependent-attribute-editor').forEach(editor => {
+                    const dependentAttrId = editor.dataset.attrId;
+                    const newOptions = Array.from(editor.querySelectorAll('.attribute-option-item'))
+                                            .map(item => item.dataset.optionValue)
+                                            .filter(Boolean);
+
+                    const attributeToUpdate = updatedAttributes.find(attr => attr.id === dependentAttrId);
+                    if (attributeToUpdate && typeof attributeToUpdate.options === 'object') {
+                        attributeToUpdate.options[productName] = newOptions;
+                    }
+                });
+
+                await updateData('categories', categoryId, { attributes: updatedAttributes });
+                document.getElementById('modal-container').innerHTML = '';
+                showModal(`Opciones para "${productName}" actualizadas con éxito.`);
+            } catch (err) {
+                showModal(`Error al guardar las opciones: ${err.message}`);
+            } finally {
+                setGlobalLoading(false, button);
+            }
+            break;
+        }
+        case 'add-dependent-attribute-form': {
+            const { categoryId, productAttributeId, productName } = form.dataset;
+            const category = appState.categories.find(c => c.id === categoryId);
+            if (!category) return;
+
+            const name = form.querySelector('#new-dependent-attr-name').value.trim();
+            if (!name) {
+                showModal('El nombre del atributo no puede estar vacío.', 'Error');
+                return;
+            }
+
+            const newAttribute = {
+                id: `attr-${Date.now()}`,
+                name: name,
+                type: 'select',
+                dependsOn: productAttributeId,
+                options: { [productName]: [] }
+            };
+
+            const updatedAttributes = [...category.attributes, newAttribute];
+            await updateData('categories', categoryId, { attributes: updatedAttributes });
+            openEditProductOptionsModal(categoryId, productName);
+            break;
+        }
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       }
     } catch (err) {
       console.error(`Error en el manejador de submit para el form #${form.id}:`, err);
@@ -1424,6 +1899,7 @@ export function setupEventListeners() {
   document.body.addEventListener('click', async (e) => {
     const target = e.target;
 
+<<<<<<< HEAD
     // =================================================================================
     // INICIO DE MODIFICACIÓN: LÓGICA PARA ELIMINAR ATRIBUTOS Y OPCIONES
     // =================================================================================
@@ -1504,6 +1980,84 @@ export function setupEventListeners() {
     // =================================================================================
     // FIN DE MODIFICACIÓN
     // =================================================================================
+=======
+    const loadMoreButton = target.closest('.load-more-btn');
+    if (loadMoreButton) {
+        const listKey = loadMoreButton.dataset.listKey;
+        if (listKey && appState.ui.pages[listKey]) {
+            const currentPage = appState.ui.pages[listKey];
+            setState({
+                ui: {
+                    pages: {
+                        ...appState.ui.pages,
+                        [listKey]: currentPage + 1,
+                    },
+                },
+            });
+        }
+        return;
+    }
+
+    if (target.closest('.delete-attribute-option-btn')) {
+        const button = target.closest('.delete-attribute-option-btn');
+        const { categoryId, productName, attrId, optionValue } = button.dataset;
+        const category = appState.categories.find(c => c.id === categoryId);
+        if (!category) return;
+
+        const updatedAttributes = JSON.parse(JSON.stringify(category.attributes));
+        const attributeToUpdate = updatedAttributes.find(attr => attr.id === attrId);
+
+        if (attributeToUpdate && typeof attributeToUpdate.options === 'object' && attributeToUpdate.options[productName]) {
+            attributeToUpdate.options[productName] = attributeToUpdate.options[productName].filter(opt => opt !== optionValue);
+            await updateData('categories', categoryId, { attributes: updatedAttributes });
+            openEditProductOptionsModal(categoryId, productName);
+        }
+        return;
+    }
+
+    if (target.closest('.delete-dependent-attribute-btn')) {
+        const button = target.closest('.delete-dependent-attribute-btn');
+        const { categoryId, productName, attrIdToDelete } = button.dataset;
+        const category = appState.categories.find(c => c.id === categoryId);
+        if (!category) return;
+
+        openConfirmModal(`¿Seguro que quieres eliminar este atributo y todas sus opciones para este producto?`, async () => {
+            const updatedAttributes = category.attributes.filter(attr => attr.id !== attrIdToDelete);
+            await updateData('categories', categoryId, { attributes: updatedAttributes });
+            openEditProductOptionsModal(categoryId, productName);
+        });
+        return;
+    }
+    
+    if (target.closest('.add-attribute-option-btn')) {
+        const button = target.closest('.add-attribute-option-btn');
+        const { categoryId, productName, attrId } = button.dataset;
+        const input = button.previousElementSibling;
+        const newOptionValue = input.value.trim();
+
+        if (newOptionValue) {
+            const category = appState.categories.find(c => c.id === categoryId);
+            if (!category) return;
+
+            const updatedAttributes = JSON.parse(JSON.stringify(category.attributes));
+            const attributeToUpdate = updatedAttributes.find(attr => attr.id === attrId);
+
+            if (attributeToUpdate && typeof attributeToUpdate.options === 'object') {
+                if (!attributeToUpdate.options[productName]) {
+                    attributeToUpdate.options[productName] = [];
+                }
+                if (!attributeToUpdate.options[productName].includes(newOptionValue)) {
+                    attributeToUpdate.options[productName].push(newOptionValue);
+                    await updateData('categories', categoryId, { attributes: updatedAttributes });
+                    openEditProductOptionsModal(categoryId, productName);
+                } else {
+                    input.value = '';
+                }
+            }
+        }
+        return;
+    }
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
     const element = target.closest(
       'button, a, div[data-client], div[data-stock], div[data-category-id], i#edit-business-name-icon, .product-search-result'
@@ -1584,11 +2138,15 @@ export function setupEventListeners() {
     if (target.closest('.reservation-client-result')) {
       const client = JSON.parse(target.closest('.reservation-client-result').dataset.client);
       setState({
+<<<<<<< HEAD
         reservationForm: {
           ...appState.reservationForm,
           selectedClient: client,
           clientSearchTerm: '',
         },
+=======
+        reservationForm: { ...appState.reservationForm, selectedClient: client, clientSearchTerm: '' },
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       });
       openReservationModal(appState);
       return;
@@ -1676,7 +2234,14 @@ export function setupEventListeners() {
       'logout-button': () => signOut(auth),
       'manage-subscription-btn': () => {
         showModal(
+<<<<<<< HEAD
           `Para gestionar tu suscripción (cambiar método de pago, cancelar, etc.), por favor revisa el email de confirmación que recibiste de <b>Gumroad</b>.<br><br>Allí encontrarás un enlace para administrar tu compra y ver tus facturas.`,
+=======
+          `Para gestionar tu suscripción (cambiar método de pago, cancelar, etc.), por favor sigue estos pasos:<br><br>
+          1. Ingresa a tu cuenta de <b>Mercado Pago</b>.<br>
+          2. Ve a la sección "<b>Suscripciones</b>".<br>
+          3. Busca la suscripción de <b>iFlow</b> y selecciona "<b>Cancelar suscripción</b>".`,
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           'Gestionar Suscripción'
         );
       },
@@ -1712,14 +2277,9 @@ export function setupEventListeners() {
         }
 
         document.getElementById('modal-container').innerHTML = '';
-        setButtonLoading(button, true, 'Redirigiendo...');
-        await setData(
-          'profile',
-          'main',
-          { subscriptionStatus: 'pending_payment_validation' },
-          true
-        );
-        setButtonLoading(button, false);
+        setGlobalLoading(true, button, 'Redirigiendo...');
+        await setData('profile', 'main', { subscriptionStatus: 'pending_payment_validation' }, true);
+        setGlobalLoading(false, button);
       },
       'toggle-sale-form-btn': () =>
         document.getElementById('add-sale-form-container')?.classList.toggle('hidden'),
@@ -1763,12 +2323,19 @@ export function setupEventListeners() {
         const name = prompt('Nombre de la nueva categoría:');
         if (name && name.trim()) {
           const newId = name.trim().toLowerCase().replace(/\s+/g, '-');
+<<<<<<< HEAD
           const mainProductAttrName = prompt(
             '¿Cómo se llama el atributo principal de esta categoría? (Ej: Producto, Modelo, Título)'
           );
           if (!mainProductAttrName || !mainProductAttrName.trim()) {
             showModal('Se requiere un nombre para el atributo principal.', 'Error');
             return;
+=======
+          const mainProductAttrName = prompt('¿Cómo se llama el atributo principal de esta categoría? (Ej: Producto, Modelo, Título)');
+          if (!mainProductAttrName || !mainProductAttrName.trim()) {
+              showModal('Se requiere un nombre para el atributo principal.', 'Error');
+              return;
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           }
           const newCategoryData = {
             name: name.trim(),
@@ -1785,8 +2352,7 @@ export function setupEventListeners() {
           await setData('categories', newId, newCategoryData);
         }
       },
-      'edit-category-name-btn': () =>
-        setState({ categoryManager: { isEditingCategoryName: true } }),
+      'edit-category-name-btn': () => setState({ categoryManager: { isEditingCategoryName: true } }),
       'save-category-name-btn': async () => {
         const { selectedCategoryId } = appState.categoryManager;
         const newName = document.getElementById('edit-category-name-input')?.value.trim();
@@ -1828,6 +2394,7 @@ export function setupEventListeners() {
       },
       'add-salesperson-btn': () => openAddSalespersonModal(),
       'add-provider-btn': () => openAddProviderModal(),
+<<<<<<< HEAD
       'back-to-salespeople-list': () =>
         setState({ ui: { ...appState.ui, selectedSalespersonId: null } }),
       'load-more-history': () => {
@@ -1837,10 +2404,17 @@ export function setupEventListeners() {
       'add-new-product-to-category-btn': async () => {
         const { selectedCategoryId } = appState.categoryManager;
         const category = appState.categories.find((c) => c.id === selectedCategoryId);
+=======
+      'back-to-salespeople-list': () => setState({ ui: { ...appState.ui, selectedSalespersonId: null } }),
+      'add-new-product-to-category-btn': async () => {
+        const { selectedCategoryId } = appState.categoryManager;
+        const category = appState.categories.find(c => c.id === selectedCategoryId);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         if (!category) return;
 
         const newProductName = prompt(`Añadir nuevo producto a la categoría "${category.name}":`);
         if (newProductName && newProductName.trim()) {
+<<<<<<< HEAD
           const productAttribute = category.attributes.find(
             (attr) => attr.id.startsWith('attr-product-') || attr.name === 'Producto'
           );
@@ -1851,6 +2425,16 @@ export function setupEventListeners() {
             );
             await updateData('categories', category.id, { attributes: updatedAttributes });
           }
+=======
+            const productAttribute = category.attributes.find(attr => attr.id.startsWith('attr-product-') || attr.name === 'Producto');
+            if (productAttribute && Array.isArray(productAttribute.options)) {
+                const updatedOptions = [newProductName.trim(), ...productAttribute.options];
+                const updatedAttributes = category.attributes.map(attr =>
+                    attr.id === productAttribute.id ? { ...attr, options: updatedOptions } : attr
+                );
+                await updateData('categories', category.id, { attributes: updatedAttributes });
+            }
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         }
       },
     };
@@ -1860,6 +2444,7 @@ export function setupEventListeners() {
     }
 
     const classActionMap = {
+<<<<<<< HEAD
       // =================================================================================
       // INICIO DE MODIFICACIÓN: Se añade el manejador para los botones de vista de deudas
       // =================================================================================
@@ -1878,10 +2463,25 @@ export function setupEventListeners() {
         const { productName } = dataset;
         const { selectedCategoryId } = appState.categoryManager;
         openEditProductOptionsModal(selectedCategoryId, productName);
+=======
+      'debt-view-btn': () => {
+          const { hub, view } = dataset;
+          if (hub === 'operaciones-deudas') {
+              setState({ ui: { ...appState.ui, activeOperacionesDebtsTab: view } });
+          } else if (hub === 'clientes-deudas') {
+              setState({ ui: { ...appState.ui, activeClientesDebtsTab: view } });
+          }
+      },
+      'edit-product-options-btn': () => {
+          const { productName } = dataset;
+          const { selectedCategoryId } = appState.categoryManager;
+          openEditProductOptionsModal(selectedCategoryId, productName);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       },
       'delete-product-from-category-btn': async () => {
         const { productName } = dataset;
         const { selectedCategoryId } = appState.categoryManager;
+<<<<<<< HEAD
         const category = appState.categories.find((c) => c.id === selectedCategoryId);
         if (!category) return;
 
@@ -1909,16 +2509,52 @@ export function setupEventListeners() {
           }
         );
       },
+=======
+        const category = appState.categories.find(c => c.id === selectedCategoryId);
+        if (!category) return;
+
+        openConfirmModal(`¿Seguro que quieres eliminar el producto "${productName}" de la lista? Esto no afectará a los items ya registrados en stock.`, async () => {
+            const productAttribute = category.attributes.find(attr => attr.id.startsWith('attr-product-') || attr.name === 'Producto');
+            if (productAttribute && Array.isArray(productAttribute.options)) {
+                const updatedOptions = productAttribute.options.filter(opt => opt !== productName);
+                const updatedAttributes = category.attributes.map(attr => {
+                    if (attr.id === productAttribute.id) {
+                        return { ...attr, options: updatedOptions };
+                    }
+                    if (attr.dependsOn === productAttribute.id && typeof attr.options === 'object') {
+                        const newDependentOptions = { ...attr.options };
+                        delete newDependentOptions[productName];
+                        return { ...attr, options: newDependentOptions };
+                    }
+                    return attr;
+                });
+                await updateData('categories', category.id, { attributes: updatedAttributes });
+            }
+        });
+      },
+      // ===============================================================
+      // INICIO DE MODIFICACIÓN: Se corrige el manejador de los filtros de fecha
+      // ===============================================================
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       'filter-btn': () => {
         const { hub, period } = dataset;
         if (hub === 'dashboard') {
-          setState({ ui: { dashboard: { dashboardPeriod: period } } });
+            setState({ ui: { ...appState.ui, dashboard: { ...appState.ui.dashboard, dashboardPeriod: period } } });
         } else if (hub === 'analysis') {
+<<<<<<< HEAD
           setState({ ui: { analysis: { analysisPeriod: period } } });
         } else if (hub === 'capital') {
           setState({ ui: { capital: { capitalPeriod: period } } });
+=======
+            setState({ ui: { ...appState.ui, analysis: { ...appState.ui.analysis, analysisPeriod: period } } });
+        } else if (hub === 'capital') {
+            setState({ ui: { ...appState.ui, capital: { ...appState.ui.capital, capitalPeriod: period } } });
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         }
       },
+      // ===============================================================
+      // FIN DE MODIFICACIÓN
+      // ===============================================================
       'category-manager-item': () => {
         if (dataset.categoryId) {
           setState({
@@ -1975,8 +2611,13 @@ export function setupEventListeners() {
         const stockItem = appState.stock.find((s) => s.id === dataset.id);
         const itemName = stockItem ? stockItem.model : 'este item';
         openConfirmModal('¿Seguro que quieres eliminar este item del stock?', async () => {
-          await deleteFromDb('stock', dataset.id);
-          await logCapitalState(`Stock eliminado: ${itemName}`);
+          setGlobalLoading(true);
+          try {
+              await deleteFromDb('stock', dataset.id);
+              await logCapitalState(`Stock eliminado: ${itemName}`);
+          } finally {
+              setGlobalLoading(false);
+          }
         });
       },
       'edit-stock-btn': () => {
@@ -2057,6 +2698,10 @@ export function setupEventListeners() {
         }
 
         openConfirmModal(message, async () => {
+<<<<<<< HEAD
+=======
+          setGlobalLoading(true);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           try {
             await runBatch(async (batch, db, userId) => {
               const reservationRef = doc(db, `users/${userId}/reservations`, reservationId);
@@ -2080,6 +2725,11 @@ export function setupEventListeners() {
           } catch (error) {
             console.error('Error al cancelar la reserva:', error);
             showModal(`Ocurrió un error al cancelar la reserva: ${error.message}`, 'Error');
+<<<<<<< HEAD
+=======
+          } finally {
+            setGlobalLoading(false);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           }
         });
       },
@@ -2229,14 +2879,20 @@ export function setupEventListeners() {
       'stock-search-input-sale': () => setState({ sale: { stockSearchTerm: target.value } }),
       'stock-search-input': () => setState({ stockSearchTerm: target.value }),
       'client-search-input': () => setState({ clientSearchTerm: target.value }),
+<<<<<<< HEAD
       'sales-search-input': () => setState({ salesSearchTerm: target.value }),
       'expenses-search-input': () => setState({ expensesSearchTerm: target.value }),
       'notes-search-input': () => setState({ notesSearchTerm: target.value }),
       'sales-analysis-search': () => renderSalesAnalysis(appState),
+=======
+      'sales-search-input': () => setState({ salesSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, sales: 1 } } }),
+      'expenses-search-input': () => setState({ expensesSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, dailyExpenses: 1 } } }),
+      'notes-search-input': () => setState({ notesSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, notes: 1 } } }),
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       'public-providers-search-input': () => setState({ providersSearchTerm: target.value }),
-      'user-providers-search-input': () => setState({ userProvidersSearchTerm: target.value }),
-      'salespeople-search-input': () => setState({ salespeopleSearchTerm: target.value }),
-      'reservations-search-input': () => setState({ reservationsSearchTerm: target.value }),
+      'user-providers-search-input': () => setState({ userProvidersSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, userProviders: 1 } } }),
+      'salespeople-search-input': () => setState({ salespeopleSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, salespeople: 1 } } }),
+      'reservations-search-input': () => setState({ reservationsSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, reservations: 1 } } }),
     };
     if (actionMap[target.id]) actionMap[target.id]();
   });
@@ -2244,10 +2900,39 @@ export function setupEventListeners() {
   document.body.addEventListener('change', (e) => {
     const target = e.target;
 
+<<<<<<< HEAD
+=======
+    if (target.id === 'analysis-area-selector') {
+        const newArea = target.value;
+        setState({ 
+            ui: { 
+                analysis: { 
+                    ...appState.ui.analysis, 
+                    analysisArea: newArea,
+                    analysisGroupby: null, 
+                    analysisMetric: null, 
+                } 
+            } 
+        });
+        return;
+    }
+
+    if (target.id === 'analysis-groupby-selector') {
+        setState({ ui: { analysis: { ...appState.ui.analysis, analysisGroupby: target.value } } });
+        return;
+    }
+
+    if (target.id === 'analysis-metric-selector') {
+        setState({ ui: { analysis: { ...appState.ui.analysis, analysisMetric: target.value } } });
+        return;
+    }
+
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     if (target.id === 'salesperson-selector') {
       const salespersonId = target.value;
       setState({ sale: { ...appState.sale, salespersonId: salespersonId || null } });
       updateSaleBalance(appState);
+<<<<<<< HEAD
       return;
     }
 
@@ -2298,14 +2983,64 @@ export function setupEventListeners() {
       } else {
         conversionEl.textContent = '';
       }
+=======
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       return;
     }
 
-    if (target.id === 'analysis-selector') {
-      renderSalesAnalysis(appState);
-      return;
+    if (target.closest('#trade-in-details')) {
+        renderTradeInAttributes();
+        return;
     }
 
+<<<<<<< HEAD
+=======
+    if (target.id === 'reservation-has-deposit') {
+      const detailsEl = document.getElementById('reservation-deposit-details');
+      if (detailsEl) {
+        detailsEl.classList.toggle('hidden', !target.checked);
+      }
+    }
+
+    if (target.closest('#stock-form-register')) {
+      renderAddStockForm(appState);
+    }
+
+    if (target.closest('#edit-stock-form')) {
+      const form = target.closest('#edit-stock-form');
+      const item = appState.stock.find((s) => s.id === form.dataset.id);
+
+      if (item) {
+        const currentValues = {};
+        form.querySelectorAll('select, input, textarea').forEach((el) => {
+          if (el.id) currentValues[el.id] = el.value;
+        });
+        openEditStockModal(item, appState, currentValues);
+      }
+    }
+
+    if (target.classList.contains('currency-select')) {
+      const formType = target.dataset.formType;
+      const amountInput = document.querySelector(`.currency-input[data-form-type="${formType}"]`);
+      const currencySelect = document.querySelector(
+        `.currency-select[data-form-type="${formType}"]`
+      );
+      const conversionEl = document.getElementById(`${formType}-conversion`);
+
+      if (!amountInput || !currencySelect || !conversionEl) return;
+
+      const amount = parseFloat(amountInput.value) || 0;
+      const currency = currencySelect.value;
+      const { exchangeRate } = appState;
+      if (currency === 'ARS' && amount > 0) {
+        conversionEl.textContent = `~ ${formatCurrency(amount / exchangeRate, 'USD')}`;
+      } else {
+        conversionEl.textContent = '';
+      }
+      return;
+    }
+    
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     if (target.id === 'stock-category-modal' || target.id === 'edit-stock-category') {
       const allCategories = [...(appState.categories || []), ...DEFAULT_CATEGORIES];
       const selectedCategory = allCategories.find((c) => c.name === target.value);
@@ -2367,6 +3102,7 @@ export function setupEventListeners() {
       e.preventDefault();
       document.getElementById('save-category-name-btn')?.click();
     }
+<<<<<<< HEAD
     // =================================================================================
     // INICIO DE MODIFICACIÓN: AÑADIR OPCIÓN AL PRESIONAR ENTER
     // =================================================================================
@@ -2378,5 +3114,12 @@ export function setupEventListeners() {
     // =================================================================================
     // FIN DE MODIFICACIÓN
     // =================================================================================
+=======
+    if (e.target.matches('.add-option-input') && e.key === 'Enter') {
+        e.preventDefault();
+        const button = e.target.nextElementSibling;
+        if (button) button.click();
+    }
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   });
 }

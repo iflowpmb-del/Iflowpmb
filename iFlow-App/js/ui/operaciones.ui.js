@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { WALLET_CONFIG } from '../state.js';
+=======
+import { WALLET_CONFIG, setState, appState } from '../state.js';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 import { formatCurrency, formatDate, formatDateTime, escapeHTML } from './utils.js';
 import { showModal } from './modales.js';
 
@@ -32,7 +36,11 @@ function renderDebtsList(state) {
   // =================================================================================
   // INICIO DE MODIFICACIÓN: Filtra solo las deudas pendientes
   // =================================================================================
+<<<<<<< HEAD
   const pendingDebts = state.debts.filter((debt) => debt.status !== 'saldada');
+=======
+  const pendingDebts = state.debts.filter(debt => debt.status !== 'saldada');
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   // =================================================================================
   // FIN DE MODIFICACIÓN
   // =================================================================================
@@ -65,10 +73,14 @@ function renderDebtsList(state) {
                         (p) => `
                         <div class="bg-gray-100 p-2 rounded-md text-xs">
                             <div class="flex justify-between">
+<<<<<<< HEAD
                                 <span class="font-medium">${formatCurrency(
                                   p.amountUSD,
                                   'USD'
                                 )}</span>
+=======
+                                <span class="font-medium">${formatCurrency(p.amountUSD, 'USD')}</span>
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                                 <span class="text-gray-500">${formatDateTime(p.createdAt)}</span>
                             </div>
                         </div>
@@ -129,6 +141,7 @@ function renderDebtsList(state) {
  * @param {object} state El estado actual de la aplicación.
  */
 function renderDebtsHistory(state) {
+<<<<<<< HEAD
   const container = document.getElementById('provider-debts-history-container');
   const noMessage = document.getElementById('no-provider-debts-history-message');
   if (!container || !noMessage || !state.debts) return;
@@ -151,28 +164,58 @@ function renderDebtsHistory(state) {
                         <p class="font-bold text-lg text-gray-700">${escapeHTML(
                           debt.debtorName
                         )}</p>
+=======
+    const container = document.getElementById('provider-debts-history-container');
+    const noMessage = document.getElementById('no-provider-debts-history-message');
+    if (!container || !noMessage || !state.debts) return;
+
+    const settledDebts = state.debts.filter(debt => debt.status === 'saldada');
+
+    noMessage.classList.toggle('hidden', settledDebts.length > 0);
+    if (settledDebts.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = settledDebts
+        .sort((a, b) => (b.settledAt?.toMillis() || 0) - (a.settledAt?.toMillis() || 0))
+        .map(debt => `
+            <div class="card p-4 bg-gray-50 opacity-80">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="font-bold text-lg text-gray-700">${escapeHTML(debt.debtorName)}</p>
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                         <p class="text-sm text-gray-500">${escapeHTML(debt.description)}</p>
                     </div>
                     <div class="text-right">
                         <p class="font-semibold text-lg text-green-600">Saldada</p>
                         <p class="text-xs text-gray-400">
+<<<<<<< HEAD
                             ${
                               debt.settledAt
                                 ? formatDate(debt.settledAt.toDate())
                                 : 'Fecha no disponible'
                             }
+=======
+                            ${debt.settledAt ? formatDate(debt.settledAt.toDate()) : 'Fecha no disponible'}
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                         </p>
                     </div>
                 </div>
             </div>
+<<<<<<< HEAD
         `
     )
     .join('');
+=======
+        `).join('');
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 }
 // =================================================================================
 // FIN DE MODIFICACIÓN
 // =================================================================================
 
+<<<<<<< HEAD
 /**
  * Obtiene el estado de un gasto fijo (pagado, pendiente, vencido).
  * @param {object} expense El objeto del gasto fijo.
@@ -200,6 +243,67 @@ function getFixedExpenseStatus(expense) {
     };
   }
 }
+=======
+
+// ===============================================================
+// INICIO DE MODIFICACIÓN: Lógica de estado de gastos fijos mejorada
+// ===============================================================
+/**
+ * Obtiene el estado de un gasto fijo (pagado, pendiente, vencido), considerando pagos parciales.
+ * @param {object} expense El objeto del gasto fijo.
+ * @param {Array} dailyExpenses La lista completa de gastos diarios (que incluye los pagos de gastos fijos).
+ * @param {number} exchangeRate La tasa de cambio actual.
+ * @returns {object} Un objeto con el texto, color y si es pagable.
+ */
+function getFixedExpenseStatus(expense, dailyExpenses, exchangeRate) {
+  const now = new Date();
+  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const currentYear = todayUTC.getUTCFullYear();
+  const currentMonth = (todayUTC.getUTCMonth() + 1).toString().padStart(2, '0');
+  const currentMonthID = `${currentYear}-${currentMonth}`;
+  
+  // Si está marcado como pagado en el documento principal, ya está.
+  if (expense.lastPaidMonth === currentMonthID) {
+    return { text: 'Pagado este mes', color: 'text-green-500', isPayable: false, remaining: 0 };
+  }
+
+  // Calcular el total a pagar en USD
+  const totalDueUSD = expense.currency === 'ARS' ? expense.amount / exchangeRate : expense.amount;
+
+  // Calcular el total pagado este mes para este gasto
+  const paymentsThisMonth = dailyExpenses.filter(p => 
+      p.fixedExpenseParentId === expense.id && 
+      p.date.startsWith(currentMonthID)
+  );
+  const totalPaidThisMonth = paymentsThisMonth.reduce((sum, p) => sum + p.amountUSD, 0);
+  const remainingAmount = totalDueUSD - totalPaidThisMonth;
+
+  // Si el remanente es cero o menos, está pagado.
+  if (remainingAmount < 0.01) {
+      return { text: 'Pagado este mes', color: 'text-green-500', isPayable: false, remaining: 0 };
+  }
+
+  // Si aún queda por pagar, calcular si está vencido o pendiente.
+  const paymentDay = expense.paymentDay || 1;
+  const dueDateUTC = new Date(Date.UTC(currentYear, todayUTC.getUTCMonth(), paymentDay));
+  const timeDiff = dueDateUTC.getTime() - todayUTC.getTime();
+  const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+  let statusText = `Pendiente: ${formatCurrency(remainingAmount, 'USD')}`;
+  let color = 'text-yellow-600';
+
+  if (daysDiff < 0) {
+      statusText += ` (Vencido hace ${Math.abs(daysDiff)} días)`;
+      color = 'text-red-500';
+  }
+
+  return { text: statusText, color: color, isPayable: true, remaining: remainingAmount };
+}
+// ===============================================================
+// FIN DE MODIFICACIÓN
+// ===============================================================
+
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
 /**
  * Renderiza la sección de gestión de gastos (fijos y diarios).
@@ -216,6 +320,7 @@ function renderExpensesSection(state) {
   const fixedList = document.getElementById('fixed-expenses-list-consultas');
   if (fixedList) {
     if (fixedExpenses.length > 0) {
+<<<<<<< HEAD
       fixedList.innerHTML = fixedExpenses
         .map((exp) => {
           const status = getFixedExpenseStatus(exp);
@@ -224,13 +329,30 @@ function renderExpensesSection(state) {
           if (exp.currency === 'ARS') {
             const amountInUSD = exp.amount / exchangeRate;
             amountDisplay = `
+=======
+      // ===============================================================
+      // INICIO DE MODIFICACIÓN: Renderizado de gastos fijos con nuevo estado
+      // ===============================================================
+      fixedList.innerHTML = fixedExpenses
+        .map((exp) => {
+          const status = getFixedExpenseStatus(exp, dailyExpenses, exchangeRate);
+          
+          let amountDisplay = '';
+          if (exp.currency === 'ARS') {
+              const amountInUSD = exp.amount / exchangeRate;
+              amountDisplay = `
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                   <div>
                       <p class="font-semibold">${formatCurrency(exp.amount, 'ARS')}</p>
                       <p class="text-xs text-gray-500">~ ${formatCurrency(amountInUSD, 'USD')}</p>
                   </div>
               `;
           } else {
+<<<<<<< HEAD
             amountDisplay = `<p class="font-semibold">${formatCurrency(exp.amount, 'USD')}</p>`;
+=======
+              amountDisplay = `<p class="font-semibold">${formatCurrency(exp.amount, 'USD')}</p>`;
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           }
 
           return `
@@ -244,7 +366,11 @@ function renderExpensesSection(state) {
                       ${
                         status.isPayable
                           ? `<button class="btn-primary px-3 py-1 text-sm pay-fixed-expense-btn" data-id="${exp.id}">Pagar</button>`
+<<<<<<< HEAD
                           : ''
+=======
+                          : `<span class="px-3 py-1 text-sm text-gray-400">Pagado</span>`
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                       }
                       <button class="edit-fixed-expense-btn p-2 text-gray-400 hover:text-blue-500" data-expense='${JSON.stringify(
                         exp
@@ -257,6 +383,12 @@ function renderExpensesSection(state) {
           `;
         })
         .join('');
+<<<<<<< HEAD
+=======
+      // ===============================================================
+      // FIN DE MODIFICACIÓN
+      // ===============================================================
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     } else {
       fixedList.innerHTML = `<p class="text-gray-500 text-center py-4">No has añadido gastos fijos.</p>`;
     }
@@ -476,12 +608,17 @@ export function openEditFixedExpenseModal(expense) {
                           expense.amount
                         }" required>
                         <select id="edit-fixed-expense-currency" data-form-type="fixed-expense-edit" class="currency-select form-select p-2">
+<<<<<<< HEAD
                             <option value="USD" ${
                               !expense.currency || expense.currency === 'USD' ? 'selected' : ''
                             }>USD</option>
                             <option value="ARS" ${
                               expense.currency === 'ARS' ? 'selected' : ''
                             }>ARS</option>
+=======
+                            <option value="USD" ${(!expense.currency || expense.currency === 'USD') ? 'selected' : ''}>USD</option>
+                            <option value="ARS" ${expense.currency === 'ARS' ? 'selected' : ''}>ARS</option>
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                         </select>
                     </div>
                     <p id="fixed-expense-edit-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>

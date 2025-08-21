@@ -24,6 +24,7 @@ export const DEFAULT_CATEGORIES = [
     id: 'iphone',
     name: 'iPhone',
     attributes: [
+<<<<<<< HEAD
       {
         id: 'model',
         name: 'Producto',
@@ -60,6 +61,10 @@ export const DEFAULT_CATEGORIES = [
         type: 'select',
         dependsOn: 'model',
         options: {
+=======
+      { id: 'model', name: 'Producto', type: 'select', options: ['iPhone 16 Pro Max', 'iPhone 16 Pro', 'iPhone 16 Plus', 'iPhone 16', 'iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15 Plus', 'iPhone 15', 'iPhone 14 Pro Max', 'iPhone 14 Pro', 'iPhone 14 Plus', 'iPhone 14', 'iPhone 13 Pro Max', 'iPhone 13 Pro', 'iPhone 13', 'iPhone 12 Pro Max', 'iPhone 12 Pro', 'iPhone 12', 'iPhone 12 mini', 'iPhone 11 Pro Max', 'iPhone 11 Pro', 'iPhone 11'], required: true },
+      { id: 'storage', name: 'Almacenamiento', type: 'select', dependsOn: 'model', options: {
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           'iPhone 16 Pro Max': ['256GB', '512GB', '1TB'],
           'iPhone 16 Pro': ['256GB', '512GB', '1TB'],
           'iPhone 16 Plus': ['128GB', '256GB', '512GB'],
@@ -82,6 +87,7 @@ export const DEFAULT_CATEGORIES = [
           'iPhone 11 Pro Max': ['64GB', '256GB', '512GB'],
           'iPhone 11 Pro': ['64GB', '256GB', '512GB'],
           'iPhone 11': ['64GB', '128GB', '256GB'],
+<<<<<<< HEAD
         },
         required: true,
       },
@@ -111,6 +117,15 @@ export const DEFAULT_CATEGORIES = [
             'Titanio Blanco',
             'Titanio Negro',
           ],
+=======
+      }, required: true },
+      { id: 'color', name: 'Color', type: 'select', dependsOn: 'model', options: {
+          'iPhone 16 Pro Max': ['Titanio Desierto', 'Titanio Gris', 'Titanio Blanco', 'Titanio Negro Espacial'],
+          'iPhone 16 Pro': ['Titanio Desierto', 'Titanio Gris', 'Titanio Blanco', 'Titanio Negro Espacial'],
+          'iPhone 16 Plus': ['Rosa', 'Amarillo', 'Azul', 'Verde', 'Negro', 'Blanco'],
+          'iPhone 16': ['Rosa', 'Amarillo', 'Azul', 'Verde', 'Negro', 'Blanco'],
+          'iPhone 15 Pro Max': ['Titanio Natural', 'Titanio Azul', 'Titanio Blanco', 'Titanio Negro'],
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           'iPhone 15 Pro': ['Titanio Natural', 'Titanio Azul', 'Titanio Blanco', 'Titanio Negro'],
           'iPhone 15 Plus': ['Rosa', 'Amarillo', 'Verde', 'Azul', 'Negro'],
           'iPhone 15': ['Rosa', 'Amarillo', 'Verde', 'Azul', 'Negro'],
@@ -128,6 +143,7 @@ export const DEFAULT_CATEGORIES = [
           'iPhone 11 Pro Max': ['Verde Medianoche', 'Plata', 'Gris Espacial', 'Oro'],
           'iPhone 11 Pro': ['Verde Medianoche', 'Plata', 'Gris Espacial', 'Oro'],
           'iPhone 11': ['Negro', 'Blanco', 'Rojo', 'Verde', 'Amarillo', 'Púrpura'],
+<<<<<<< HEAD
         },
         required: true,
       },
@@ -138,6 +154,10 @@ export const DEFAULT_CATEGORIES = [
         options: ['Caja Sellada', 'A+', 'A', 'B', 'C'],
         required: true,
       },
+=======
+      }, required: true },
+      { id: 'grade', name: 'Grado', type: 'select', options: ['Caja Sellada', 'A+', 'A', 'B', 'C'], required: true },
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       { id: 'battery', name: 'Batería (%)', type: 'number', required: false },
     ],
   },
@@ -145,6 +165,7 @@ export const DEFAULT_CATEGORIES = [
     id: 'macbook',
     name: 'MacBook',
     attributes: [
+<<<<<<< HEAD
       {
         id: 'model',
         name: 'Producto',
@@ -219,10 +240,47 @@ export const DEFAULT_CATEGORIES = [
       },
       { id: 'battery-cycles', name: 'Ciclos Batería', type: 'number', required: false },
     ],
+=======
+        { id: 'model', name: 'Producto', type: 'select', options: ['MacBook Air M4 13"', 'MacBook Air M4 15"', 'MacBook Pro M4 14"', 'MacBook Pro M4 Pro/Max 14"', 'MacBook Pro M4 Pro/Max 16"', 'MacBook Air M3 13"', 'MacBook Air M3 15"', 'MacBook Air M2 13"', 'MacBook Air M2 15"', 'MacBook Air M1 13"', 'MacBook Pro M3 14"', 'MacBook Pro M3 Pro/Max 14"', 'MacBook Pro M3 Pro/Max 16"'], required: true },
+        { id: 'ram', name: 'RAM', type: 'select', dependsOn: 'model', options: {
+            'MacBook Air M4 13"': ['8GB', '16GB', '24GB'],
+            'MacBook Air M4 15"': ['8GB', '16GB', '24GB'],
+            'MacBook Pro M4 14"': ['8GB', '16GB', '24GB'],
+            'MacBook Pro M4 Pro/Max 14"': ['18GB', '36GB', '48GB', '96GB'],
+            'MacBook Pro M4 Pro/Max 16"': ['18GB', '36GB', '48GB', '96GB'],
+            'MacBook Air M3 13"': ['8GB', '16GB', '24GB'],
+            'MacBook Air M3 15"': ['8GB', '16GB', '24GB'],
+            'MacBook Air M2 13"': ['8GB', '16GB', '24GB'],
+            'MacBook Air M2 15"': ['8GB', '16GB', '24GB'],
+            'MacBook Air M1 13"': ['8GB', '16GB'],
+            'MacBook Pro M3 14"': ['8GB', '16GB', '24GB'],
+            'MacBook Pro M3 Pro/Max 14"': ['18GB', '36GB', '48GB', '64GB', '96GB', '128GB'],
+            'MacBook Pro M3 Pro/Max 16"': ['18GB', '36GB', '48GB', '64GB', '96GB', '128GB'],
+        }, required: true },
+        { id: 'storage', name: 'Almacenamiento', type: 'select', dependsOn: 'model', options: {
+            'MacBook Air M4 13"': ['256GB', '512GB', '1TB', '2TB'],
+            'MacBook Air M4 15"': ['256GB', '512GB', '1TB', '2TB'],
+            'MacBook Pro M4 14"': ['512GB', '1TB', '2TB'],
+            'MacBook Pro M4 Pro/Max 14"': ['512GB', '1TB', '2TB', '4TB'],
+            'MacBook Pro M4 Pro/Max 16"': ['512GB', '1TB', '2TB', '4TB'],
+            'MacBook Air M3 13"': ['256GB', '512GB', '1TB', '2TB'],
+            'MacBook Air M3 15"': ['256GB', '512GB', '1TB', '2TB'],
+            'MacBook Air M2 13"': ['256GB', '512GB', '1TB', '2TB'],
+            'MacBook Air M2 15"': ['256GB', '512GB', '1TB', '2TB'],
+            'MacBook Air M1 13"': ['256GB', '512GB', '1TB', '2TB'],
+            'MacBook Pro M3 14"': ['512GB', '1TB', '2TB'],
+            'MacBook Pro M3 Pro/Max 14"': ['512GB', '1TB', '2TB', '4TB', '8TB'],
+            'MacBook Pro M3 Pro/Max 16"': ['512GB', '1TB', '2TB', '4TB', '8TB'],
+        }, required: true },
+        { id: 'grade', name: 'Grado', type: 'select', options: ['Caja Sellada', 'A+', 'A', 'B', 'C'], required: true },
+        { id: 'battery-cycles', name: 'Ciclos Batería', type: 'number', required: false },
+    ]
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   },
   {
     id: 'ipad',
     name: 'iPad',
+<<<<<<< HEAD
     attributes: [
       {
         id: 'model',
@@ -268,8 +326,48 @@ export const DEFAULT_CATEGORIES = [
         required: true,
       },
     ],
+=======
+    attributes: [
+        { id: 'model', name: 'Producto', type: 'select', options: ['iPad Pro 13" (M4)', 'iPad Pro 11" (M4)', 'iPad Air 13" (M2)', 'iPad Air 11" (M2)', 'iPad (10th Gen)', 'iPad Mini (6th Gen)'], required: true },
+        { id: 'storage', name: 'Almacenamiento', type: 'select', dependsOn: 'model', options: {
+            'iPad Pro 13" (M4)': ['256GB', '512GB', '1TB', '2TB'],
+            'iPad Pro 11" (M4)': ['256GB', '512GB', '1TB', '2TB'],
+            'iPad Air 13" (M2)': ['128GB', '256GB', '512GB', '1TB'],
+            'iPad Air 11" (M2)': ['128GB', '256GB', '512GB', '1TB'],
+            'iPad (10th Gen)': ['64GB', '256GB'],
+            'iPad Mini (6th Gen)': ['64GB', '256GB'],
+        }, required: true },
+        { id: 'connectivity', name: 'Conectividad', type: 'select', options: ['Wi-Fi', 'Wi-Fi + Cellular'], required: true },
+        { id: 'grade', name: 'Grado', type: 'select', options: ['Caja Sellada', 'A+', 'A', 'B', 'C'], required: true },
+    ]
   },
   {
+    id: 'apple-watch',
+    name: 'Apple Watch',
+    attributes: [
+        { id: 'model', name: 'Producto', type: 'select', options: ['Apple Watch Ultra 3', 'Apple Watch Series 10', 'Apple Watch Ultra 2', 'Apple Watch Series 9', 'Apple Watch SE'], required: true },
+        { id: 'size', name: 'Tamaño', type: 'select', dependsOn: 'model', options: {
+            'Apple Watch Ultra 3': ['49mm'],
+            'Apple Watch Series 10': ['41mm', '45mm'],
+            'Apple Watch Ultra 2': ['49mm'],
+            'Apple Watch Series 9': ['41mm', '45mm'],
+            'Apple Watch SE': ['40mm', '44mm'],
+        }, required: true },
+        { id: 'material', name: 'Material', type: 'select', dependsOn: 'model', options: {
+            'Apple Watch Ultra 3': ['Titanio'],
+            'Apple Watch Series 10': ['Aluminio', 'Acero Inoxidable'],
+            'Apple Watch Ultra 2': ['Titanio'],
+            'Apple Watch Series 9': ['Aluminio', 'Acero Inoxidable'],
+            'Apple Watch SE': ['Aluminio'],
+        }, required: true },
+        { id: 'grade', name: 'Grado', type: 'select', options: ['Caja Sellada', 'A+', 'A', 'B', 'C'], required: true },
+        { id: 'battery', name: 'Batería (%)', type: 'number', required: false },
+    ]
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
+  },
+  // --- Xiaomi ---
+  {
+<<<<<<< HEAD
     id: 'apple-watch',
     name: 'Apple Watch',
     attributes: [
@@ -343,12 +441,25 @@ export const DEFAULT_CATEGORIES = [
       { id: 'color', name: 'Color', type: 'text', required: false },
       { id: 'grade', name: 'Grado', type: 'select', options: ['Nuevo', 'Usado'], required: true },
     ],
+=======
+    id: 'xiaomi',
+    name: 'Xiaomi',
+    attributes: [
+        { id: 'model', name: 'Producto', type: 'select', options: ['Redmi 14c'], required: true },
+        { id: 'config', name: 'Configuración', type: 'select', dependsOn: 'model', options: {
+            'Redmi 14c': ['128GB / 8GB RAM', '256GB / 16GB RAM']
+        }, required: true },
+        { id: 'color', name: 'Color', type: 'text', required: false},
+        { id: 'grade', name: 'Grado', type: 'select', options: ['Nuevo', 'Usado'], required: true },
+    ]
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   },
   // --- Consolas y Electrónica ---
   {
     id: 'consolas-electronica',
     name: 'Consolas y Electrónica',
     attributes: [
+<<<<<<< HEAD
       {
         id: 'product',
         name: 'Producto',
@@ -369,12 +480,22 @@ export const DEFAULT_CATEGORIES = [
         required: true,
       },
     ],
+=======
+        { id: 'product', name: 'Producto', type: 'select', options: ['PlayStation 5', 'Android TV', 'Proyector Ultra HD'], required: true },
+        { id: 'spec', name: 'Especificación', type: 'select', dependsOn: 'product', options: {
+            'PlayStation 5': ['Digital 1TB'],
+            'Android TV': ['Calidad TOP (Magic Instalado)'],
+            'Proyector Ultra HD': ['Estándar']
+        }, required: true },
+    ]
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   },
   // --- Auriculares ---
   {
     id: 'auriculares',
     name: 'Auriculares',
     attributes: [
+<<<<<<< HEAD
       {
         id: 'model',
         name: 'Producto',
@@ -396,12 +517,23 @@ export const DEFAULT_CATEGORIES = [
         required: true,
       },
     ],
+=======
+        { id: 'model', name: 'Producto', type: 'select', options: ['AirPods Pro 2da Gen', 'AirPods 4ta Gen', 'AirPods Max', 'InPods 12'], required: true },
+        { id: 'type', name: 'Tipo', type: 'select', dependsOn: 'model', options: {
+            'AirPods Pro 2da Gen': ['Original', 'Réplica'],
+            'AirPods 4ta Gen': ['Original', 'Réplica'],
+            'AirPods Max': ['Original', 'Réplica'],
+            'InPods 12': ['Réplica']
+        }, required: true },
+    ]
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   },
   // --- Parlantes ---
   {
     id: 'parlantes',
     name: 'Parlantes',
     attributes: [
+<<<<<<< HEAD
       {
         id: 'model',
         name: 'Producto',
@@ -423,12 +555,23 @@ export const DEFAULT_CATEGORIES = [
         required: true,
       },
     ],
+=======
+        { id: 'model', name: 'Producto', type: 'select', options: ['JBL GO 4', 'JBL Charge 6 Flip', 'JBL Charge 7 Flip', 'Astronauta Parlante'], required: true },
+        { id: 'spec', name: 'Especificación', type: 'select', dependsOn: 'model', options: {
+            'JBL GO 4': ['Certificado'],
+            'JBL Charge 6 Flip': ['Estándar'],
+            'JBL Charge 7 Flip': ['Estándar'],
+            'Astronauta Parlante': ['Estándar']
+        }, required: true },
+    ]
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   },
   // --- Smartwatches (Replicas) ---
   {
     id: 'smartwatches-replicas',
     name: 'Smartwatches (Réplicas)',
     attributes: [
+<<<<<<< HEAD
       {
         id: 'model',
         name: 'Producto',
@@ -448,12 +591,21 @@ export const DEFAULT_CATEGORIES = [
         required: true,
       },
     ],
+=======
+        { id: 'model', name: 'Producto', type: 'select', options: ['Apple Watch Ultra 2 Réplica', 'Apple Watch Series 10 Réplica'], required: true },
+        { id: 'spec', name: 'Especificación', type: 'select', dependsOn: 'model', options: {
+            'Apple Watch Ultra 2 Réplica': ['49mm'],
+            'Apple Watch Series 10 Réplica': ['46mm']
+        }, required: true },
+    ]
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   },
   // --- Perfumería ---
   {
     id: 'perfumeria',
     name: 'Perfumería',
     attributes: [
+<<<<<<< HEAD
       {
         id: 'product',
         name: 'Producto',
@@ -475,12 +627,23 @@ export const DEFAULT_CATEGORIES = [
       },
       { id: 'fragrance', name: 'Fragancia/Modelo', type: 'text', required: true },
     ],
+=======
+        { id: 'product', name: 'Producto', type: 'select', options: ["Splash Victoria's Secret", "Crema Victoria's Secret", "Perfume Árabe"], required: true },
+        { id: 'type', name: 'Tipo', type: 'select', dependsOn: 'product', options: {
+            "Splash Victoria's Secret": ['Original', 'Réplica'],
+            "Crema Victoria's Secret": ['Original'],
+            "Perfume Árabe": ['Original']
+        }, required: true },
+        { id: 'fragrance', name: 'Fragancia/Modelo', type: 'text', required: true },
+    ]
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   },
   // --- Accesorios Apple ---
   {
     id: 'accesorios-apple',
     name: 'Accesorios Apple',
     attributes: [
+<<<<<<< HEAD
       {
         id: 'product',
         name: 'Producto',
@@ -509,12 +672,24 @@ export const DEFAULT_CATEGORIES = [
         required: true,
       },
     ],
+=======
+        { id: 'product', name: 'Producto', type: 'select', options: ['AirTag', 'Cable USB-C a Lightning', 'Cable USB-C a USB-C', 'Cargador 20W', 'Combo Cargador + Cable'], required: true },
+        { id: 'type', name: 'Tipo', type: 'select', dependsOn: 'product', options: {
+            'AirTag': ['Original'],
+            'Cable USB-C a Lightning': ['Original', 'Réplica'],
+            'Cable USB-C a USB-C': ['Original', 'Réplica'],
+            'Cargador 20W': ['Original', 'Réplica AAA+'],
+            'Combo Cargador + Cable': ['Original', 'Réplica AAA+']
+        }, required: true },
+    ]
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   },
   // --- Accesorios Celulares ---
   {
     id: 'accesorios-celulares',
     name: 'Accesorios Celulares',
     attributes: [
+<<<<<<< HEAD
       {
         id: 'product',
         name: 'Producto',
@@ -524,12 +699,18 @@ export const DEFAULT_CATEGORIES = [
       },
       { id: 'spec', name: 'Modelo/Especificación', type: 'text', required: true },
     ],
+=======
+        { id: 'product', name: 'Producto', type: 'select', options: ['Vidrio Templado', 'Funda Transparente', 'Funda Silicona'], required: true },
+        { id: 'spec', name: 'Modelo/Especificación', type: 'text', required: true },
+    ]
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   },
   // --- Hogar ---
   {
     id: 'hogar',
     name: 'Hogar',
     attributes: [
+<<<<<<< HEAD
       {
         id: 'product',
         name: 'Producto',
@@ -538,12 +719,17 @@ export const DEFAULT_CATEGORIES = [
         required: true,
       },
     ],
+=======
+        { id: 'product', name: 'Producto', type: 'select', options: ['Aspiradora Robot', 'Inflador Portátil'], required: true },
+    ]
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   },
   // --- Hidratación & Lifestyle ---
   {
     id: 'hidratacion-lifestyle',
     name: 'Hidratación & Lifestyle',
     attributes: [
+<<<<<<< HEAD
       {
         id: 'product',
         name: 'Producto',
@@ -564,12 +750,22 @@ export const DEFAULT_CATEGORIES = [
       },
       { id: 'color', name: 'Color', type: 'text', required: false },
     ],
+=======
+        { id: 'product', name: 'Producto', type: 'select', options: ['Quencher STANLEY', 'Set STANLEY'], required: true },
+        { id: 'spec', name: 'Especificación', type: 'select', dependsOn: 'product', options: {
+            'Quencher STANLEY': ['Estándar'],
+            'Set STANLEY': ['Termo 1.2L + Mate 236ml']
+        }, required: true },
+        { id: 'color', name: 'Color', type: 'text', required: false },
+    ]
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   },
   // --- Vapeadores ---
   {
     id: 'vapeadores',
     name: 'Vapeadores',
     attributes: [
+<<<<<<< HEAD
       {
         id: 'model',
         name: 'Producto',
@@ -595,12 +791,33 @@ export const DEFAULT_CATEGORIES = [
         options: ['Nuevo', 'Usado'],
         required: false,
       },
+=======
+        { id: 'model', name: 'Producto', type: 'select', options: ['Elfbar 40.000', 'Lost Mary Mixer 30k', 'Ignite V250', 'Otro'], required: true },
+        { id: 'flavor', name: 'Sabor/Especificación', type: 'text', required: true },
+    ]
+  },
+  // =================================================================================
+  // INICIO DE LA MODIFICACIÓN: Categoría "Otro" simplificada
+  // =================================================================================
+  {
+    id: 'universal',
+    name: 'Estándar o Universal',
+    attributes: [
+      { id: 'description', name: 'Descripción', type: 'text', required: true },
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     ],
   },
+  // =================================================================================
+  // FIN DE LA MODIFICACIÓN
+  // =================================================================================
 ];
 // =================================================================================
 // >>>>>>>>>> FIN DE LA MODIFICACIÓN <<<<<<<<<<
 // =================================================================================
+<<<<<<< HEAD
+=======
+
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
 const initialState = {
   user: null,
@@ -617,7 +834,10 @@ const initialState = {
   notes: null,
   // INICIO CAMBIO: Se añade capitalHistory al estado inicial.
   capitalHistory: null,
+<<<<<<< HEAD
   // FIN CAMBIO
+=======
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   reservations: null,
   salespeople: null,
   userProviders: null,
@@ -638,6 +858,13 @@ const initialState = {
 
   isDataLoading: true,
   isInitialRender: true,
+  // ===============================================================
+  // INICIO DE MODIFICACIÓN: Estado para el overlay de carga global
+  // ===============================================================
+  isGlobalLoading: false,
+  // ===============================================================
+  // FIN DE MODIFICACIÓN
+  // ===============================================================
   ui: {
     collapsedSections: {
       ventas: false,
@@ -646,6 +873,7 @@ const initialState = {
       gastos: false,
       deudas: false,
     },
+<<<<<<< HEAD
     // INICIO CAMBIO: Se añade el estado para la sub-pestaña de Billeteras.
     activeCapitalSubTab: 'principal',
     // FIN CAMBIO
@@ -661,12 +889,23 @@ const initialState = {
     // FIN DE MODIFICACIÓN
     // =================================================================================
     // INICIO DE LA MODIFICACIÓN
+=======
+    activeCapitalSubTab: 'principal',
+    activeSalesSubTab: 'nueva',
+    activeOperacionesSubTab: 'gastos',
+    activeClientesSubTab: 'lista',
+    activeOperacionesDebtsTab: 'pendientes',
+    activeClientesDebtsTab: 'pendientes',
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     capital: {
       capitalPeriod: 'month',
       capitalCustomStartDate: '',
       capitalCustomEndDate: '',
     },
+<<<<<<< HEAD
     // FIN DE LA MODIFICACIÓN
+=======
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     dashboard: {
       dashboardPeriod: 'month',
       dashboardCustomStartDate: '',
@@ -677,6 +916,23 @@ const initialState = {
       analysisCustomStartDate: '',
       analysisCustomEndDate: '',
     },
+    // ===============================================================
+    // INICIO DE MODIFICACIÓN: Estado para la paginación de listas
+    // ===============================================================
+    pages: {
+        sales: 1,
+        dailyExpenses: 1,
+        notes: 1,
+        reservations: 1,
+        salespeople: 1,
+        userProviders: 1,
+        clientDebts: 1,
+        providerDebts: 1,
+        capitalHistory: 1,
+    }
+    // ===============================================================
+    // FIN DE MODIFICACIÓN
+    // ===============================================================
   },
   addSaleForm: { isFormVisible: false },
   addClientForm: { isFormVisible: false },
@@ -689,7 +945,11 @@ const initialState = {
     suggestedSalePrice: '',
     quantity: 1,
     isFormVisible: false,
+<<<<<<< HEAD
     productSearchTerm: '', // Nuevo estado para el buscador
+=======
+    productSearchTerm: '',
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   },
   sale: {
     clientSearchTerm: '',
@@ -752,6 +1012,13 @@ export function setState(newState) {
       capital: { ...appState.ui.capital, ...newState.ui.capital },
       dashboard: { ...appState.ui.dashboard, ...newState.ui.dashboard },
       analysis: { ...appState.ui.analysis, ...newState.ui.analysis },
+      // ===============================================================
+      // INICIO DE MODIFICACIÓN: Asegurar que el objeto 'pages' se fusione correctamente
+      // ===============================================================
+      pages: { ...(appState.ui.pages || {}), ...(newState.ui.pages || {}) },
+      // ===============================================================
+      // FIN DE MODIFICACIÓN
+      // ===============================================================
     };
     delete newState.ui;
   }
@@ -786,4 +1053,5 @@ export let charts = {
   salesMetrics: null,
   capitalGrowth: null,
   salesAnalysis: null,
+  capitalEvolution: null,
 };

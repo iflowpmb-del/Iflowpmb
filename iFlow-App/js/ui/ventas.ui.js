@@ -153,6 +153,7 @@ export function renderSalesSection(state) {
   const commissionContainer = document.getElementById('commission-container');
   if (salespersonSelector && commissionContainer) {
     salespersonSelector.innerHTML = '<option value="">Ninguno</option>';
+<<<<<<< HEAD
     salespeople.forEach((person) => {
       const option = document.createElement('option');
       option.value = person.id;
@@ -161,6 +162,16 @@ export function renderSalesSection(state) {
         option.selected = true;
       }
       salespersonSelector.appendChild(option);
+=======
+    salespeople.forEach(person => {
+        const option = document.createElement('option');
+        option.value = person.id;
+        option.textContent = person.name;
+        if (sale.salespersonId === person.id) {
+            option.selected = true;
+        }
+        salespersonSelector.appendChild(option);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     });
 
     commissionContainer.classList.toggle('hidden', !sale.salespersonId);
@@ -225,7 +236,11 @@ export function renderSalesHistory(state) {
     .map((day) => {
       const salesOfTheDay = salesByDay[day];
       const dayTotal = salesOfTheDay.reduce((sum, s) => sum + s.total, 0);
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       const dayProfit = salesOfTheDay.reduce((sum, s) => {
         const itemsCost = (s.items || []).reduce((itemSum, i) => itemSum + (i.phoneCost || 0), 0);
         const commission = s.commissionUSD || 0;
@@ -261,10 +276,14 @@ export function renderSalesHistory(state) {
  * @returns {string} El HTML de la tarjeta de venta.
  */
 function renderSaleCard(sale) {
+<<<<<<< HEAD
   const grossProfit = (sale.items || []).reduce(
     (sum, i) => sum + (i.salePrice - (i.phoneCost || 0)),
     0
   );
+=======
+  const grossProfit = (sale.items || []).reduce((sum, i) => sum + (i.salePrice - (i.phoneCost || 0)), 0);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   const netProfit = grossProfit - (sale.commissionUSD || 0);
 
   let daysSinceSaleHtml = '';
@@ -287,6 +306,7 @@ function renderSaleCard(sale) {
                     <p class="text-sm text-gray-500">${(sale.items || [])
                       .map((i) => escapeHTML(i.model))
                       .join(', ')}</p>
+<<<<<<< HEAD
                     ${
                       sale.salespersonName
                         ? `<p class="text-xs text-blue-600 mt-1"><i class="fas fa-user-tie mr-1"></i> ${escapeHTML(
@@ -294,6 +314,9 @@ function renderSaleCard(sale) {
                           )}</p>`
                         : ''
                     }
+=======
+                    ${sale.salespersonName ? `<p class="text-xs text-blue-600 mt-1"><i class="fas fa-user-tie mr-1"></i> ${escapeHTML(sale.salespersonName)}</p>` : ''}
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                 </div>
                 <div class="text-right flex-shrink-0 ml-4">
                     <p class="text-xl font-bold">${formatCurrency(sale.total, 'USD')}</p>
@@ -361,6 +384,7 @@ export function updateSaleBalance(state) {
   const totalReceived = totalPaidViaMethods + tradeInValueUSD;
   const balance = totalSalePrice - totalReceived;
 
+<<<<<<< HEAD
   const commissionHTML =
     commission > 0
       ? `<div class="flex justify-between items-center text-sm text-red-600"><span>Comisión Vendedor:</span> <span class="font-medium">-${formatCurrency(
@@ -368,6 +392,9 @@ export function updateSaleBalance(state) {
           'USD'
         )}</span></div>`
       : '';
+=======
+  const commissionHTML = commission > 0 ? `<div class="flex justify-between items-center text-sm text-red-600"><span>Comisión Vendedor:</span> <span class="font-medium">-${formatCurrency(commission, 'USD')}</span></div>` : '';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
   summaryEl.innerHTML = `
         <div class="flex justify-between items-center text-sm"><span>Subtotal:</span> <span class="font-medium">${formatCurrency(
@@ -397,10 +424,14 @@ export function updateSaleBalance(state) {
             <span>Balance:</span> <span>${formatCurrency(balance, 'USD')}</span>
         </div>
         <div class="border-t my-2 pt-2"></div>
+<<<<<<< HEAD
         <div class="flex justify-between items-center text-sm"><span>Ganancia Bruta (Venta):</span> <span class="font-bold">${formatCurrency(
           totalSalePrice - costTotal,
           'USD'
         )}</span></div>
+=======
+        <div class="flex justify-between items-center text-sm"><span>Ganancia Bruta (Venta):</span> <span class="font-bold">${formatCurrency(totalSalePrice - costTotal, 'USD')}</span></div>
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         ${commissionHTML}
         <div class="flex justify-between items-center text-sm font-bold border-t pt-2 mt-2"><span>Ganancia NETA:</span> <span class="${
           netProfit >= 0 ? 'text-green-600' : 'text-red-600'
@@ -425,7 +456,11 @@ export function toggleTradeInDetails() {
       allCategories
         .map((cat) => `<option value="${escapeHTML(cat.name)}">${escapeHTML(cat.name)}</option>`)
         .join('');
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     tradeInDetailsEl.innerHTML = `
             <h4 class="text-lg font-semibold text-gray-700 mb-2">Detalles del Equipo Recibido</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -457,7 +492,11 @@ export function toggleTradeInDetails() {
   }
 
   tradeInDetailsEl.classList.toggle('hidden', !show);
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   if (!show) {
     const tradeInValue = document.getElementById('trade-in-value');
     if (tradeInValue) {
@@ -480,6 +519,7 @@ export function renderTradeInAttributes() {
   const categorySelect = document.getElementById('trade-in-category');
   const attributesContainer = document.getElementById('trade-in-attributes-container');
   if (!categorySelect || !attributesContainer) return;
+<<<<<<< HEAD
 
   // Recolecta los valores actuales del formulario para mantener el estado.
   const currentValues = {};
@@ -490,13 +530,28 @@ export function renderTradeInAttributes() {
     if (el.id) {
       currentValues[el.id] = el.value;
     }
+=======
+  
+  // Recolecta los valores actuales del formulario para mantener el estado.
+  const currentValues = {};
+  const formElements = document.querySelectorAll('#trade-in-details select, #trade-in-details input');
+  formElements.forEach(el => {
+      if (el.id) {
+          currentValues[el.id] = el.value;
+      }
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   });
 
   const selectedCategoryName = categorySelect.value;
   if (!selectedCategoryName) {
+<<<<<<< HEAD
     attributesContainer.innerHTML =
       '<p class="text-sm text-gray-400 col-span-full">Selecciona una categoría para ver sus atributos.</p>';
     return;
+=======
+      attributesContainer.innerHTML = '<p class="text-sm text-gray-400 col-span-full">Selecciona una categoría para ver sus atributos.</p>';
+      return;
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   }
 
   const allCategories = [...(appState.categories || []), ...DEFAULT_CATEGORIES];
@@ -515,6 +570,10 @@ export function renderTradeInAttributes() {
 // FIN DE LA MODIFICACIÓN
 // =================================================================================
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 /**
  * Renderiza la sección de gestión de reservas.
  * @param {object} state El estado actual de la aplicación.
@@ -555,12 +614,18 @@ export function renderReservationsSection(state) {
 
   container.innerHTML = filteredReservations
     .map((res) => {
+<<<<<<< HEAD
       const depositText = res.hasDeposit
         ? `<span class="font-semibold text-green-700">${formatCurrency(
             res.depositAmountUSD,
             'USD'
           )}</span>`
         : '<span class="text-gray-500">No</span>';
+=======
+        const depositText = res.hasDeposit
+            ? `<span class="font-semibold text-green-700">${formatCurrency(res.depositAmountUSD, 'USD')}</span>`
+            : '<span class="text-gray-500">No</span>';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
       return `
         <div class="bg-white p-4 rounded-lg border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -604,10 +669,17 @@ export function renderSalespeopleSection(state) {
   if (!listView || !detailView) return;
 
   if (ui.selectedSalespersonId) {
+<<<<<<< HEAD
     listView.classList.add('hidden');
     detailView.classList.remove('hidden');
     renderSalespersonDetailView(state);
     return;
+=======
+      listView.classList.add('hidden');
+      detailView.classList.remove('hidden');
+      renderSalespersonDetailView(state);
+      return;
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   }
 
   listView.classList.remove('hidden');
@@ -647,9 +719,13 @@ export function renderSalespeopleSection(state) {
                 <p class="text-sm text-gray-500">${escapeHTML(person.contact || 'Sin contacto')}</p>
             </div>
             <div class="flex items-center justify-between mt-4">
+<<<<<<< HEAD
                 <button class="view-salesperson-details-btn btn-secondary text-xs py-1 px-3" data-id="${
                   person.id
                 }">Ver Detalles</button>
+=======
+                <button class="view-salesperson-details-btn btn-secondary text-xs py-1 px-3" data-id="${person.id}">Ver Detalles</button>
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                 <div class="flex items-center">
                     <button class="edit-salesperson-btn text-gray-400 hover:text-blue-500" data-salesperson='${JSON.stringify(
                       person
@@ -670,6 +746,7 @@ export function renderSalespeopleSection(state) {
  * @param {object} state El estado actual de la aplicación.
  */
 function renderSalespersonDetailView(state) {
+<<<<<<< HEAD
   const { salespeople, sales, ui } = state;
   const detailViewContainer = document.getElementById('salesperson-detail-view');
   if (!detailViewContainer) return;
@@ -724,18 +801,60 @@ function renderSalespersonDetailView(state) {
       : `<p class="text-center text-gray-500 mt-6">Este vendedor aún no tiene ventas registradas.</p>`;
 
   detailViewContainer.innerHTML = `
+=======
+    const { salespeople, sales, ui } = state;
+    const detailViewContainer = document.getElementById('salesperson-detail-view');
+    if (!detailViewContainer) return;
+
+    const selectedSalesperson = salespeople.find(p => p.id === ui.selectedSalespersonId);
+    if (!selectedSalesperson) {
+        detailViewContainer.innerHTML = '';
+        return;
+    }
+
+    const salespersonSales = sales.filter(s => s.salespersonId === selectedSalesperson.id);
+    const totalCommissions = salespersonSales.reduce((sum, s) => sum + (s.commissionUSD || 0), 0);
+    const totalSalesValue = salespersonSales.reduce((sum, s) => sum + (s.total || 0), 0);
+
+    const salesHistoryHtml = salespersonSales.length > 0 ? `
+        <div class="space-y-3 mt-4">
+            ${salespersonSales.map(sale => {
+                const netProfit = (sale.items || []).reduce((sum, i) => sum + (i.salePrice - (i.phoneCost || 0)), 0) - (sale.commissionUSD || 0);
+                return `
+                    <div class="bg-white p-3 rounded-lg border flex justify-between items-center">
+                        <div>
+                            <p class="font-semibold">${(sale.items || []).map(i => i.model).join(', ')}</p>
+                            <p class="text-xs text-gray-500">a ${escapeHTML(sale.customerName)} el ${formatDate(sale.saleDate)}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-semibold text-blue-600">${formatCurrency(sale.commissionUSD, 'USD')}</p>
+                            <p class="text-xs">Ganancia Neta: ${formatCurrency(netProfit, 'USD')}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    ` : `<p class="text-center text-gray-500 mt-6">Este vendedor aún no tiene ventas registradas.</p>`;
+
+    detailViewContainer.innerHTML = `
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         <div class="card p-6 md:p-8">
             <div class="flex justify-between items-center mb-6">
                 <div>
                     <h3 class="text-3xl font-bold">${escapeHTML(selectedSalesperson.name)}</h3>
+<<<<<<< HEAD
                     <p class="text-gray-500">${escapeHTML(
                       selectedSalesperson.contact || 'Sin contacto'
                     )}</p>
+=======
+                    <p class="text-gray-500">${escapeHTML(selectedSalesperson.contact || 'Sin contacto')}</p>
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                 </div>
                 <button id="back-to-salespeople-list" class="btn-secondary py-2 px-4"><i class="fas fa-arrow-left mr-2"></i>Volver</button>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center mb-6">
+<<<<<<< HEAD
                 <div class="bg-gray-50 p-4 rounded-lg"><p class="text-sm text-gray-500">Ventas Realizadas</p><p class="text-2xl font-bold">${
                   salespersonSales.length
                 }</p></div>
@@ -747,6 +866,11 @@ function renderSalespersonDetailView(state) {
                   totalCommissions,
                   'USD'
                 )}</p></div>
+=======
+                <div class="bg-gray-50 p-4 rounded-lg"><p class="text-sm text-gray-500">Ventas Realizadas</p><p class="text-2xl font-bold">${salespersonSales.length}</p></div>
+                <div class="bg-gray-50 p-4 rounded-lg"><p class="text-sm text-gray-500">Volumen de Venta</p><p class="text-2xl font-bold">${formatCurrency(totalSalesValue, 'USD')}</p></div>
+                <div class="bg-gray-50 p-4 rounded-lg"><p class="text-sm text-gray-500">Comisiones Totales</p><p class="text-2xl font-bold text-green-600">${formatCurrency(totalCommissions, 'USD')}</p></div>
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
             </div>
 
             <h4 class="text-xl font-semibold mt-8 border-b pb-2">Historial de Ventas</h4>
@@ -766,6 +890,7 @@ export function openReservationModal(state) {
 
   let selectedClientHtml = '';
   if (reservationForm.selectedClient) {
+<<<<<<< HEAD
     selectedClientHtml = `<div class="p-2 bg-green-100 border rounded-md flex justify-between items-center"><span>${escapeHTML(
       reservationForm.selectedClient.name
     )}</span><button type="button" id="remove-reservation-client-btn" class="text-red-500 text-lg">&times;</button></div>`;
@@ -778,18 +903,59 @@ export function openReservationModal(state) {
     )}</span><button type="button" id="remove-reservation-item-btn" class="text-red-500 text-lg">&times;</button></div>`;
   }
 
+=======
+      selectedClientHtml = `<div class="p-2 bg-green-100 border rounded-md flex justify-between items-center"><span>${escapeHTML(reservationForm.selectedClient.name)}</span><button type="button" id="remove-reservation-client-btn" class="text-red-500 text-lg">&times;</button></div>`;
+  }
+
+  // =================================================================================
+  // INICIO DE LA MODIFICACIÓN: Mostrar detalles del producto seleccionado
+  // =================================================================================
+  let selectedItemHtml = '';
+  if (reservationForm.selectedItem) {
+      const item = reservationForm.selectedItem;
+      selectedItemHtml = `
+        <div class="p-3 bg-green-100 border border-green-300 rounded-lg">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="font-bold">${escapeHTML(item.model)}</p>
+                    <p class="text-sm text-gray-600 font-mono">${escapeHTML(item.serialNumber)}</p>
+                </div>
+                <button type="button" id="remove-reservation-item-btn" class="text-red-500 hover:text-red-700 text-xl">&times;</button>
+            </div>
+            <div class="mt-2 pt-2 border-t border-green-200 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                    <span class="text-gray-500">Costo:</span>
+                    <p class="font-semibold">${formatCurrency(item.phoneCost, 'USD')}</p>
+                </div>
+                <div>
+                    <span class="text-gray-500">P. Venta Sug.:</span>
+                    <p class="font-semibold text-green-700">${formatCurrency(item.suggestedSalePrice, 'USD')}</p>
+                </div>
+            </div>
+        </div>`;
+  }
+  // =================================================================================
+  // FIN DE LA MODIFICACIÓN
+  // =================================================================================
+  
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   const content = `
         <form id="reservation-form" class="space-y-6">
             <div class="space-y-2">
                 <h4 class="font-semibold">1. Cliente</h4>
                 <div class="relative">
                     ${selectedClientHtml}
+<<<<<<< HEAD
                     <div id="reservation-client-search-container" class="${
                       reservationForm.selectedClient ? 'hidden' : ''
                     }">
                          <input type="text" id="reservation-client-search-input" class="form-input w-full" placeholder="Buscar cliente..." value="${escapeHTML(
                            reservationForm.clientSearchTerm || ''
                          )}">
+=======
+                    <div id="reservation-client-search-container" class="${reservationForm.selectedClient ? 'hidden' : ''}">
+                         <input type="text" id="reservation-client-search-input" class="form-input w-full" placeholder="Buscar cliente..." value="${escapeHTML(reservationForm.clientSearchTerm || '')}">
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                          <div id="reservation-client-search-results" class="absolute z-20 w-full bg-white border rounded-md mt-1 hidden max-h-48 overflow-y-auto"></div>
                     </div>
                 </div>
@@ -799,12 +965,17 @@ export function openReservationModal(state) {
                 <h4 class="font-semibold">2. Producto a Reservar</h4>
                  <div class="relative">
                     ${selectedItemHtml}
+<<<<<<< HEAD
                     <div id="reservation-stock-search-container" class="${
                       reservationForm.selectedItem ? 'hidden' : ''
                     }">
                         <input type="text" id="reservation-stock-search-input" class="form-input w-full" placeholder="Buscar producto disponible..." value="${escapeHTML(
                           reservationForm.stockSearchTerm || ''
                         )}">
+=======
+                    <div id="reservation-stock-search-container" class="${reservationForm.selectedItem ? 'hidden' : ''}">
+                        <input type="text" id="reservation-stock-search-input" class="form-input w-full" placeholder="Buscar producto disponible..." value="${escapeHTML(reservationForm.stockSearchTerm || '')}">
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                         <div id="reservation-stock-search-results" class="absolute z-10 w-full bg-white border rounded-md mt-1 hidden max-h-48 overflow-y-auto"></div>
                     </div>
                 </div>
@@ -833,6 +1004,7 @@ export function openReservationModal(state) {
   showModal(content, 'Crear Nueva Reserva', footer);
 
   if (reservationForm.clientSearchTerm) {
+<<<<<<< HEAD
     const resultsContainer = document.getElementById('reservation-client-search-results');
     const filteredClients = clients.filter((c) =>
       c.name.toLowerCase().includes(reservationForm.clientSearchTerm.toLowerCase())
@@ -864,6 +1036,36 @@ export function openReservationModal(state) {
       .join('');
     resultsContainer.classList.remove('hidden');
   }
+=======
+      const resultsContainer = document.getElementById('reservation-client-search-results');
+      const filteredClients = clients.filter(c => c.name.toLowerCase().includes(reservationForm.clientSearchTerm.toLowerCase()));
+      resultsContainer.innerHTML = filteredClients.map(c => `<div class="p-2 hover:bg-gray-100 cursor-pointer reservation-client-result" data-client='${JSON.stringify(c)}'>${escapeHTML(c.name)}</div>`).join('');
+      resultsContainer.classList.remove('hidden');
+  }
+  
+  // =================================================================================
+  // INICIO DE LA MODIFICACIÓN: Mostrar detalles en los resultados de búsqueda
+  // =================================================================================
+   if (reservationForm.stockSearchTerm) {
+      const resultsContainer = document.getElementById('reservation-stock-search-results');
+      const filteredStock = stock.filter(item => item.status !== 'reservado' && item.model.toLowerCase().includes(reservationForm.stockSearchTerm.toLowerCase()));
+      resultsContainer.innerHTML = filteredStock.map(item => `
+        <div class="p-3 hover:bg-gray-100 cursor-pointer reservation-stock-result" data-stock='${JSON.stringify(item)}'>
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="font-semibold">${escapeHTML(item.model)}</p>
+                    <p class="text-xs text-gray-500">${escapeHTML(item.serialNumber)}</p>
+                </div>
+                <p class="text-sm font-bold text-green-600">${formatCurrency(item.suggestedSalePrice, 'USD')}</p>
+            </div>
+        </div>
+      `).join('');
+      resultsContainer.classList.remove('hidden');
+  }
+  // =================================================================================
+  // FIN DE LA MODIFICACIÓN
+  // =================================================================================
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 }
 
 /**
@@ -932,12 +1134,18 @@ export function showSaleDetailModal(sale) {
         : `<p class="font-bold text-red-600">Vencida hace ${Math.abs(diffDays)} días</p>`;
   }
 
+<<<<<<< HEAD
   const commissionHtml =
     sale.commissionUSD > 0
       ? `<div class="flex justify-between text-red-600"><span>Comisión Vendedor (${escapeHTML(
           sale.salespersonName
         )}):</span> <span>-${formatCurrency(sale.commissionUSD, 'USD')}</span></div>`
       : '';
+=======
+  const commissionHtml = sale.commissionUSD > 0 
+    ? `<div class="flex justify-between text-red-600"><span>Comisión Vendedor (${escapeHTML(sale.salespersonName)}):</span> <span>-${formatCurrency(sale.commissionUSD, 'USD')}</span></div>` 
+    : '';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
   const modalHTML = `
         <div id="sale-detail-modal-backdrop" class="modal-backdrop">

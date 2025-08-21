@@ -26,8 +26,21 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
     />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<<<<<<< HEAD
     <!-- CAMBIO: Se añade el adaptador de fecha para Chart.js. Esto es CRUCIAL para los gráficos de tiempo. -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+=======
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    
+    <!-- =============================================================== -->
+    <!-- INICIO DE MODIFICACIÓN: Se añade la librería SortableJS          -->
+    <!-- =============================================================== -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <!-- =============================================================== -->
+    <!-- FIN DE MODIFICACIÓN                                             -->
+    <!-- =============================================================== -->
+
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     <style>
       body {
         font-family: 'Inter', sans-serif;
@@ -260,10 +273,36 @@
       #whatsapp-support-button:hover {
         transform: scale(1.1);
       }
+<<<<<<< HEAD
+=======
+      
+      #global-loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease-in-out;
+      }
+
+      body.is-loading #global-loading-overlay {
+        opacity: 1;
+        pointer-events: auto;
+      }
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
       body.is-loading * {
         pointer-events: none;
       }
+<<<<<<< HEAD
       body.is-loading .modal-backdrop,
       body.is-loading .modal-backdrop * {
         pointer-events: auto;
@@ -274,11 +313,18 @@
       /* =============================================================== */
 
       /* --- Vista Móvil (por defecto): Tarjetas --- */
+=======
+      body.is-loading #global-loading-overlay * {
+          pointer-events: auto;
+      }
+
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       .stock-list-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         gap: 1.5rem;
       }
+<<<<<<< HEAD
       .stock-table-header,
       .stock-item-row {
         display: none; /* Oculta la tabla en móvil */
@@ -292,6 +338,18 @@
         .stock-table-header,
         .stock-item-row {
           display: table-row; /* Muestra las filas de la tabla */
+=======
+      .stock-table-header, .stock-item-row {
+          display: none;
+      }
+
+      @media (min-width: 1024px) {
+        .stock-list-grid {
+          display: none;
+        }
+        .stock-table-header, .stock-item-row {
+          display: table-row;
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         }
         .stock-table-container {
           display: table;
@@ -321,11 +379,39 @@
         }
       }
       /* =============================================================== */
+<<<<<<< HEAD
       /* FIN DE MODIFICACIÓN                                             */
       /* =============================================================== */
     </style>
   </head>
   <body class="antialiased">
+=======
+      /* INICIO DE MODIFICACIÓN: Estilos para Drag and Drop              */
+      /* =============================================================== */
+      .drag-handle {
+        cursor: grab;
+        color: #9ca3af;
+        margin-right: 12px;
+      }
+      .drag-handle:hover {
+        color: #111827;
+      }
+      .sortable-ghost {
+        opacity: 0.4;
+        background-color: #d1fae5;
+      }
+      /* =============================================================== */
+      /* FIN DE MODIFICACIÓN                                             */
+      /* =============================================================== */
+
+    </style>
+  </head>
+  <body class="antialiased">
+    <div id="global-loading-overlay">
+        <i class="fas fa-spinner fa-spin fa-3x text-green-600"></i>
+    </div>
+
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     <a
       id="whatsapp-support-button"
       href="https://wa.me/5492241576696"
@@ -335,7 +421,6 @@
       <i class="fab fa-whatsapp"></i>
     </a>
 
-    <!-- Initial Loading Spinner -->
     <div
       id="initial-loading-container"
       class="fixed inset-0 bg-gray-100 flex flex-col items-center justify-center z-50"
@@ -344,7 +429,6 @@
       <p class="mt-4 text-lg text-gray-600">Iniciando iFlow...</p>
     </div>
 
-    <!-- Authentication Container -->
     <div
       id="auth-container"
       class="hidden fixed inset-0 bg-gray-100 flex items-center justify-center z-40"
@@ -403,11 +487,9 @@
       </div>
     </div>
 
-    <!-- Main App Containers -->
     <div id="app-container" class="hidden"></div>
     <div id="modal-container"></div>
 
-    <!-- App Content Template -->
     <template id="all-app-content-template">
       <div class="container mx-auto p-4 md:p-8 max-w-7xl">
         <header class="flex flex-wrap justify-between items-start mb-10 gap-y-4">
@@ -428,6 +510,7 @@
               ></i>
             </h1>
           </div>
+<<<<<<< HEAD
 
           <div class="w-1/3 lg:w-1/2 flex justify-end">
             <div class="relative">
@@ -501,12 +584,60 @@
                   class="block px-4 py-3 text-sm text-red-600 hover:bg-red-50"
                   ><i class="fas fa-sign-out-alt w-6 text-center mr-2"></i>Cerrar Sesión</a
                 >
+=======
+          
+          <div class="w-1/3 lg:w-1/2 flex justify-end">
+              <div class="relative">
+                  <button id="user-menu-button" class="bg-white border border-gray-200 rounded-xl p-2 shadow-sm flex items-center gap-3 hover:bg-gray-50 transition-colors">
+                      <div class="text-right">
+                          <p id="dolar-widget-effective-rate" class="font-bold text-green-600">$ --</p>
+                          <p id="user-email-display" class="text-xs text-gray-500 truncate max-w-[120px]">Cargando...</p>
+                      </div>
+                      <i class="fas fa-user-circle text-2xl text-gray-400"></i>
+                  </button>
+
+                  <div id="user-menu-dropdown" class="hidden absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-xl border z-10">
+                      <div id="dolar-widget-container" class="p-3 border-b">
+                          <div class="flex justify-between items-center mb-2">
+                              <h4 class="font-bold text-gray-800 text-sm">Dólar de Referencia</h4>
+                              <span id="dolar-widget-status" class="text-xs text-gray-400 flex items-center gap-1.5">
+                                  <i class="fas fa-circle text-gray-300 animate-pulse"></i>
+                                  <span>Cargando...</span>
+                              </span>
+                          </div>
+                          <div class="space-y-1 text-xs">
+                              <div class="flex justify-between items-center">
+                                  <span class="text-gray-500">Compra:</span>
+                                  <span id="dolar-widget-market-buy-rate" class="font-semibold text-gray-700">--</span>
+                              </div>
+                              <div class="flex justify-between items-center">
+                                  <span class="text-gray-500">Venta:</span>
+                                  <span id="dolar-widget-market-rate" class="font-semibold text-gray-700">--</span>
+                              </div>
+                              <div class="flex justify-between items-center">
+                                  <span class="text-gray-500">Ajuste:</span>
+                                  <input 
+                                      type="number" 
+                                      id="dolar-widget-offset-input"
+                                      class="form-input p-1 w-16 text-right font-semibold border-gray-300 focus:border-green-500 focus:ring-green-500 focus:ring-opacity-50"
+                                      placeholder="0"
+                                  >
+                              </div>
+                          </div>
+                      </div>
+                      <a href="#" id="manage-subscription-btn" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-credit-card w-6 text-center mr-2"></i>Gestionar Suscripción</a>
+                      <a href="#" id="change-password-btn" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-key w-6 text-center mr-2"></i>Cambiar Contraseña</a>
+                      <a href="#" id="logout-button" class="block px-4 py-3 text-sm text-red-600 hover:bg-red-50"><i class="fas fa-sign-out-alt w-6 text-center mr-2"></i>Cerrar Sesión</a>
+                  </div>
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
               </div>
-            </div>
           </div>
         </header>
 
+<<<<<<< HEAD
         <!-- Main Tabs Navigation -->
+=======
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         <div class="mb-8 border-b border-gray-200 tabs-container">
           <div id="scroll-arrow-left" class="scroll-arrow left hidden">
             <i class="fas fa-chevron-left"></i>
@@ -564,25 +695,21 @@
           </div>
         </div>
 
-        <!-- Main Content Area -->
         <main>
           <div id="loading-container" class="hidden text-center py-20">
             <i class="fas fa-spinner fa-spin fa-3x text-green-500"></i>
             <p class="mt-4 text-lg text-gray-500">Cargando datos...</p>
           </div>
           <div id="main-content-wrapper">
-            <!-- Content will be injected here by ui.js -->
           </div>
         </main>
 
-        <!-- Footer -->
         <footer class="text-center mt-12 text-gray-500 text-xs">
           <p>iFlow App | ID de Usuario: <span id="user-id-display">Cargando...</span></p>
         </footer>
       </div>
     </template>
 
-    <!-- Main JS Module -->
     <script type="module" src="./js/main.js"></script>
 
     <script>

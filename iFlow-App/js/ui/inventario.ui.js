@@ -1,6 +1,13 @@
 import { appState, setState, DEFAULT_CATEGORIES } from '../state.js';
 import { formatCurrency, escapeHTML } from './utils.js';
 import { showModal } from './modales.js';
+// ===============================================================
+// INICIO DE MODIFICACIÓN: Se importa 'updateData' para guardar el orden
+// ===============================================================
+import { updateData } from '../api.js';
+// ===============================================================
+// FIN DE MODIFICACIÓN
+// ===============================================================
 
 /**
  * Renderiza todas las sub-secciones de la pestaña de Inventario.
@@ -508,13 +515,21 @@ function renderCategoryProductsAndAttributes(category) {
   );
   const productList = productAttribute ? productAttribute.options : [];
 
+  // ===============================================================
+  // INICIO DE MODIFICACIÓN: Se añade el ícono de arrastre y el data-attribute
+  // ===============================================================
   const productListHTML =
     productList.length > 0
       ? productList
           .map(
             (productName) => `
-        <div class="bg-white p-3 rounded-lg flex justify-between items-center border hover:shadow-sm">
-            <span class="font-medium">${escapeHTML(productName)}</span>
+        <div class="product-list-item bg-white p-3 rounded-lg flex justify-between items-center border hover:shadow-sm" data-product-name="${escapeHTML(
+          productName
+        )}">
+            <div class="flex items-center">
+                <i class="fas fa-grip-vertical drag-handle" title="Arrastrar para reordenar"></i>
+                <span class="font-medium">${escapeHTML(productName)}</span>
+            </div>
             <div class="flex items-center gap-2">
                 <button class="edit-product-options-btn btn-secondary text-xs py-1 px-3" data-product-name="${escapeHTML(
                   productName
@@ -528,6 +543,9 @@ function renderCategoryProductsAndAttributes(category) {
           )
           .join('')
       : '<p class="text-gray-400 text-center py-4">Aún no hay productos en esta categoría. ¡Añade uno!</p>';
+  // ===============================================================
+  // FIN DE MODIFICACIÓN
+  // ===============================================================
 
   const generalAttributes = category.attributes.filter(
     (attr) => !attr.dependsOn && attr.id !== productAttribute?.id
@@ -576,7 +594,13 @@ function renderCategoryProductsAndAttributes(category) {
                     )}"</h4>
                     <button id="add-new-product-to-category-btn" class="btn-primary py-1 px-3 text-sm"><i class="fas fa-plus"></i> Añadir Producto</button>
                 </div>
-                <div class="space-y-2">${productListHTML}</div>
+                <!-- =============================================================== -->
+                <!-- INICIO DE MODIFICACIÓN: Se añade ID al contenedor de la lista   -->
+                <!-- =============================================================== -->
+                <div id="product-list-container" class="space-y-2">${productListHTML}</div>
+                <!-- =============================================================== -->
+                <!-- FIN DE MODIFICACIÓN                                             -->
+                <!-- =============================================================== -->
             </div>
 
             <div class="border-t pt-6">
@@ -606,6 +630,56 @@ function renderCategoryProductsAndAttributes(category) {
             </div>
         </div>
     `;
+
+  // ===============================================================
+  // INICIO DE MODIFICACIÓN: Se inicializa SortableJS en la lista
+  // ===============================================================
+  const productListContainer = document.getElementById('product-list-container');
+  if (productListContainer) {
+    new Sortable(productListContainer, {
+      handle: '.drag-handle', // El drag solo se inicia desde el ícono
+      animation: 150,
+      ghostClass: 'sortable-ghost', // Clase CSS para el elemento "fantasma"
+      onEnd: async (evt) => {
+        // Se ejecuta cuando el usuario suelta el elemento
+        const { categoryManager } = appState;
+        const selectedCategory = appState.categories.find(
+          (c) => c.id === categoryManager.selectedCategoryId
+        );
+        if (!selectedCategory) return;
+
+        const productAttribute = selectedCategory.attributes.find(
+          (attr) => attr.id.startsWith('attr-product-') || attr.name === 'Producto'
+        );
+        if (!productAttribute) return;
+
+        // Se obtiene el nuevo orden de los elementos desde el DOM
+        const items = evt.target.querySelectorAll('.product-list-item');
+        const newOrder = Array.from(items).map((item) => item.dataset.productName);
+
+        // Se crea una copia actualizada de los atributos con el nuevo orden
+        const updatedAttributes = selectedCategory.attributes.map((attr) => {
+          if (attr.id === productAttribute.id) {
+            return { ...attr, options: newOrder };
+          }
+          return attr;
+        });
+
+        // Se actualiza la base de datos con el nuevo orden
+        try {
+          await updateData('categories', selectedCategory.id, { attributes: updatedAttributes });
+        } catch (error) {
+          console.error('Error al guardar el nuevo orden:', error);
+          showModal('No se pudo guardar el nuevo orden de los productos.', 'Error');
+          // Opcional: revertir la UI al estado anterior si falla el guardado
+          renderCategoryProductsAndAttributes(selectedCategory);
+        }
+      },
+    });
+  }
+  // ===============================================================
+  // FIN DE MODIFICACIÓN
+  // ===============================================================
 }
 
 // --- Modales Específicos de Inventario ---
@@ -859,7 +933,7 @@ export function openEditProductOptionsModal(categoryId, productName) {
   );
 
   // =================================================================================
-  // INICIO DE MODIFICACIÓN: Se cambia el renderizado de textarea a una lista interactiva.
+  // INICIO DE LA MODIFICACIÓN: Se cambia el renderizado de textarea a una lista interactiva.
   // =================================================================================
   const editorsHTML = dependentAttributes
     .map((attr) => {

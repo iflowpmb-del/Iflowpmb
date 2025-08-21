@@ -105,6 +105,12 @@ export async function openPaymentModal(options) {
     }
   }
 
+<<<<<<< HEAD
+=======
+  // ===============================================================
+  // INICIO DE MODIFICACIÓN: Aceptar centavos y mostrar saldos
+  // ===============================================================
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   const content = `
         <form id="payment-form-modal" class="space-y-4" 
               data-payment-type="${paymentType}" 
@@ -117,6 +123,7 @@ export async function openPaymentModal(options) {
             
             <div class="grid grid-cols-2 gap-4 pt-4 border-t">
                 <div>
+<<<<<<< HEAD
                     <label class="block text-sm">Efectivo (ARS)</label>
                     <input type="number" data-wallet="ars" class="payment-input-modal form-input w-full" placeholder="0" max="${
                       capital.ars || 0
@@ -139,6 +146,22 @@ export async function openPaymentModal(options) {
                     <input type="number" data-wallet="usdt" class="payment-input-modal form-input w-full" placeholder="0" max="${
                       capital.usdt || 0
                     }">
+=======
+                    <label class="block text-sm">Efectivo (ARS) <span class="text-gray-400 font-normal">- Saldo: ${formatCurrency(capital.ars || 0, 'ARS')}</span></label>
+                    <input type="number" step="any" data-wallet="ars" class="payment-input-modal form-input w-full" placeholder="0">
+                </div>
+                 <div>
+                    <label class="block text-sm">Digital (ARS) <span class="text-gray-400 font-normal">- Saldo: ${formatCurrency(capital.mp || 0, 'ARS')}</span></label>
+                    <input type="number" step="any" data-wallet="mp" class="payment-input-modal form-input w-full" placeholder="0">
+                </div>
+                 <div>
+                    <label class="block text-sm">Dólares (USD) <span class="text-gray-400 font-normal">- Saldo: ${formatCurrency(capital.usd || 0, 'USD')}</span></label>
+                    <input type="number" step="0.01" data-wallet="usd" class="payment-input-modal form-input w-full" placeholder="0">
+                </div>
+                 <div>
+                    <label class="block text-sm">USDT <span class="text-gray-400 font-normal">- Saldo: ${formatCurrency(capital.usdt || 0, 'USDT')}</span></label>
+                    <input type="number" step="0.01" data-wallet="usdt" class="payment-input-modal form-input w-full" placeholder="0">
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                 </div>
             </div>
             <div class="mt-4 p-3 bg-gray-100 rounded-lg text-sm">
@@ -157,6 +180,12 @@ export async function openPaymentModal(options) {
             ${paymentHistoryHtml}
         </form>
     `;
+<<<<<<< HEAD
+=======
+  // ===============================================================
+  // FIN DE MODIFICACIÓN
+  // ===============================================================
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
   const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
