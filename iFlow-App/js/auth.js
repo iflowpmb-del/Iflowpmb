@@ -3,19 +3,19 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-import {
-  getFunctions,
-  httpsCallable,
-} from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js';
 import {
   doc,
   getDoc,
   writeBatch,
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 import { auth, db } from './firebase-config.js';
-import { setState, resetState, clearFirebaseListeners } from './state.js';
+import { setState, resetState, clearFirebaseListeners, DEFAULT_CATEGORIES } from './state.js';
 import { loadAllData } from './api.js';
+import { showModal } from './ui/modales.js';
 
 function showAuthError(message) {
   const modalContainer = document.getElementById('modal-container');
@@ -52,11 +52,9 @@ async function checkSubscription(userId) {
       console.log('ID de Pre-aprobación capturado:', preapprovalId);
       console.log('Verificando estado de suscripción con tu servidor Node.js...');
 
-      // ⚠️ Líneas clave: Comunicación con tu servidor Node.js local
       const response = await fetch(`https://api-mp.vercel.app/check-subscription/${preapprovalId}`);
       const data = await response.json();
 
-      // Muestra el resultado de la consulta en la consola
       console.log('Información de la suscripción:', data);
 
       if (data.status === 'authorized') {
@@ -142,13 +140,15 @@ export async function handleRegistration(email, password) {
       debt: 0,
     });
 
+    DEFAULT_CATEGORIES.forEach((category) => {
+      const categoryRef = doc(db, `users/${user.uid}/categories`, category.id);
+      const { id, ...categoryData } = category;
+      batch.set(categoryRef, categoryData);
+    });
+
     await batch.commit();
   } catch (error) {
-    // =================================================================================
-    // >>>>>>>>>> INICIO DE LA CORRECCIÓN <<<<<<<<<<
-    // Se añaden más casos para dar mensajes de error más específicos al usuario.
-    // =================================================================================
-    console.error('Error en registro:', error); // Log para depuración
+    console.error('Error en registro:', error);
     let friendlyMessage = 'Ocurrió un error durante el registro.';
     if (error.code === 'auth/email-already-in-use') {
       friendlyMessage = 'Este correo ya está en uso.';
@@ -157,9 +157,6 @@ export async function handleRegistration(email, password) {
     } else if (error.code === 'auth/invalid-email') {
       friendlyMessage = 'El formato del correo electrónico no es válido.';
     }
-    // =================================================================================
-    // >>>>>>>>>> FIN DE LA CORRECCIÓN <<<<<<<<<<
-    // =================================================================================
     showAuthError(friendlyMessage);
     throw error;
   }
@@ -218,4 +215,28 @@ export function initializeAuth() {
       document.getElementById('modal-container').innerHTML = '';
     }
   });
+}
+
+export function openChangePasswordModal() {
+  const content = `
+        <form id="password-change-form" class="space-y-4">
+            <div>
+                <label for="current-password" class="block text-sm font-medium text-gray-700">Contraseña Actual</label>
+                <input type="password" id="current-password" class="form-input w-full mt-1" required>
+            </div>
+            <div>
+                <label for="new-password" class="block text-sm font-medium text-gray-700">Nueva Contraseña</label>
+                <input type="password" id="new-password" class="form-input w-full mt-1" placeholder="Mínimo 6 caracteres" required>
+            </div>
+            <div>
+                <label for="confirm-password" class="block text-sm font-medium text-gray-700">Confirmar Nueva Contraseña</label>
+                <input type="password" id="confirm-password" class="form-input w-full mt-1" required>
+            </div>
+        </form>
+    `;
+  const footer = `
+        <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
+        <button type="submit" form="password-change-form" class="btn-primary px-4 py-2">Guardar Cambios</button>
+    `;
+  showModal(content, 'Cambiar Contraseña', footer);
 }
