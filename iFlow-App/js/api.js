@@ -127,13 +127,6 @@ export function loadAllData(userId) {
         marketRate: 1000,
         marketBuyRate: 1000,
       },
-      default: {
-        businessName: 'Mi Negocio',
-        subscriptionStatus: 'none',
-        dolarOffset: 0,
-        marketRate: 1000,
-        marketBuyRate: 1000,
-      },
     },
     capital: {
       type: 'doc',
@@ -176,7 +169,6 @@ export function loadAllData(userId) {
     sales: true,
     debts: true,
   };
-
   let profileLoaded = false;
 
   const onInitialLoad = async (collectionName, error = null) => {
@@ -211,7 +203,6 @@ export function loadAllData(userId) {
     salesQuery,
     (salesSnapshot) => {
       const salesData = salesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
       salesData.sort((a, b) => (b.soldAt?.toMillis() || 0) - (a.soldAt?.toMillis() || 0));
       setState({ sales: salesData });
 
@@ -239,7 +230,6 @@ export function loadAllData(userId) {
       setState({ sales: [], clientDebtPayments: [] });
     }
   );
-
   addFirebaseListener(salesUnsubscribe);
 
   // 2. Cargar Deudas y luego sus sub-colecciones de pagos
@@ -275,7 +265,6 @@ export function loadAllData(userId) {
       setState({ debts: [], providerDebtPayments: [] });
     }
   );
-
   addFirebaseListener(debtsUnsubscribe);
   // --- FIN DE LA MODIFICACIÓN ---
 
@@ -343,7 +332,6 @@ export function loadAllData(userId) {
 
     let queryRef =
       config.type === 'doc' ? doc(db, config.path) : query(collection(db, config.path));
-
     const unsubscribe = onSnapshot(
       queryRef,
       (snapshot) => {

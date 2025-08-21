@@ -4,7 +4,6 @@
 
 // --- Importaciones de Módulos de UI ---
 import { renderCapitalSection } from './ui/capital.ui.js';
-<<<<<<< HEAD
 import {
   renderSalesSection,
   renderSalesHistory,
@@ -15,35 +14,8 @@ import {
 import { renderInventorySections, renderAddStockForm } from './ui/inventario.ui.js';
 import { renderClientsSections } from './ui/clientes.ui.js';
 import { renderOperationsSections } from './ui/operaciones.ui.js';
-import { renderReportsSections } from './ui/reportes.ui.js';
+import { renderReportsSections, renderIntelligentAnalysisSection } from './ui/reportes.ui.js';
 import { renderPublicProvidersSection, renderUserProvidersSection } from './ui/proveedores.ui.js';
-=======
-import { 
-    renderSalesSection, 
-    renderSalesHistory, 
-    renderReservationsSection, 
-    renderSalespeopleSection,
-    updateSaleBalance
-} from './ui/ventas.ui.js';
-import { 
-    renderInventorySections, 
-    renderAddStockForm
-} from './ui/inventario.ui.js';
-import { 
-    renderClientsSections
-} from './ui/clientes.ui.js';
-import { 
-    renderOperationsSections
-} from './ui/operaciones.ui.js';
-import { 
-    renderReportsSections,
-    renderIntelligentAnalysisSection
-} from './ui/reportes.ui.js';
-import { 
-    renderPublicProvidersSection, 
-    renderUserProvidersSection
-} from './ui/proveedores.ui.js';
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
 // --- Importaciones de Estado y Configuración ---
 import { setState, appState } from './state.js';
@@ -54,18 +26,15 @@ import { formatCurrency } from './ui/utils.js'; // Importamos formatCurrency par
 // =================================================================================
 
 /**
-<<<<<<< HEAD
-=======
  * Muestra u oculta el overlay de carga global basado en el estado.
  * @param {object} state El estado actual de la aplicación.
  */
 function renderGlobalLoading(state) {
-    const { isGlobalLoading } = state;
-    document.body.classList.toggle('is-loading', isGlobalLoading);
+  const { isGlobalLoading } = state;
+  document.body.classList.toggle('is-loading', isGlobalLoading);
 }
 
 /**
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
  * Renderiza el shell principal de la aplicación y orquesta el renderizado de todas las secciones.
  * @param {object} state El estado actual de la aplicación.
  */
@@ -134,7 +103,6 @@ function renderHeader(state) {
 
   if (marketRateEl && offsetInputEl && effectiveRateEl && statusEl && profile) {
     // Mostrar la tasa de mercado (Venta)
-<<<<<<< HEAD
     marketRateEl.textContent = profile.marketRate
       ? formatCurrency(profile.marketRate, 'ARS')
       : '$ --';
@@ -147,16 +115,6 @@ function renderHeader(state) {
     // Rellenar el input de ajuste con el valor guardado del usuario
     if (offsetInputEl.value !== (profile.dolarOffset || 0).toString()) {
       offsetInputEl.value = profile.dolarOffset || 0;
-=======
-    marketRateEl.textContent = profile.marketRate ? formatCurrency(profile.marketRate, 'ARS') : '$ --';
-    
-    // Mostrar la tasa de mercado (Compra)
-    marketBuyRateEl.textContent = profile.marketBuyRate ? formatCurrency(profile.marketBuyRate, 'ARS') : '$ --';
-
-    // Rellenar el input de ajuste con el valor guardado del usuario
-    if (offsetInputEl.value !== (profile.dolarOffset || 0).toString()) {
-        offsetInputEl.value = profile.dolarOffset || 0;
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     }
 
     // Mostrar la tasa final que usará la aplicación
@@ -164,20 +122,12 @@ function renderHeader(state) {
 
     // Actualizar el estado visual del widget
     if (profile.marketRate) {
-<<<<<<< HEAD
       statusEl.innerHTML = `
-=======
-        statusEl.innerHTML = `
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
             <i class="fas fa-circle text-green-500"></i>
             <span>Actualizado</span>
         `;
     } else {
-<<<<<<< HEAD
       statusEl.innerHTML = `
-=======
-         statusEl.innerHTML = `
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
             <i class="fas fa-circle text-red-500"></i>
             <span>Error API</span>
         `;
@@ -185,7 +135,6 @@ function renderHeader(state) {
   }
 }
 
-<<<<<<< HEAD
 /**
  * Llama a las funciones de renderizado para cada sección de la aplicación.
  * @param {object} state El estado actual de la aplicación.
@@ -193,16 +142,6 @@ function renderHeader(state) {
 function renderAllSections(state) {
   const { isInitialRender, isDataLoading, ui } = state;
 
-=======
-
-/**
- * Llama a las funciones de renderizado para cada sección de la aplicación.
- * @param {object} state El estado actual de la aplicación.
- */
-function renderAllSections(state) {
-  const { isInitialRender, isDataLoading, ui } = state;
-
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   // Llama a las funciones importadas de los módulos especializados
   renderCapitalSection(state);
   renderSalesSection(state);
@@ -212,7 +151,7 @@ function renderAllSections(state) {
   renderInventorySections(state);
   renderClientsSections(state);
   renderOperationsSections(state);
-  renderReportsSections(state); 
+  renderReportsSections(state);
   renderIntelligentAnalysisSection(state);
   renderPublicProvidersSection(state);
   renderUserProvidersSection(state);
@@ -224,24 +163,12 @@ function renderAllSections(state) {
     switchTab('capital');
   }
 
-<<<<<<< HEAD
-  // =================================================================================
-  // INICIO DE MODIFICACIÓN: Se asegura que las vistas de deudas se actualicen
-  // =================================================================================
-=======
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   if (ui.activeOperacionesDebtsTab) {
     switchDebtView('operaciones-deudas', ui.activeOperacionesDebtsTab);
   }
   if (ui.activeClientesDebtsTab) {
     switchDebtView('clientes-deudas', ui.activeClientesDebtsTab);
   }
-<<<<<<< HEAD
-  // =================================================================================
-  // FIN DE MODIFICACIÓN
-  // =================================================================================
-=======
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 }
 
 // =================================================================================
@@ -304,11 +231,6 @@ function getAppSectionsHTML() {
                     <button id="capital-apply-custom-filter-btn" class="btn-primary py-2 px-4">Aplicar</button>
                 </div>
                 
-<<<<<<< HEAD
-                <div>
-                    <h3 class="text-xl font-semibold mb-6">Detalle de Movimientos</h3>
-                    <div id="capital-history-list-container" class="space-y-2"></div>
-=======
                 <div class="mb-8">
                     <h3 class="text-xl font-semibold mb-4">Evolución del Capital</h3>
                     <div class="bg-white p-4 rounded-lg border shadow-inner">
@@ -319,7 +241,6 @@ function getAppSectionsHTML() {
                 <div>
                     <h3 class="text-xl font-semibold mb-6">Detalle de Movimientos</h3>
                     <div id="capital-history-list-container" data-list-key="capitalHistory"></div>
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                     <div id="no-capital-history-message" class="text-center py-16 text-gray-500 hidden">
                         <i class="fas fa-history fa-3x mb-4"></i>
                         <p>Aún no hay movimientos registrados para el período seleccionado.</p>
@@ -409,11 +330,7 @@ function getAppSectionsHTML() {
                     <input type="text" id="sales-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar por cliente, nombre, N/S...">
                     <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                 </div>
-<<<<<<< HEAD
-                <div id="sales-list-container"></div>
-=======
                 <div id="sales-list-container" data-list-key="sales"></div>
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                 <div id="no-sales-message" class="text-center py-16 text-gray-500 hidden"><i class="fas fa-folder-open fa-3x mb-4"></i><p>Aún no has registrado ventas.</p></div>
             </div>
         </div>
@@ -442,11 +359,7 @@ function getAppSectionsHTML() {
                         <input type="text" id="salespeople-search-input" class="form-input w-full p-3 pl-10" placeholder="Buscar vendedor...">
                         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     </div>
-<<<<<<< HEAD
-                    <div id="salespeople-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6"></div>
-=======
                     <div id="salespeople-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6" data-list-key="salespeople"></div>
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                     <div id="no-salespeople-message" class="text-center py-8 text-gray-500 hidden"><i class="fas fa-users-slash fa-3x mb-4"></i><p>No hay vendedores registrados.</p></div>
                 </div>
             </div>
@@ -552,22 +465,12 @@ function getAppSectionsHTML() {
         <div id="clientes-sub-deudas" class="clientes-sub-section hidden">
             <div class="card p-6 md:p-8">
                 <h3 class="text-2xl font-semibold mb-6">Control de Deudas de Clientes</h3>
-<<<<<<< HEAD
-                <!-- ================================================================================= -->
-                <!-- INICIO DE MODIFICACIÓN: Se añade la navegación para deudas de clientes -->
-                <!-- ================================================================================= -->
-=======
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                 <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap">
                     <button class="debt-view-btn btn-secondary py-2 px-4" data-hub="clientes-deudas" data-view="pendientes">Pendientes</button>
                     <button class="debt-view-btn btn-secondary py-2 px-4" data-hub="clientes-deudas" data-view="historial">Historial</button>
                 </div>
                 <div id="client-debts-pendientes-view">
-<<<<<<< HEAD
-                    <div id="client-debts-section-container" class="space-y-4"></div>
-=======
                     <div id="client-debts-section-container" class="space-y-4" data-list-key="clientDebts"></div>
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                     <div id="no-client-debts-message" class="text-center py-16 text-gray-500 hidden">
                         <i class="fas fa-check-circle fa-3x mb-4 text-green-500"></i>
                         <p>¡Excelente! No hay deudas de clientes pendientes.</p>
@@ -580,12 +483,6 @@ function getAppSectionsHTML() {
                         <p>No hay un historial de deudas de clientes todavía.</p>
                     </div>
                 </div>
-<<<<<<< HEAD
-                <!-- ================================================================================= -->
-                <!-- FIN DE MODIFICACIÓN -->
-                <!-- ================================================================================= -->
-=======
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
             </div>
         </div>
     </div>
@@ -664,59 +561,6 @@ function getAppSectionsHTML() {
                     <button class="toggle-section-btn text-gray-400 hover:text-gray-600 p-2" data-section="deudas"><i class="fas fa-chevron-up"></i></button>
                 </div>
                 <div id="collapsible-content-deudas">
-<<<<<<< HEAD
-                    <!-- ================================================================================= -->
-                    <!-- INICIO DE MODIFICACIÓN: Se añade la navegación para deudas de proveedores -->
-                    <!-- ================================================================================= -->
-                    <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap">
-                        <button class="debt-view-btn btn-secondary py-2 px-4" data-hub="operaciones-deudas" data-view="pendientes">Pendientes</button>
-                        <button class="debt-view-btn btn-secondary py-2 px-4" data-hub="operaciones-deudas" data-view="historial">Historial</button>
-                    </div>
-                    <div id="provider-debts-pendientes-view">
-                        <button id="toggle-debt-form-btn" class="btn-primary py-2 px-4 flex items-center mb-6"><i class="fas fa-plus mr-2"></i>Nueva Deuda</button>
-                        <div id="add-debt-form-container" class="hidden mb-8">
-                            <form id="debt-form" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-start bg-gray-50 p-6 rounded-lg border">
-                                <div>
-                                    <label for="debtor-name" class="block text-sm font-medium text-gray-700">Nombre del Acreedor</label>
-                                    <input type="text" id="debtor-name" class="mt-1 form-input w-full p-2" required>
-                                </div>
-                                <div>
-                                    <label for="debt-desc" class="block text-sm font-medium text-gray-700">Descripción</label>
-                                    <input type="text" id="debt-desc" class="mt-1 form-input w-full p-2" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Monto</label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="number" id="debt-amount" data-form-type="debt-create" class="currency-input mt-1 form-input w-full p-2" required>
-                                        <select id="debt-currency" data-form-type="debt-create" class="currency-select mt-1 form-select p-2">
-                                            <option value="USD">USD</option>
-                                            <option value="ARS">ARS</option>
-                                        </select>
-                                    </div>
-                                    <p id="debt-create-conversion" class="text-xs text-gray-500 h-4 mt-1"></p>
-                                </div>
-                                <div class="sm:col-span-2 md:col-span-3">
-                                    <button type="submit" class="btn-primary w-full py-2">Añadir Deuda</button>
-                                </div>
-                            </form>
-                        </div>
-                        <div id="debts-list-consultas" class="space-y-4"></div>
-                         <div id="no-provider-debts-message" class="text-center py-16 text-gray-500 hidden">
-                            <i class="fas fa-file-invoice-dollar fa-3x mb-4"></i>
-                            <p>No tienes deudas con proveedores registradas.</p>
-                        </div>
-                    </div>
-                    <div id="provider-debts-historial-view" class="hidden">
-                        <div id="provider-debts-history-container" class="space-y-4"></div>
-                        <div id="no-provider-debts-history-message" class="text-center py-16 text-gray-500 hidden">
-                            <i class="fas fa-history fa-3x mb-4"></i>
-                            <p>No hay un historial de deudas con proveedores todavía.</p>
-                        </div>
-                    </div>
-                    <!-- ================================================================================= -->
-                    <!-- FIN DE MODIFICACIÓN -->
-                    <!-- ================================================================================= -->
-=======
                     <div class="mb-6 flex justify-center gap-2 md:gap-4 flex-wrap">
                         <button class="debt-view-btn btn-secondary py-2 px-4" data-hub="operaciones-deudas" data-view="pendientes">Pendientes</button>
                         <button class="debt-view-btn btn-secondary py-2 px-4" data-hub="operaciones-deudas" data-view="historial">Historial</button>
@@ -762,7 +606,6 @@ function getAppSectionsHTML() {
                             <p>No hay un historial de deudas con proveedores todavía.</p>
                         </div>
                     </div>
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                 </div>
             </div>
         </div>
@@ -824,18 +667,11 @@ function getAppSectionsHTML() {
                 <div class="card p-6 md:p-8"><h3 class="text-xl font-semibold mb-4">Métricas de Venta</h3><canvas id="sales-metrics-chart"></canvas></div>
             </div>
         </div>
-<<<<<<< HEAD
-        <div id="reportes-sub-analisis" class="reportes-sub-section hidden">
-            <div class="card p-6 md:p-8">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <h3 class="text-2xl font-bold text-gray-800">Centro de Análisis</h3>
-=======
         
         <div id="reportes-sub-analisis" class="reportes-sub-section hidden">
             <div class="card p-6 md:p-8">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <h3 class="text-2xl font-bold text-gray-800">Análisis Inteligente</h3>
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                     <div class="flex items-center gap-2 flex-wrap">
                         <button class="filter-btn btn-secondary py-1 px-3 text-sm" data-hub="analysis" data-period="today">Hoy</button>
                         <button class="filter-btn btn-secondary py-1 px-3 text-sm" data-hub="analysis" data-period="week">Semana</button>
@@ -849,14 +685,6 @@ function getAppSectionsHTML() {
                     <div><label for="analysis-custom-end-date" class="block text-sm">Hasta</label><input type="date" id="analysis-custom-end-date" class="form-input"></div>
                     <button id="analysis-apply-custom-filter-btn" class="btn-primary py-2 px-4">Aplicar</button>
                 </div>
-<<<<<<< HEAD
-                <div class="flex flex-col md:flex-row gap-4 mb-6">
-                    <select id="analysis-selector" class="form-select w-full md:w-1/3">
-                        <option value="sales">Análisis de Ventas</option>
-                        <option value="stock">Análisis de Stock</option>
-                        <option value="clients">Análisis de Clientes</option>
-                    </select>
-=======
                 
                 <div id="intelligent-analysis-form" class="space-y-4 bg-gray-50 p-4 rounded-lg border">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -876,7 +704,6 @@ function getAppSectionsHTML() {
                     <div id="analysis-specific-filters-container" class="pt-4 border-t">
                         <!-- Filtros adicionales aparecerán aquí -->
                     </div>
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                 </div>
 
                 <div id="analysis-results-container" class="mt-6">
@@ -949,19 +776,12 @@ export function switchSubTab(hubKey, activeKey) {
     );
 }
 
-<<<<<<< HEAD
-// =================================================================================
-// INICIO DE MODIFICACIÓN: Nueva función para cambiar entre vistas de deudas
-// =================================================================================
-=======
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 /**
  * Cambia la vista entre 'pendientes' e 'historial' dentro de una sección de deudas.
  * @param {string} hubKey La clave del hub de deudas ('clientes-deudas' u 'operaciones-deudas').
  * @param {string} activeView La vista a activar ('pendientes' o 'historial').
  */
 export function switchDebtView(hubKey, activeView) {
-<<<<<<< HEAD
   // Actualiza el estilo de los botones
   document.querySelectorAll(`.debt-view-btn[data-hub="${hubKey}"]`).forEach((btn) => {
     btn.classList.toggle('sub-tab-btn-active', btn.dataset.view === activeView);
@@ -984,22 +804,3 @@ export function switchDebtView(hubKey, activeView) {
       ?.classList.toggle('hidden', activeView !== 'historial');
   }
 }
-// =================================================================================
-// FIN DE MODIFICACIÓN
-// =================================================================================
-=======
-    // Actualiza el estilo de los botones
-    document.querySelectorAll(`.debt-view-btn[data-hub="${hubKey}"]`).forEach(btn => {
-        btn.classList.toggle('sub-tab-btn-active', btn.dataset.view === activeView);
-    });
-
-    // Muestra u oculta los contenedores de contenido
-    if (hubKey === 'clientes-deudas') {
-        document.getElementById('client-debts-pendientes-view')?.classList.toggle('hidden', activeView !== 'pendientes');
-        document.getElementById('client-debts-historial-view')?.classList.toggle('hidden', activeView !== 'historial');
-    } else if (hubKey === 'operaciones-deudas') {
-        document.getElementById('provider-debts-pendientes-view')?.classList.toggle('hidden', activeView !== 'pendientes');
-        document.getElementById('provider-debts-historial-view')?.classList.toggle('hidden', activeView !== 'historial');
-    }
-}
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b

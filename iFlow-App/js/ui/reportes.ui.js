@@ -1,72 +1,72 @@
 import { charts, appState } from '../state.js';
 import { formatCurrency, escapeHTML } from './utils.js';
 
-<<<<<<< HEAD
-=======
 // ===============================================================
 // INICIO DE MODIFICACIÓN: Se añade la configuración del nuevo módulo
 // ===============================================================
 
 // Configuración central para el módulo de Análisis Inteligente
 const ANALYSIS_CONFIG = {
-    ventas: {
-        label: 'Ventas',
-        groups: {
-            category: 'Categoría',
-            product: 'Producto Específico',
-            salesperson: 'Vendedor'
-        },
-        metrics: {
-            revenue: 'Total Facturado (USD)',
-            units: 'Unidades Vendidas',
-            grossProfit: 'Ganancia Bruta (USD)'
-        }
+  ventas: {
+    label: 'Ventas',
+    groups: {
+      category: 'Categoría',
+      product: 'Producto Específico',
+      salesperson: 'Vendedor',
     },
-    rentabilidad: {
-        label: 'Rentabilidad',
-        groups: {
-            category: 'Categoría',
-            product: 'Producto Específico',
-            salesperson: 'Vendedor'
-        },
-        metrics: {
-            netProfit: 'Ganancia Neta (USD)',
-            margin: 'Margen de Ganancia (%)'
-        }
+    metrics: {
+      revenue: 'Total Facturado (USD)',
+      units: 'Unidades Vendidas',
+      grossProfit: 'Ganancia Bruta (USD)',
     },
-    inventario: {
-        label: 'Inventario',
-        groups: {
-            category: 'Categoría',
-            provider: 'Proveedor',
-            grade: 'Grado del Producto'
-        },
-        metrics: {
-            costValue: 'Valor de Costo Total (USD)',
-            units: 'Cantidad de Unidades',
-            age: 'Antigüedad Promedio (días)'
-        }
+  },
+  rentabilidad: {
+    label: 'Rentabilidad',
+    groups: {
+      category: 'Categoría',
+      product: 'Producto Específico',
+      salesperson: 'Vendedor',
     },
-    clientes: {
-        label: 'Clientes',
-        groups: { // Para clientes, "agrupar por" funciona como un "ranking por"
-            top_revenue: 'Mayor Volumen de Compra (USD)',
-            top_purchases: 'Mayor Cantidad de Compras',
-            top_profit: 'Mayor Ganancia Generada (USD)'
-        },
-        metrics: { // Las métricas son implícitas en el ranking, pero definimos una para la tabla
-            value: 'Valor'
-        }
+    metrics: {
+      netProfit: 'Ganancia Neta (USD)',
+      margin: 'Margen de Ganancia (%)',
     },
-    gastos: {
-        label: 'Gastos',
-        groups: {
-            type: 'Tipo de Gasto'
-        },
-        metrics: {
-            totalSpent: 'Monto Total Gastado (USD)'
-        }
-    }
+  },
+  inventario: {
+    label: 'Inventario',
+    groups: {
+      category: 'Categoría',
+      provider: 'Proveedor',
+      grade: 'Grado del Producto',
+    },
+    metrics: {
+      costValue: 'Valor de Costo Total (USD)',
+      units: 'Cantidad de Unidades',
+      age: 'Antigüedad Promedio (días)',
+    },
+  },
+  clientes: {
+    label: 'Clientes',
+    groups: {
+      // Para clientes, "agrupar por" funciona como un "ranking por"
+      top_revenue: 'Mayor Volumen de Compra (USD)',
+      top_purchases: 'Mayor Cantidad de Compras',
+      top_profit: 'Mayor Ganancia Generada (USD)',
+    },
+    metrics: {
+      // Las métricas son implícitas en el ranking, pero definimos una para la tabla
+      value: 'Valor',
+    },
+  },
+  gastos: {
+    label: 'Gastos',
+    groups: {
+      type: 'Tipo de Gasto',
+    },
+    metrics: {
+      totalSpent: 'Monto Total Gastado (USD)',
+    },
+  },
 };
 
 /**
@@ -74,276 +74,334 @@ const ANALYSIS_CONFIG = {
  * @param {object} state El estado actual de la aplicación.
  */
 export function renderIntelligentAnalysisSection(state) {
-    const { sales, stock, clients, salespeople, dailyExpenses, categories, ui } = state;
-    if (!sales || !stock || !clients || !ui.analysis) return;
+  const { sales, stock, clients, salespeople, dailyExpenses, categories, ui } = state;
+  if (!sales || !stock || !clients || !ui.analysis) return;
 
-    const areaSelector = document.getElementById('analysis-area-selector');
-    const groupbySelector = document.getElementById('analysis-groupby-selector');
-    const metricSelector = document.getElementById('analysis-metric-selector');
-    const resultsContainer = document.getElementById('analysis-results-container');
+  const areaSelector = document.getElementById('analysis-area-selector');
+  const groupbySelector = document.getElementById('analysis-groupby-selector');
+  const metricSelector = document.getElementById('analysis-metric-selector');
+  const resultsContainer = document.getElementById('analysis-results-container');
 
-    if (!areaSelector || !groupbySelector || !metricSelector || !resultsContainer) return;
+  if (!areaSelector || !groupbySelector || !metricSelector || !resultsContainer) return;
 
-    // ===============================================================
-    // INICIO DE LA CORRECCIÓN
-    // Se añade la lógica para actualizar el estado visual de los botones de filtro.
-    // Esto hace que el botón seleccionado se vea de un color diferente.
-    // ===============================================================
-    const { analysisPeriod } = ui.analysis;
-    document
-        .querySelectorAll('.filter-btn[data-hub="analysis"]')
-        .forEach((btn) =>
-            btn.classList.toggle('filter-btn-active', btn.dataset.period === analysisPeriod)
-        );
-    
-    const customControls = document.getElementById('analysis-custom-date-range-controls');
-    if (customControls) {
-        customControls.classList.toggle('hidden', analysisPeriod !== 'custom');
-    }
-    // ===============================================================
-    // FIN DE LA CORRECCIÓN
-    // ===============================================================
+  // ===============================================================
+  // INICIO DE LA CORRECCIÓN
+  // Se añade la lógica para actualizar el estado visual de los botones de filtro.
+  // Esto hace que el botón seleccionado se vea de un color diferente.
+  // ===============================================================
+  const { analysisPeriod } = ui.analysis;
+  document
+    .querySelectorAll('.filter-btn[data-hub="analysis"]')
+    .forEach((btn) =>
+      btn.classList.toggle('filter-btn-active', btn.dataset.period === analysisPeriod)
+    );
 
-    const {
-        analysisArea = 'ventas',
-        analysisGroupby,
-        analysisMetric
-    } = ui.analysis;
+  const customControls = document.getElementById('analysis-custom-date-range-controls');
+  if (customControls) {
+    customControls.classList.toggle('hidden', analysisPeriod !== 'custom');
+  }
+  // ===============================================================
+  // FIN DE LA CORRECCIÓN
+  // ===============================================================
 
-    // 1. Poblar el selector de Área
-    if (areaSelector.options.length <= 1) {
-        areaSelector.innerHTML = Object.entries(ANALYSIS_CONFIG)
-            .map(([key, config]) => `<option value="${key}" ${analysisArea === key ? 'selected' : ''}>${config.label}</option>`)
-            .join('');
-    }
+  const { analysisArea = 'ventas', analysisGroupby, analysisMetric } = ui.analysis;
 
-    // 2. Poblar los selectores de Agrupación y Métrica dinámicamente
-    const currentConfig = ANALYSIS_CONFIG[analysisArea];
-    const selectedGroupby = analysisGroupby || Object.keys(currentConfig.groups)[0];
-    const selectedMetric = analysisMetric || Object.keys(currentConfig.metrics)[0];
+  // 1. Poblar el selector de Área
+  if (areaSelector.options.length <= 1) {
+    areaSelector.innerHTML = Object.entries(ANALYSIS_CONFIG)
+      .map(
+        ([key, config]) =>
+          `<option value="${key}" ${analysisArea === key ? 'selected' : ''}>${
+            config.label
+          }</option>`
+      )
+      .join('');
+  }
 
-    groupbySelector.innerHTML = Object.entries(currentConfig.groups)
-        .map(([key, label]) => `<option value="${key}" ${selectedGroupby === key ? 'selected' : ''}>${label}</option>`)
-        .join('');
+  // 2. Poblar los selectores de Agrupación y Métrica dinámicamente
+  const currentConfig = ANALYSIS_CONFIG[analysisArea];
+  const selectedGroupby = analysisGroupby || Object.keys(currentConfig.groups)[0];
+  const selectedMetric = analysisMetric || Object.keys(currentConfig.metrics)[0];
 
-    metricSelector.innerHTML = Object.entries(currentConfig.metrics)
-        .map(([key, label]) => `<option value="${key}" ${selectedMetric === key ? 'selected' : ''}>${label}</option>`)
-        .join('');
+  groupbySelector.innerHTML = Object.entries(currentConfig.groups)
+    .map(
+      ([key, label]) =>
+        `<option value="${key}" ${selectedGroupby === key ? 'selected' : ''}>${label}</option>`
+    )
+    .join('');
 
-    // 3. Filtrar los datos por el rango de fechas seleccionado
-    const { analysisCustomStartDate, analysisCustomEndDate } = ui.analysis;
-    const now = new Date();
-    let startDate, endDate;
-    // (La lógica de filtrado de fechas es la misma que en el dashboard)
-    switch (analysisPeriod) {
-        case 'today':
-            startDate = new Date(); startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(); endDate.setHours(23, 59, 59, 999);
-            break;
-        case 'week':
-            const day = now.getDay();
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + (day === 0 ? -6 : 1));
-            startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(); endDate.setHours(23, 59, 59, 999);
-            break;
-        case 'month':
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(); endDate.setHours(23, 59, 59, 999);
-            break;
-        case 'year':
-            startDate = new Date(now.getFullYear(), 0, 1);
-            startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(now.getFullYear(), 11, 31);
-            endDate.setHours(23, 59, 59, 999);
-            break;
-        case 'custom':
-            startDate = analysisCustomStartDate ? new Date(analysisCustomStartDate + 'T00:00:00') : new Date(0);
-            endDate = analysisCustomEndDate ? new Date(analysisCustomEndDate + 'T23:59:59') : new Date();
-            break;
-        default:
-            startDate = new Date(0);
-            endDate = new Date();
-    }
+  metricSelector.innerHTML = Object.entries(currentConfig.metrics)
+    .map(
+      ([key, label]) =>
+        `<option value="${key}" ${selectedMetric === key ? 'selected' : ''}>${label}</option>`
+    )
+    .join('');
 
-    const salesInPeriod = sales.filter(s => {
-        const saleDate = s.soldAt?.toDate() || new Date(s.saleDate + 'T12:00:00Z');
-        return saleDate >= startDate && saleDate <= endDate;
-    });
+  // 3. Filtrar los datos por el rango de fechas seleccionado
+  const { analysisCustomStartDate, analysisCustomEndDate } = ui.analysis;
+  const now = new Date();
+  let startDate, endDate;
+  // (La lógica de filtrado de fechas es la misma que en el dashboard)
+  switch (analysisPeriod) {
+    case 'today':
+      startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'week':
+      const day = now.getDay();
+      startDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - day + (day === 0 ? -6 : 1)
+      );
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'month':
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'year':
+      startDate = new Date(now.getFullYear(), 0, 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), 11, 31);
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'custom':
+      startDate = analysisCustomStartDate
+        ? new Date(analysisCustomStartDate + 'T00:00:00')
+        : new Date(0);
+      endDate = analysisCustomEndDate ? new Date(analysisCustomEndDate + 'T23:59:59') : new Date();
+      break;
+    default:
+      startDate = new Date(0);
+      endDate = new Date();
+  }
 
-    // 4. Calcular los resultados
-    let results = [];
-    let headers = ['Grupo', 'Métrica'];
+  const salesInPeriod = sales.filter((s) => {
+    const saleDate = s.soldAt?.toDate() || new Date(s.saleDate + 'T12:00:00Z');
+    return saleDate >= startDate && saleDate <= endDate;
+  });
 
-    // Lógica principal de cálculo
-    try {
-        switch (analysisArea) {
-            case 'ventas':
-            case 'rentabilidad':
-                const data = {};
-                salesInPeriod.forEach(sale => {
-                    (sale.items || []).forEach(item => {
-                        let key;
-                        switch (selectedGroupby) {
-                            case 'category': key = item.category || 'Sin Categoría'; break;
-                            case 'product': key = item.model || 'Producto Desconocido'; break;
-                            case 'salesperson': key = sale.salespersonName || 'Sin Vendedor'; break;
-                        }
-                        if (!data[key]) data[key] = { revenue: 0, units: 0, cost: 0, commission: 0 };
-                        data[key].revenue += item.salePrice || 0;
-                        data[key].units++;
-                        data[key].cost += item.phoneCost || 0;
-                        // La comisión se prorratea entre los items de la venta
-                        data[key].commission += (sale.commissionUSD || 0) / (sale.items.length || 1);
-                    });
-                });
-                
-                results = Object.entries(data).map(([key, values]) => {
-                    const grossProfit = values.revenue - values.cost;
-                    const netProfit = grossProfit - values.commission;
-                    let metricValue;
-                    switch (selectedMetric) {
-                        case 'revenue': metricValue = values.revenue; break;
-                        case 'units': metricValue = values.units; break;
-                        case 'grossProfit': metricValue = grossProfit; break;
-                        case 'netProfit': metricValue = netProfit; break;
-                        case 'margin': metricValue = values.cost > 0 ? (netProfit / values.cost) * 100 : 0; break;
-                    }
-                    return { group: key, value: metricValue };
-                });
+  // 4. Calcular los resultados
+  let results = [];
+  let headers = ['Grupo', 'Métrica'];
+
+  // Lógica principal de cálculo
+  try {
+    switch (analysisArea) {
+      case 'ventas':
+      case 'rentabilidad':
+        const data = {};
+        salesInPeriod.forEach((sale) => {
+          (sale.items || []).forEach((item) => {
+            let key;
+            switch (selectedGroupby) {
+              case 'category':
+                key = item.category || 'Sin Categoría';
                 break;
-
-            case 'inventario':
-                const invData = {};
-                stock.forEach(item => {
-                    let key;
-                    switch (selectedGroupby) {
-                        case 'category': key = item.category || 'Sin Categoría'; break;
-                        case 'provider': key = item.providerName || 'No Asignado'; break;
-                        case 'grade': key = item.attributes?.Grado || 'Sin Grado'; break;
-                    }
-                    if (!invData[key]) invData[key] = { costValue: 0, units: 0, totalAge: 0, countForAge: 0 };
-                    const quantity = item.quantity || 1;
-                    invData[key].costValue += (item.phoneCost || 0) * quantity;
-                    invData[key].units += quantity;
-                    if (item.createdAt?.toDate) {
-                        const age = (new Date() - item.createdAt.toDate()) / (1000 * 3600 * 24);
-                        invData[key].totalAge += age * quantity;
-                        invData[key].countForAge += quantity;
-                    }
-                });
-
-                results = Object.entries(invData).map(([key, values]) => {
-                    let metricValue;
-                    switch (selectedMetric) {
-                        case 'costValue': metricValue = values.costValue; break;
-                        case 'units': metricValue = values.units; break;
-                        case 'age': metricValue = values.countForAge > 0 ? values.totalAge / values.countForAge : 0; break;
-                    }
-                    return { group: key, value: metricValue };
-                });
+              case 'product':
+                key = item.model || 'Producto Desconocido';
                 break;
-            
-            case 'clientes':
-                const clientData = {};
-                salesInPeriod.forEach(sale => {
-                    const id = sale.clientId;
-                    if (!clientData[id]) clientData[id] = { name: sale.customerName, purchases: 0, revenue: 0, profit: 0 };
-                    clientData[id].purchases++;
-                    clientData[id].revenue += sale.total || 0;
-                    const saleProfit = (sale.items || []).reduce((sum, i) => sum + ((i.salePrice || 0) - (i.phoneCost || 0)), 0) - (sale.commissionUSD || 0);
-                    clientData[id].profit += saleProfit;
-                });
-
-                results = Object.values(clientData).map(c => {
-                    let metricValue;
-                    switch (selectedGroupby) {
-                        case 'top_revenue': metricValue = c.revenue; break;
-                        case 'top_purchases': metricValue = c.purchases; break;
-                        case 'top_profit': metricValue = c.profit; break;
-                    }
-                    return { group: c.name, value: metricValue };
-                });
-                headers = ['Cliente', currentConfig.groups[selectedGroupby]];
+              case 'salesperson':
+                key = sale.salespersonName || 'Sin Vendedor';
                 break;
+            }
+            if (!data[key]) data[key] = { revenue: 0, units: 0, cost: 0, commission: 0 };
+            data[key].revenue += item.salePrice || 0;
+            data[key].units++;
+            data[key].cost += item.phoneCost || 0;
+            // La comisión se prorratea entre los items de la venta
+            data[key].commission += (sale.commissionUSD || 0) / (sale.items.length || 1);
+          });
+        });
 
-            case 'gastos':
-                const expenseData = { 'Gastos Fijos': 0, 'Gastos Diarios/Variables': 0 };
-                const expensesInPeriod = dailyExpenses.filter(e => {
-                    const expenseDate = new Date(e.date + 'T12:00:00Z');
-                    return expenseDate >= startDate && expenseDate <= endDate;
-                });
-                expensesInPeriod.forEach(expense => {
-                    if (expense.isFixedPayment) {
-                        expenseData['Gastos Fijos'] += expense.amountUSD || 0;
-                    } else {
-                        expenseData['Gastos Diarios/Variables'] += expense.amountUSD || 0;
-                    }
-                });
-                results = Object.entries(expenseData).map(([key, value]) => ({ group: key, value }));
-                break;
-        }
-    } catch (error) {
-        console.error("Error al calcular el análisis:", error);
-        resultsContainer.innerHTML = `<p class="text-center text-red-500">Ocurrió un error al generar el análisis.</p>`;
-        return;
+        results = Object.entries(data).map(([key, values]) => {
+          const grossProfit = values.revenue - values.cost;
+          const netProfit = grossProfit - values.commission;
+          let metricValue;
+          switch (selectedMetric) {
+            case 'revenue':
+              metricValue = values.revenue;
+              break;
+            case 'units':
+              metricValue = values.units;
+              break;
+            case 'grossProfit':
+              metricValue = grossProfit;
+              break;
+            case 'netProfit':
+              metricValue = netProfit;
+              break;
+            case 'margin':
+              metricValue = values.cost > 0 ? (netProfit / values.cost) * 100 : 0;
+              break;
+          }
+          return { group: key, value: metricValue };
+        });
+        break;
+
+      case 'inventario':
+        const invData = {};
+        stock.forEach((item) => {
+          let key;
+          switch (selectedGroupby) {
+            case 'category':
+              key = item.category || 'Sin Categoría';
+              break;
+            case 'provider':
+              key = item.providerName || 'No Asignado';
+              break;
+            case 'grade':
+              key = item.attributes?.Grado || 'Sin Grado';
+              break;
+          }
+          if (!invData[key]) invData[key] = { costValue: 0, units: 0, totalAge: 0, countForAge: 0 };
+          const quantity = item.quantity || 1;
+          invData[key].costValue += (item.phoneCost || 0) * quantity;
+          invData[key].units += quantity;
+          if (item.createdAt?.toDate) {
+            const age = (new Date() - item.createdAt.toDate()) / (1000 * 3600 * 24);
+            invData[key].totalAge += age * quantity;
+            invData[key].countForAge += quantity;
+          }
+        });
+
+        results = Object.entries(invData).map(([key, values]) => {
+          let metricValue;
+          switch (selectedMetric) {
+            case 'costValue':
+              metricValue = values.costValue;
+              break;
+            case 'units':
+              metricValue = values.units;
+              break;
+            case 'age':
+              metricValue = values.countForAge > 0 ? values.totalAge / values.countForAge : 0;
+              break;
+          }
+          return { group: key, value: metricValue };
+        });
+        break;
+
+      case 'clientes':
+        const clientData = {};
+        salesInPeriod.forEach((sale) => {
+          const id = sale.clientId;
+          if (!clientData[id])
+            clientData[id] = { name: sale.customerName, purchases: 0, revenue: 0, profit: 0 };
+          clientData[id].purchases++;
+          clientData[id].revenue += sale.total || 0;
+          const saleProfit =
+            (sale.items || []).reduce(
+              (sum, i) => sum + ((i.salePrice || 0) - (i.phoneCost || 0)),
+              0
+            ) - (sale.commissionUSD || 0);
+          clientData[id].profit += saleProfit;
+        });
+
+        results = Object.values(clientData).map((c) => {
+          let metricValue;
+          switch (selectedGroupby) {
+            case 'top_revenue':
+              metricValue = c.revenue;
+              break;
+            case 'top_purchases':
+              metricValue = c.purchases;
+              break;
+            case 'top_profit':
+              metricValue = c.profit;
+              break;
+          }
+          return { group: c.name, value: metricValue };
+        });
+        headers = ['Cliente', currentConfig.groups[selectedGroupby]];
+        break;
+
+      case 'gastos':
+        const expenseData = { 'Gastos Fijos': 0, 'Gastos Diarios/Variables': 0 };
+        const expensesInPeriod = dailyExpenses.filter((e) => {
+          const expenseDate = new Date(e.date + 'T12:00:00Z');
+          return expenseDate >= startDate && expenseDate <= endDate;
+        });
+        expensesInPeriod.forEach((expense) => {
+          if (expense.isFixedPayment) {
+            expenseData['Gastos Fijos'] += expense.amountUSD || 0;
+          } else {
+            expenseData['Gastos Diarios/Variables'] += expense.amountUSD || 0;
+          }
+        });
+        results = Object.entries(expenseData).map(([key, value]) => ({ group: key, value }));
+        break;
     }
+  } catch (error) {
+    console.error('Error al calcular el análisis:', error);
+    resultsContainer.innerHTML = `<p class="text-center text-red-500">Ocurrió un error al generar el análisis.</p>`;
+    return;
+  }
 
-    // 5. Renderizar los resultados
-    results.sort((a, b) => b.value - a.value);
+  // 5. Renderizar los resultados
+  results.sort((a, b) => b.value - a.value);
 
-    if (results.length === 0) {
-        resultsContainer.innerHTML = `<p class="text-center text-gray-500 py-8">No hay datos suficientes para mostrar en el período seleccionado.</p>`;
-        return;
-    }
+  if (results.length === 0) {
+    resultsContainer.innerHTML = `<p class="text-center text-gray-500 py-8">No hay datos suficientes para mostrar en el período seleccionado.</p>`;
+    return;
+  }
 
-    const formatValue = (value, metric) => {
-        if (metric === 'units' || metric === 'top_purchases') return value.toFixed(0);
-        if (metric === 'margin') return `${value.toFixed(2)}%`;
-        if (metric === 'age') return `${value.toFixed(0)} días`;
-        return formatCurrency(value, 'USD');
-    };
+  const formatValue = (value, metric) => {
+    if (metric === 'units' || metric === 'top_purchases') return value.toFixed(0);
+    if (metric === 'margin') return `${value.toFixed(2)}%`;
+    if (metric === 'age') return `${value.toFixed(0)} días`;
+    return formatCurrency(value, 'USD');
+  };
 
-    resultsContainer.innerHTML = `
+  resultsContainer.innerHTML = `
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
                 <thead class="bg-gray-100">
                     <tr>
                         <th class="p-3 text-left font-semibold">${headers[0]}</th>
-                        <th class="p-3 text-right font-semibold">${currentConfig.metrics[selectedMetric] || headers[1]}</th>
+                        <th class="p-3 text-right font-semibold">${
+                          currentConfig.metrics[selectedMetric] || headers[1]
+                        }</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${results.map(r => `
+                    ${results
+                      .map(
+                        (r) => `
                         <tr class="border-b hover:bg-gray-50">
                             <td class="p-3">${escapeHTML(r.group)}</td>
-                            <td class="p-3 text-right font-semibold">${formatValue(r.value, selectedMetric)}</td>
+                            <td class="p-3 text-right font-semibold">${formatValue(
+                              r.value,
+                              selectedMetric
+                            )}</td>
                         </tr>
-                    `).join('')}
+                    `
+                      )
+                      .join('')}
                 </tbody>
             </table>
         </div>
     `;
 }
 
-
 // ===============================================================
 // FIN DE MODIFICACIÓN
 // ===============================================================
 
-
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 /**
  * Renderiza las sub-secciones de la pestaña de Reportes.
  * @param {object} state El estado actual de la aplicación.
  */
 export function renderReportsSections(state) {
   renderDashboardSection(state);
-<<<<<<< HEAD
-  renderSalesAnalysis(state);
-=======
   // La llamada a renderIntelligentAnalysisSection se hace desde el orquestador principal (ui.js)
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 }
 
 /**
@@ -437,17 +495,10 @@ function renderDashboardSection(state) {
     return sum + (s.total - itemsCost);
   }, 0);
   const dailyCosts = dailyExpensesInPeriod.reduce((sum, e) => sum + (e.amountUSD || 0), 0);
-<<<<<<< HEAD
-  const totalExpenses = dailyCosts;
 
-  const totalCommissions = salesInPeriod.reduce((sum, s) => sum + (s.commissionUSD || 0), 0);
-  const netProfit = grossProfit - totalExpenses - totalCommissions;
-=======
-  
   const totalCommissions = salesInPeriod.reduce((sum, s) => sum + (s.commissionUSD || 0), 0);
   const totalExpenses = dailyCosts + totalCommissions; // Ahora las comisiones son parte de los gastos totales
   const netProfit = grossProfit - totalExpenses;
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
   const summarySalesEl = document.getElementById('summary-sales');
   if (summarySalesEl) summarySalesEl.textContent = formatCurrency(totalSales, 'USD');
@@ -471,276 +522,15 @@ function renderDashboardSection(state) {
   const executedFixedExpenses = dailyExpensesInPeriod
     .filter((e) => e.isFixedPayment)
     .reduce((sum, e) => sum + e.amountUSD, 0);
-<<<<<<< HEAD
+
   const pureDailyExpenses = dailyCosts - executedFixedExpenses;
-  renderExpenseBreakdownChart(0, executedFixedExpenses, pureDailyExpenses);
-=======
-  
-  const pureDailyExpenses = dailyCosts - executedFixedExpenses;
-  
+
   renderExpenseBreakdownChart(totalCommissions, executedFixedExpenses, pureDailyExpenses);
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   renderNetProfitCategoryChart(salesInPeriod);
   renderSalesMetricsChart(salesInPeriod);
 }
 
-<<<<<<< HEAD
-/**
- * Renderiza la sección de Análisis con sus filtros y resultados.
- * @param {object} state El estado actual de la aplicación.
- */
-export function renderSalesAnalysis(state) {
-  const { sales, stock, clients, ui } = state;
-  const { analysisPeriod, analysisCustomStartDate, analysisCustomEndDate } = ui.analysis;
-  const container = document.getElementById('analysis-results-container');
-  const selector = document.getElementById('analysis-selector');
-  if (!container || !selector || !sales || !stock || !clients) return;
-
-  document
-    .querySelectorAll('.filter-btn[data-hub="analysis"]')
-    .forEach((btn) =>
-      btn.classList.toggle('filter-btn-active', btn.dataset.period === analysisPeriod)
-    );
-  const customControls = document.getElementById('analysis-custom-date-range-controls');
-  if (customControls) customControls.classList.toggle('hidden', analysisPeriod !== 'custom');
-
-  const now = new Date();
-  let startDate, endDate;
-  switch (analysisPeriod) {
-    case 'today':
-      startDate = new Date();
-      startDate.setHours(0, 0, 0, 0);
-      endDate = new Date();
-      endDate.setHours(23, 59, 59, 999);
-      break;
-    case 'week':
-      const day = now.getDay();
-      startDate = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() - day + (day === 0 ? -6 : 1)
-      );
-      startDate.setHours(0, 0, 0, 0);
-      endDate = new Date();
-      endDate.setHours(23, 59, 59, 999);
-      break;
-    case 'month':
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      startDate.setHours(0, 0, 0, 0);
-      endDate = new Date();
-      endDate.setHours(23, 59, 59, 999);
-      break;
-    case 'year':
-      startDate = new Date(now.getFullYear(), 0, 1);
-      startDate.setHours(0, 0, 0, 0);
-      endDate = new Date(now.getFullYear(), 11, 31);
-      endDate.setHours(23, 59, 59, 999);
-      break;
-    case 'custom':
-      startDate = analysisCustomStartDate
-        ? new Date(analysisCustomStartDate + 'T00:00:00')
-        : new Date(0);
-
-      endDate = analysisCustomEndDate ? new Date(analysisCustomEndDate + 'T23:59:59') : new Date();
-
-      break;
-    default:
-      startDate = new Date(0);
-      endDate = new Date();
-  }
-
-  const salesInPeriod = sales.filter((s) => {
-    const saleDate = s.soldAt?.toDate() || new Date(s.saleDate + 'T12:00:00Z');
-    return saleDate >= startDate && saleDate <= endDate;
-  });
-  const analysisType = selector.value;
-  let contentHTML = '';
-
-  switch (analysisType) {
-    case 'sales':
-      if (salesInPeriod.length === 0) {
-        contentHTML =
-          '<p class="text-center text-gray-500">No hay ventas en el período seleccionado.</p>';
-        break;
-      }
-      const totalRevenue = salesInPeriod.reduce((sum, s) => sum + s.total, 0);
-      const totalNetProfit = salesInPeriod.reduce((sum, s) => {
-        const itemsCost = (s.items || []).reduce((cost, i) => cost + (i.phoneCost || 0), 0);
-        return sum + (s.total - itemsCost);
-      }, 0);
-      const salesByCategory = salesInPeriod
-        .flatMap((s) => s.items)
-        .reduce((acc, item) => {
-          const category = item.category || 'Sin Categoría';
-          if (!acc[category]) {
-            acc[category] = { count: 0, revenue: 0 };
-          }
-          acc[category].count++;
-          acc[category].revenue += item.salePrice || 0;
-
-          return acc;
-        }, {});
-      contentHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Ventas Totales</p><p class="text-2xl font-bold">${
-                      salesInPeriod.length
-                    }</p></div>
-                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Facturación Total</p><p class="text-2xl font-bold">${formatCurrency(
-                      totalRevenue,
-                      'USD'
-                    )}</p></div>
-                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Ganancia Neta Total</p><p class="text-2xl font-bold text-green-600">${formatCurrency(
-                      totalNetProfit,
-                      'USD'
-                    )}</p></div>
-                </div>
-                <h4 class="text-lg font-semibold mb-2">Ventas por Categoría</h4>
-                <div class="overflow-x-auto"><table class="min-w-full text-sm">
-                    <thead class="bg-gray-100"><tr>
-                        <th class="p-2 text-left">Categoría</th><th class="p-2 text-center">Unidades</th><th class="p-2 text-right">Facturación</th>
-                    </tr></thead>
-                    <tbody>${Object.entries(salesByCategory)
-                      .map(
-                        ([cat, data]) => `
-                        <tr class="border-b"><td class="p-2 font-semibold">${cat}</td><td class="p-2 text-center">${
-                          data.count
-                        }</td><td class="p-2 text-right">${formatCurrency(
-                          data.revenue,
-                          'USD'
-                        )}</td></tr>
-                    `
-                      )
-                      .join('')}</tbody>
-                </table></div>
-            `;
-      break;
-
-    case 'stock':
-      const totalStockValue = stock.reduce((sum, item) => sum + (item.phoneCost || 0), 0);
-      const stockByCategory = stock.reduce((acc, item) => {
-        const category = item.category || 'Sin Categoría';
-        if (!acc[category]) {
-          acc[category] = { count: 0, value: 0 };
-        }
-        acc[category].count++;
-        acc[category].value += item.phoneCost || 0;
-        return acc;
-      }, {});
-      contentHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Unidades en Stock</p><p class="text-2xl font-bold">${
-                      stock.length
-                    }</p></div>
-                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Valor Total del Stock</p><p class="text-2xl font-bold text-blue-600">${formatCurrency(
-                      totalStockValue,
-                      'USD'
-                    )}</p></div>
-                </div>
-                <h4 class="text-lg font-semibold mb-2">Stock por Categoría</h4>
-                <div class="overflow-x-auto"><table class="min-w-full text-sm">
-                    <thead class="bg-gray-100"><tr>
-                        <th class="p-2 text-left">Categoría</th><th class="p-2 text-center">Unidades</th><th class="p-2 text-right">Valor (USD)</th>
-                    </tr></thead>
-                    <tbody>${Object.entries(stockByCategory)
-                      .map(
-                        ([cat, data]) => `
-                        <tr class="border-b"><td class="p-2 font-semibold">${cat}</td><td class="p-2 text-center">${
-                          data.count
-                        }</td><td class="p-2 text-right">${formatCurrency(
-                          data.value,
-                          'USD'
-                        )}</td></tr>
-                    `
-                      )
-                      .join('')}</tbody>
-                </table></div>
-            `;
-      break;
-
-    case 'clients':
-      if (salesInPeriod.length === 0) {
-        contentHTML =
-          '<p class="text-center text-gray-500">No hay datos de clientes para el período seleccionado.</p>';
-        break;
-      }
-      const salesByClient = salesInPeriod.reduce((acc, sale) => {
-        const id = sale.clientId;
-        if (!acc[id]) {
-          acc[id] = { name: sale.customerName, count: 0, totalProfit: 0 };
-        }
-        const itemsCost = (sale.items || []).reduce((cost, i) => cost + (i.phoneCost || 0), 0);
-        acc[id].count++;
-        acc[id].totalProfit += sale.total - itemsCost;
-
-        return acc;
-      }, {});
-      const repeatClients = Object.values(salesByClient)
-        .filter((c) => c.count > 1)
-        .sort((a, b) => b.count - a.count);
-      const topClients = Object.values(salesByClient)
-        .sort((a, b) => b.totalProfit - a.totalProfit)
-        .slice(0, 10);
-      contentHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Clientes Únicos (Período)</p><p class="text-2xl font-bold">${
-                      Object.keys(salesByClient).length
-                    }</p></div>
-                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Clientes Recurrentes (Período)</p><p class="text-2xl font-bold">${
-                      repeatClients.length
-                    }</p></div>
-                </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div>
-                        <h4 class="text-lg font-semibold mb-2">Clientes con Más Compras (Período)</h4>
-                        <div class="overflow-x-auto"><table class="min-w-full text-sm">
-                            <thead class="bg-gray-100"><tr><th class="p-2 text-left">Nombre</th><th class="p-2 text-center">Compras</th></tr></thead>
-                            <tbody>${
-                              repeatClients.length > 0
-                                ? repeatClients
-                                    .map(
-                                      (c) =>
-                                        `<tr class="border-b"><td class="p-2">${escapeHTML(
-                                          c.name
-                                        )}</td><td class="p-2 text-center">${c.count}</td></tr>`
-                                    )
-                                    .join('')
-                                : '<tr><td colspan="2" class="text-center p-4 text-gray-500">Ninguno</td></tr>'
-                            }</tbody>
-                        </table></div>
-                    </div>
-                    <div>
-                        <h4 class="text-lg font-semibold mb-2">Top 10 Clientes por Ganancia (Período)</h4>
-                        <div class="overflow-x-auto"><table class="min-w-full text-sm">
-                            <thead class="bg-gray-100"><tr><th class="p-2 text-left">Nombre</th><th class="p-2 text-right">Ganancia Generada</th></tr></thead>
-                            <tbody>${
-                              topClients.length > 0
-                                ? topClients
-                                    .map(
-                                      (c) =>
-                                        `<tr class="border-b"><td class="p-2">${escapeHTML(
-                                          c.name
-                                        )}</td><td class="p-2 text-right font-semibold text-green-600">${formatCurrency(
-                                          c.totalProfit,
-                                          'USD'
-                                        )}</td></tr>`
-                                    )
-                                    .join('')
-                                : '<tr><td colspan="2" class="text-center p-4 text-gray-500">Sin datos</td></tr>'
-                            }</tbody>
-                        </table></div>
-                    </div>
-                </div>
-            `;
-      break;
-  }
-
-  container.innerHTML = contentHTML;
-}
-
-// --- Funciones de Gráficos ---
-=======
 // --- Funciones de Gráficos (SIN CAMBIOS) ---
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
 /**
  * Renderiza el gráfico de rendimiento (Ingresos vs Gastos).
@@ -779,10 +569,7 @@ function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate,
         income: 0,
         expenses: 0,
         grossProfit: 0,
-<<<<<<< HEAD
-=======
         commissions: 0, // Añadido para acumular comisiones
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         date: new Date(currentDate),
       };
     }
@@ -802,10 +589,7 @@ function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate,
       groupedData[key].income += sale.total || 0;
       const itemsCost = (sale.items || []).reduce((sum, i) => sum + (i.phoneCost || 0), 0);
       groupedData[key].grossProfit += (sale.total || 0) - itemsCost;
-<<<<<<< HEAD
-=======
       groupedData[key].commissions += sale.commissionUSD || 0;
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     }
   });
   dailyExpensesInPeriod.forEach((expense) => {
@@ -845,11 +629,7 @@ function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate,
         },
         {
           label: 'Ganancia Neta',
-<<<<<<< HEAD
-          data: sortedGroups.map((g) => g.grossProfit - g.expenses),
-=======
           data: sortedGroups.map((g) => g.grossProfit - g.expenses - g.commissions),
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           borderColor: '#5856d6',
           borderWidth: 2,
           type: 'line',
@@ -869,19 +649,11 @@ function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate,
 
 /**
  * Renderiza el gráfico de desglose de gastos.
-<<<<<<< HEAD
- * @param {number} saleCosts Costo total de ventas.
- * @param {number} executedFixed Gastos fijos pagados.
- * @param {number} daily Gastos diarios.
- */
-function renderExpenseBreakdownChart(saleCosts, executedFixed, daily) {
-=======
  * @param {number} commissions Comisiones totales de vendedores.
  * @param {number} executedFixed Gastos fijos pagados.
  * @param {number} daily Gastos diarios.
  */
 function renderExpenseBreakdownChart(commissions, executedFixed, daily) {
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   const chartContainer = document.getElementById('expense-chart-container');
   if (!chartContainer) return;
 
@@ -889,11 +661,7 @@ function renderExpenseBreakdownChart(commissions, executedFixed, daily) {
   const ctxEl = document.getElementById('expense-breakdown-chart');
   if (!ctxEl) return;
 
-<<<<<<< HEAD
-  const totalExpenses = executedFixed + daily;
-=======
   const totalExpenses = commissions + executedFixed + daily;
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   if (totalExpenses === 0) {
     if (charts.expenseBreakdown) {
       charts.expenseBreakdown.destroy();
@@ -913,19 +681,11 @@ function renderExpenseBreakdownChart(commissions, executedFixed, daily) {
   charts.expenseBreakdown = new Chart(ctxEl.getContext('2d'), {
     type: 'doughnut',
     data: {
-<<<<<<< HEAD
-      labels: ['Pagos Fijos', 'Gastos Diarios'],
-      datasets: [
-        {
-          data: [executedFixed, daily],
-          backgroundColor: ['#ff3b30', '#ffcc00'],
-=======
       labels: ['Comisiones', 'Pagos Fijos', 'Gastos Diarios'],
       datasets: [
         {
           data: [commissions, executedFixed, daily],
           backgroundColor: ['#5856d6', '#ff3b30', '#ffcc00'], // Color añadido para comisiones
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           borderColor: '#ffffff',
           borderWidth: 2,
         },
@@ -946,13 +706,10 @@ function renderExpenseBreakdownChart(commissions, executedFixed, daily) {
     summaryContainer.innerHTML = `
             <ul class="space-y-2 text-sm">
                 <li class="flex justify-between items-center py-1">
-<<<<<<< HEAD
-=======
                     <span><i class="fas fa-circle mr-2" style="color: #5856d6;"></i>Comisiones</span>
                     <span class="font-semibold">${formatCurrency(commissions, 'USD')}</span>
                 </li>
                 <li class="flex justify-between items-center py-1">
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                     <span><i class="fas fa-circle mr-2" style="color: #ff3b30;"></i>Pagos Fijos</span>
                     <span class="font-semibold">${formatCurrency(executedFixed, 'USD')}</span>
                 </li>
