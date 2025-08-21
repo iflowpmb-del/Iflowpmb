@@ -33,7 +33,11 @@ import {
   openEditFixedExpenseModal,
   openNoteModal,
 } from './ui/operaciones.ui.js';
+<<<<<<< HEAD
+import { renderSalesAnalysis } from './ui/reportes.ui.js';
+=======
 import { renderIntelligentAnalysisSection } from './ui/reportes.ui.js';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 import { openAddProviderModal, openEditProviderModal } from './ui/proveedores.ui.js';
 import { appState, setState, WALLET_CONFIG, DEFAULT_CATEGORIES } from './state.js';
 import { addData, deleteFromDb, updateData, setData, runBatch } from './api.js';
@@ -50,7 +54,11 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+<<<<<<< HEAD
+import { auth } from './firebase-config.js';
+=======
 import { auth, db } from './firebase-config.js';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
 // Variable para el temporizador del ajuste del dólar (debounce)
 let dolarOffsetTimer;
@@ -89,6 +97,20 @@ async function logCapitalState(reason) {
   }
 }
 
+<<<<<<< HEAD
+function setButtonLoading(button, isLoading, loadingText = 'Guardando...') {
+  if (!button) return;
+  const body = document.body;
+  if (isLoading) {
+    body.classList.add('is-loading');
+    button.dataset.originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = `<i class="fas fa-spinner spinner mr-2"></i> ${loadingText}`;
+  } else {
+    body.classList.remove('is-loading');
+    if (button.dataset.originalText) {
+      button.innerHTML = button.dataset.originalText;
+=======
 /**
  * Gestiona el estado de carga global de la aplicación.
  * @param {boolean} isLoading - True para mostrar el overlay, false para ocultarlo.
@@ -108,12 +130,232 @@ function setGlobalLoading(isLoading, button = null, loadingText = 'Guardando...'
         button.innerHTML = button.dataset.originalText;
       }
       button.disabled = false;
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     }
   }
 }
 
 function handleManualDelete(collectionName, docId, entityName) {
   const message = `Esta acción eliminará ${entityName} de la lista. Recuerda que debes revertir o ajustar manualmente cualquier cambio de capital asociado. ¿Deseas continuar?`;
+<<<<<<< HEAD
+  openConfirmModal(message, () => deleteFromDb(collectionName, docId));
+}
+
+async function handleProcessPayment(form) {
+  const button = form.querySelector('button[type="submit"]');
+  setButtonLoading(button, true, 'Procesando...');
+  try {
+    const { paymentType, targetId, totalAmount, expenseData: expenseDataJSON } = form.dataset;
+    const totalAmountDue = parseFloat(totalAmount);
+    const { capital, exchangeRate, user } = appState;
+
+    const paymentInputs = form.querySelectorAll('.payment-input-modal');
+    const paymentBreakdownOriginal = {};
+    let totalPaidInUSD = 0;
+
+    paymentInputs.forEach((input) => {
+      const value = parseFloat(input.value) || 0;
+      if (value > 0) {
+        const walletType = input.dataset.wallet;
+        paymentBreakdownOriginal[walletType] = value;
+        const isArs = walletType === 'ars' || walletType === 'mp';
+        totalPaidInUSD += isArs ? value / exchangeRate : value;
+      }
+    });
+    if (totalPaidInUSD <= 0) {
+      throw new Error('Debes ingresar un monto a pagar.');
+    }
+
+    if (totalPaidInUSD > totalAmountDue + 0.01) {
+      throw new Error('El monto pagado no puede ser mayor que el total adeudado.');
+    }
+
+    await runBatch(async (batch, db, userId) => {
+      const capitalRef = doc(db, `users/${userId}/capital`, 'summary');
+      const capitalUpdates = {};
+
+      const basePaymentRecord = {
+        userId: user.uid,
+        amountUSD: totalPaidInUSD,
+        breakdown: paymentBreakdownOriginal,
+        createdAt: serverTimestamp(),
+        exchangeRateAtPayment: exchangeRate,
+      };
+
+      switch (paymentType) {
+        case 'settleClientDebt': {
+          const saleRef = doc(db, `users/${userId}/sales`, targetId);
+          const sale = appState.sales.find((s) => s.id === targetId);
+          const currentSettled = sale.debtSettled || 0;
+          const newSettledAmount = currentSettled + totalPaidInUSD;
+
+          batch.update(saleRef, { debtSettled: newSettledAmount });
+
+          const paymentRecordRef = doc(
+            collection(db, `users/${userId}/sales/${targetId}/payments`)
+          );
+          batch.set(paymentRecordRef, basePaymentRecord);
+
+          for (const walletType in paymentBreakdownOriginal) {
+            const paymentValue = paymentBreakdownOriginal[walletType];
+            capitalUpdates[walletType] = (capital[walletType] || 0) + paymentValue;
+          }
+          batch.update(capitalRef, capitalUpdates);
+          break;
+        }
+
+        case 'settleProviderDebt': {
+          const debtRef = doc(db, `users/${userId}/debts`, targetId);
+          const debt = appState.debts.find((d) => d.id === targetId);
+          const newAmount = debt.amount - totalPaidInUSD;
+          // =================================================================================
+          // INICIO DE MODIFICACIÓN: Cambia de borrar a actualizar estado
+          // =================================================================================
+          if (newAmount < 0.01) {
+            batch.update(debtRef, {
+              amount: 0,
+              status: 'saldada',
+              settledAt: serverTimestamp(),
+            });
+          } else {
+            batch.update(debtRef, { amount: newAmount });
+          }
+          // =================================================================================
+          // FIN DE MODIFICACIÓN
+          // =================================================================================
+
+          const paymentRecordRef = doc(
+            collection(db, `users/${userId}/debts/${targetId}/payments`)
+          );
+          batch.set(paymentRecordRef, basePaymentRecord);
+          for (const walletType in paymentBreakdownOriginal) {
+            const paymentValue = paymentBreakdownOriginal[walletType];
+            capitalUpdates[walletType] = (capital[walletType] || 0) - paymentValue;
+          }
+          batch.update(capitalRef, capitalUpdates);
+          break;
+        }
+
+        case 'payFixedExpense': {
+          const expense = appState.fixedExpenses.find((exp) => exp.id === targetId);
+          if (Math.abs(totalPaidInUSD - parseFloat(form.dataset.totalAmount)) > 0.01) {
+            throw new Error('El monto pagado para el gasto fijo debe ser exacto.');
+          }
+
+          const dailyExpenseRef = doc(collection(db, `users/${userId}/daily_expenses`));
+          batch.set(dailyExpenseRef, {
+            amountUSD: totalPaidInUSD,
+            date: new Date().toISOString().split('T')[0],
+            description: `Pago de gasto fijo: ${expense.description}`,
+            isFixedPayment: true,
+            paidFromBreakdown: paymentBreakdownOriginal,
+            createdAt: serverTimestamp(),
+            exchangeRateAtPayment: exchangeRate,
+            originalAmount: expense.amount,
+            originalCurrency: expense.currency,
+          });
+          const fixedExpenseRef = doc(db, `users/${userId}/fixed_expenses`, targetId);
+          const currentMonthID = `${new Date().getFullYear()}-${String(
+            new Date().getMonth() + 1
+          ).padStart(2, '0')}`;
+          batch.update(fixedExpenseRef, { lastPaidMonth: currentMonthID });
+
+          for (const walletType in paymentBreakdownOriginal) {
+            const paymentValue = paymentBreakdownOriginal[walletType];
+            capitalUpdates[walletType] = (capital[walletType] || 0) - paymentValue;
+          }
+          batch.update(capitalRef, capitalUpdates);
+          break;
+        }
+
+        case 'payDailyExpense': {
+          const expenseData = JSON.parse(expenseDataJSON);
+          if (Math.abs(totalPaidInUSD - expenseData.amountUSD) > 0.01) {
+            throw new Error('El monto pagado para el gasto diario debe ser exacto.');
+          }
+
+          const dailyExpenseRef = doc(collection(db, `users/${userId}/daily_expenses`));
+          batch.set(dailyExpenseRef, {
+            ...expenseData,
+            isFixedPayment: false,
+            paidFromBreakdown: paymentBreakdownOriginal,
+            createdAt: serverTimestamp(),
+            exchangeRateAtPayment: exchangeRate,
+            originalAmount: expenseData.originalAmount,
+            originalCurrency: expenseData.originalCurrency,
+          });
+          for (const walletType in paymentBreakdownOriginal) {
+            const paymentValue = paymentBreakdownOriginal[walletType];
+            capitalUpdates[walletType] = (capital[walletType] || 0) - paymentValue;
+          }
+          batch.update(capitalRef, capitalUpdates);
+          break;
+        }
+      }
+    });
+
+    await logCapitalState(`Procesado pago de tipo: ${paymentType}`);
+    document.getElementById('modal-container').innerHTML = '';
+    showModal('Pago registrado con éxito.');
+  } catch (error) {
+    console.error('Error al procesar el pago:', error);
+    showModal(`No se pudo procesar el pago: ${error.message}`, 'Error');
+  } finally {
+    setButtonLoading(button, false);
+  }
+}
+
+function handlePayFixedExpense(expenseId) {
+  const expense = appState.fixedExpenses.find((exp) => exp.id === expenseId);
+  if (expense) {
+    const amountInUSD =
+      expense.currency === 'ARS' ? expense.amount / appState.exchangeRate : expense.amount;
+
+    openPaymentModal({
+      paymentType: 'payFixedExpense',
+      targetId: expense.id,
+      totalAmount: amountInUSD,
+      entityName: `Gasto Fijo: ${expense.description}`,
+      allowPartial: false,
+    });
+  } else {
+    showModal('No se pudo encontrar el gasto fijo seleccionado.', 'Error');
+  }
+}
+
+function handleSettleProviderDebt(debtId) {
+  const debt = appState.debts.find((d) => d.id === debtId);
+  if (debt) {
+    openPaymentModal({
+      paymentType: 'settleProviderDebt',
+      targetId: debt.id,
+      totalAmount: debt.amount,
+      entityName: `Deuda a ${debt.debtorName}`,
+      allowPartial: true,
+      paymentHistoryCollection: `users/${appState.user.uid}/debts/${debtId}/payments`,
+    });
+  } else {
+    showModal('No se pudo encontrar la deuda seleccionada.', 'Error');
+  }
+}
+
+function handleSettleClientDebt(saleId, balance) {
+  const sale = appState.sales.find((s) => s.id === saleId);
+  if (sale) {
+    openPaymentModal({
+      paymentType: 'settleClientDebt',
+      targetId: sale.id,
+      totalAmount: balance,
+      entityName: `Deuda de ${sale.customerName}`,
+      allowPartial: true,
+      paymentHistoryCollection: `users/${appState.user.uid}/sales/${saleId}/payments`,
+    });
+  } else {
+    showModal('No se pudo encontrar la venta asociada a la deuda.', 'Error');
+  }
+}
+
+=======
   openConfirmModal(message, async () => {
     setGlobalLoading(true);
     try {
@@ -361,6 +603,7 @@ function handleSettleClientDebt(saleId, balance) {
   }
 }
 
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 function handleAddDailyExpense(form) {
   const amount = parseFloat(form.querySelector('#daily-expense-amount-reg').value) || 0;
   const currency = form.querySelector('#daily-expense-currency-reg').value;
@@ -399,7 +642,12 @@ async function handleAdjustCapital(form, reason) {
     });
     await setData('capital', 'summary', capitalData);
     await logCapitalState(`Ajuste Manual: ${reason}`);
+<<<<<<< HEAD
+    const modalContainer = document.getElementById('modal-container');
+    if (modalContainer) modalContainer.innerHTML = '';
+=======
     document.getElementById('modal-container').innerHTML = '';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     showModal('Saldos de capital actualizados con éxito.');
   } catch (error) {
     console.error('Error al ajustar el capital:', error);
@@ -475,7 +723,11 @@ async function handleAnnulSale(saleId) {
 }
 
 async function handleFinalizeSaleFromReservation(reservationId) {
+<<<<<<< HEAD
+  const { reservations, clients, stock } = appState;
+=======
   const { reservations, clients } = appState;
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   const reservation = reservations.find((r) => r.id === reservationId);
 
   if (!reservation) {
@@ -515,7 +767,12 @@ async function handleFinalizeSaleFromReservation(reservationId) {
     },
   });
 
+<<<<<<< HEAD
+  const modalContainer = document.getElementById('modal-container');
+  if (modalContainer) modalContainer.innerHTML = '';
+=======
   document.getElementById('modal-container').innerHTML = '';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
   switchTab('ventas');
   switchSubTab('ventas', 'nueva');
@@ -531,7 +788,15 @@ function getStockItemDataFromForm(formElement, formSuffix) {
       let value = input.type === 'checkbox' ? input.checked : input.value.trim();
       if (value !== '' && value !== null && value !== false) {
         attributes[attrName] = value;
+<<<<<<< HEAD
+        if (
+          ['Producto', 'Configuración', 'Especificación', 'Almacenamiento', 'RAM', 'Tipo'].includes(
+            attrName
+          )
+        ) {
+=======
         if (['Producto', 'Configuración', 'Especificación', 'Almacenamiento', 'RAM', 'Tipo'].includes(attrName)) {
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           modelParts.push(value);
         }
       }
@@ -541,6 +806,42 @@ function getStockItemDataFromForm(formElement, formSuffix) {
   const modelName = modelParts.length > 0 ? modelParts.join(' ') : 'Producto Personalizado';
 
   const stockItemData = {
+<<<<<<< HEAD
+    category: formElement.querySelector(
+      `#stock-category-${formSuffix}, #edit-stock-category, #trade-in-category`
+    ).value,
+    model: modelName,
+    serialNumber: (
+      formElement.querySelector(`#stock-serial-${formSuffix}, #edit-stock-serial, #trade-in-serial`)
+        ?.value || ''
+    )
+      .trim()
+      .toUpperCase(),
+    phoneCost:
+      parseFloat(
+        formElement.querySelector(`#stock-cost-${formSuffix}, #edit-stock-cost, #trade-in-value`)
+          ?.value
+      ) || 0,
+    suggestedSalePrice:
+      parseFloat(
+        formElement.querySelector(
+          `#stock-price-${formSuffix}, #edit-stock-price, #trade-in-sug-price`
+        )?.value
+      ) || 0,
+    quantity:
+      parseInt(
+        formElement.querySelector(`#stock-quantity-${formSuffix}, #edit-stock-quantity`)?.value,
+        10
+      ) || 1,
+    details:
+      formElement
+        .querySelector(`#stock-details-${formSuffix}, #edit-stock-details, #trade-in-details-input`)
+        ?.value.trim() || '',
+    attributes: attributes,
+    providerId:
+      formElement.querySelector(`#stock-provider-${formSuffix}, #edit-stock-provider`)?.value ||
+      'no-asignar',
+=======
     category: formElement.querySelector(`#stock-category-${formSuffix}, #edit-stock-category, #trade-in-category`).value,
     model: modelName,
     serialNumber: (formElement.querySelector(`#stock-serial-${formSuffix}, #edit-stock-serial, #trade-in-serial`)?.value || '').trim().toUpperCase(),
@@ -550,13 +851,19 @@ function getStockItemDataFromForm(formElement, formSuffix) {
     details: formElement.querySelector(`#stock-details-${formSuffix}, #edit-stock-details, #trade-in-details-input`)?.value.trim() || '',
     attributes: attributes,
     providerId: formElement.querySelector(`#stock-provider-${formSuffix}, #edit-stock-provider`)?.value || 'no-asignar',
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   };
 
   if (stockItemData.providerId !== 'no-asignar' && stockItemData.providerId !== 'parte-de-pago') {
     const provider = appState.userProviders.find((p) => p.id === stockItemData.providerId);
     stockItemData.providerName = provider ? provider.name : '';
   } else {
+<<<<<<< HEAD
+    stockItemData.providerName =
+      stockItemData.providerId === 'parte-de-pago' ? 'Parte de pago/Otro' : '';
+=======
     stockItemData.providerName = stockItemData.providerId === 'parte-de-pago' ? 'Parte de pago/Otro' : '';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   }
 
   return stockItemData;
@@ -646,7 +953,17 @@ async function handleAddDebt(form) {
       description: form.querySelector('#debt-desc').value.trim(),
       amount: amountInUSD,
       createdAt: serverTimestamp(),
+<<<<<<< HEAD
+      // =================================================================================
+      // INICIO DE MODIFICACIÓN: Se añade el estado inicial a las deudas
+      // =================================================================================
       status: 'pendiente',
+      // =================================================================================
+      // FIN DE MODIFICACIÓN
+      // =================================================================================
+=======
+      status: 'pendiente',
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     };
     await addData('debts', newDebt);
     await logCapitalState(`Nueva deuda a ${newDebt.debtorName}`);
@@ -870,17 +1187,25 @@ async function handleSaveSale() {
         commissionUSD: commissionUSD,
         exchangeRateAtSale: exchangeRate,
       };
+<<<<<<< HEAD
+=======
       
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       sale.items.forEach((item) => {
         const stockItemRef = doc(db, `users/${userId}/stock`, item.id);
         const originalStockItem = stock.find((s) => s.id === item.id);
         const currentQuantity = originalStockItem ? originalStockItem.quantity || 1 : 1;
 
+<<<<<<< HEAD
+        if (currentQuantity > 1 && originalStockItem.status !== 'reservado') {
+          batch.update(stockItemRef, { quantity: currentQuantity - 1 });
+=======
         if (currentQuantity > 1) {
           batch.update(stockItemRef, { 
             quantity: currentQuantity - 1,
             status: 'disponible'
           });
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         } else {
           batch.delete(stockItemRef);
         }
@@ -889,6 +1214,16 @@ async function handleSaveSale() {
       if (document.getElementById('has-trade-in').checked && tradeInValue > 0) {
         const tradeInContainer = document.getElementById('trade-in-details');
         if (tradeInContainer) {
+<<<<<<< HEAD
+          const tradeInItem = getStockItemDataFromForm(tradeInContainer, 'tradein');
+          tradeInItem.createdAt = serverTimestamp();
+          tradeInItem.providerId = 'parte-de-pago';
+          tradeInItem.providerName = 'Parte de pago/Otro';
+
+          saleData.tradeIn = { ...tradeInItem };
+          saleData.tradeInValueUSD = tradeInItem.phoneCost;
+          batch.set(doc(collection(db, `users/${userId}/stock`)), tradeInItem);
+=======
             const tradeInItem = getStockItemDataFromForm(tradeInContainer, 'tradein');
             tradeInItem.createdAt = serverTimestamp();
             tradeInItem.providerId = 'parte-de-pago';
@@ -897,6 +1232,7 @@ async function handleSaveSale() {
             saleData.tradeIn = { ...tradeInItem };
             saleData.tradeInValueUSD = tradeInItem.phoneCost;
             batch.set(doc(collection(db, `users/${userId}/stock`)), tradeInItem);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         }
       }
 
@@ -1037,7 +1373,11 @@ export function setupEventListeners() {
         'edit-attribute-form',
         'reservation-form',
         'edit-product-options-form',
+<<<<<<< HEAD
+        'add-dependent-attribute-form', // <-- NUEVO FORMULARIO
+=======
         'add-dependent-attribute-form',
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       ].includes(form.id)
     ) {
       e.preventDefault();
@@ -1165,7 +1505,11 @@ export function setupEventListeners() {
         }
         case 'edit-attribute-form': {
           const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
+<<<<<<< HEAD
+          setButtonLoading(button, true);
+=======
           setGlobalLoading(true, button);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           try {
             const { categoryId, attrId } = form.dataset;
             const category = appState.categories.find((c) => c.id === categoryId);
@@ -1196,7 +1540,11 @@ export function setupEventListeners() {
           } catch (err) {
             showModal(`Error al actualizar el atributo: ${err.message}`);
           } finally {
+<<<<<<< HEAD
+            setButtonLoading(button, false);
+=======
             setGlobalLoading(false, button);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           }
           break;
         }
@@ -1279,6 +1627,146 @@ export function setupEventListeners() {
           break;
         }
         case 'reservation-form': {
+<<<<<<< HEAD
+          const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
+          setButtonLoading(button, true, 'Guardando...');
+          try {
+            const { reservationForm, exchangeRate, capital } = appState;
+            if (!reservationForm.selectedClient || !reservationForm.selectedItem) {
+              throw new Error('Debes seleccionar un cliente y un producto.');
+            }
+
+            const paymentInputs = form.querySelectorAll('.payment-input-reservation');
+            const paymentBreakdownOriginal = {};
+            let totalDepositUSD = 0;
+
+            paymentInputs.forEach((input) => {
+              const value = parseFloat(input.value) || 0;
+              if (value > 0) {
+                const walletType = input.dataset.payment;
+                paymentBreakdownOriginal[walletType] = value;
+                const isArs = walletType === 'ars' || walletType === 'mp';
+                totalDepositUSD += isArs ? value / exchangeRate : value;
+              }
+            });
+
+            const hasDeposit = totalDepositUSD > 0;
+
+            const reservationData = {
+              clientId: reservationForm.selectedClient.id,
+              customerName: reservationForm.selectedClient.name,
+              itemId: reservationForm.selectedItem.id,
+              item: reservationForm.selectedItem,
+              hasDeposit,
+              depositAmountUSD: totalDepositUSD,
+              depositPaymentBreakdown: paymentBreakdownOriginal,
+              notes: form.querySelector('#reservation-notes').value.trim(),
+              createdAt: serverTimestamp(),
+              status: 'active',
+            };
+
+            await runBatch(async (batch, db, userId) => {
+              const reservationRef = doc(collection(db, `users/${userId}/reservations`));
+              batch.set(reservationRef, reservationData);
+
+              const stockItemRef = doc(
+                db,
+                `users/${userId}/stock`,
+                reservationForm.selectedItem.id
+              );
+              batch.update(stockItemRef, { status: 'reservado' });
+
+              if (hasDeposit) {
+                const capitalRef = doc(db, `users/${userId}/capital`, 'summary');
+                const capitalUpdates = {};
+                for (const walletType in paymentBreakdownOriginal) {
+                  const paymentValue = paymentBreakdownOriginal[walletType];
+                  capitalUpdates[walletType] = (capital[walletType] || 0) + paymentValue;
+                }
+                batch.update(capitalRef, capitalUpdates);
+              }
+            });
+
+            await logCapitalState(`Reserva creada para ${reservationForm.selectedClient.name}`);
+            document.getElementById('modal-container').innerHTML = '';
+            showModal('Reserva creada con éxito.');
+          } catch (error) {
+            showModal(`Error al guardar la reserva: ${error.message}`, 'Error');
+          } finally {
+            setButtonLoading(button, false);
+          }
+          break;
+        }
+        case 'edit-product-options-form': {
+          const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
+          setButtonLoading(button, true);
+          try {
+            const { categoryId, productAttributeId, productName } = form.dataset;
+            const category = appState.categories.find((c) => c.id === categoryId);
+            if (!category) throw new Error('Categoría no encontrada.');
+
+            const updatedAttributes = JSON.parse(JSON.stringify(category.attributes));
+
+            form.querySelectorAll('.dependent-attribute-editor').forEach((editor) => {
+              const dependentAttrId = editor.dataset.attrId;
+              const optionsTextarea = editor.querySelector('textarea');
+              // INICIO DE MODIFICACIÓN: Se cambia el método de recolección de datos
+              const newOptions = Array.from(editor.querySelectorAll('.attribute-option-item'))
+                .map((item) => item.dataset.optionValue)
+                .filter(Boolean);
+              // FIN DE MODIFICACIÓN
+
+              const attributeToUpdate = updatedAttributes.find(
+                (attr) => attr.id === dependentAttrId
+              );
+              if (attributeToUpdate && typeof attributeToUpdate.options === 'object') {
+                attributeToUpdate.options[productName] = newOptions;
+              }
+            });
+
+            await updateData('categories', categoryId, { attributes: updatedAttributes });
+            document.getElementById('modal-container').innerHTML = '';
+            showModal(`Opciones para "${productName}" actualizadas con éxito.`);
+          } catch (err) {
+            showModal(`Error al guardar las opciones: ${err.message}`);
+          } finally {
+            setButtonLoading(button, false);
+          }
+          break;
+        }
+        // =================================================================================
+        // INICIO DE MODIFICACIÓN: MANEJADOR PARA CREAR ATRIBUTOS DEPENDIENTES
+        // =================================================================================
+        case 'add-dependent-attribute-form': {
+          const { categoryId, productAttributeId, productName } = form.dataset;
+          const category = appState.categories.find((c) => c.id === categoryId);
+          if (!category) return;
+
+          const name = form.querySelector('#new-dependent-attr-name').value.trim();
+          if (!name) {
+            showModal('El nombre del atributo no puede estar vacío.', 'Error');
+            return;
+          }
+
+          const newAttribute = {
+            id: `attr-${Date.now()}`,
+            name: name,
+            type: 'select', // Por defecto, los nuevos atributos dependientes son listas
+            dependsOn: productAttributeId,
+            options: { [productName]: [] }, // Inicializa con un array vacío para el producto actual
+          };
+
+          const updatedAttributes = [...category.attributes, newAttribute];
+          await updateData('categories', categoryId, { attributes: updatedAttributes });
+
+          // Refresca el modal para mostrar el nuevo campo
+          openEditProductOptionsModal(categoryId, productName);
+          break;
+        }
+        // =================================================================================
+        // FIN DE MODIFICACIÓN
+        // =================================================================================
+=======
             const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
             setGlobalLoading(true, button, 'Guardando...');
             try {
@@ -1401,6 +1889,7 @@ export function setupEventListeners() {
             openEditProductOptionsModal(categoryId, productName);
             break;
         }
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       }
     } catch (err) {
       console.error(`Error en el manejador de submit para el form #${form.id}:`, err);
@@ -1410,6 +1899,88 @@ export function setupEventListeners() {
   document.body.addEventListener('click', async (e) => {
     const target = e.target;
 
+<<<<<<< HEAD
+    // =================================================================================
+    // INICIO DE MODIFICACIÓN: LÓGICA PARA ELIMINAR ATRIBUTOS Y OPCIONES
+    // =================================================================================
+    if (target.closest('.delete-attribute-option-btn')) {
+      const button = target.closest('.delete-attribute-option-btn');
+      const { categoryId, productName, attrId, optionValue } = button.dataset;
+      const category = appState.categories.find((c) => c.id === categoryId);
+      if (!category) return;
+
+      const updatedAttributes = JSON.parse(JSON.stringify(category.attributes));
+      const attributeToUpdate = updatedAttributes.find((attr) => attr.id === attrId);
+
+      if (
+        attributeToUpdate &&
+        typeof attributeToUpdate.options === 'object' &&
+        attributeToUpdate.options[productName]
+      ) {
+        attributeToUpdate.options[productName] = attributeToUpdate.options[productName].filter(
+          (opt) => opt !== optionValue
+        );
+        await updateData('categories', categoryId, { attributes: updatedAttributes });
+        openEditProductOptionsModal(categoryId, productName); // Refresca el modal
+      }
+      return;
+    }
+
+    if (target.closest('.delete-dependent-attribute-btn')) {
+      const button = target.closest('.delete-dependent-attribute-btn');
+      const { categoryId, productName, attrIdToDelete } = button.dataset;
+      const category = appState.categories.find((c) => c.id === categoryId);
+      if (!category) return;
+
+      openConfirmModal(
+        `¿Seguro que quieres eliminar este atributo y todas sus opciones para este producto?`,
+        async () => {
+          const updatedAttributes = category.attributes.filter(
+            (attr) => attr.id !== attrIdToDelete
+          );
+          await updateData('categories', categoryId, { attributes: updatedAttributes });
+          openEditProductOptionsModal(categoryId, productName); // Refresca el modal
+        }
+      );
+      return;
+    }
+
+    // =================================================================================
+    // INICIO DE MODIFICACIÓN: Lógica para el botón "+" de añadir opción
+    // =================================================================================
+    if (target.closest('.add-attribute-option-btn')) {
+      const button = target.closest('.add-attribute-option-btn');
+      const { categoryId, productName, attrId } = button.dataset;
+      const input = button.previousElementSibling;
+      const newOptionValue = input.value.trim();
+
+      if (newOptionValue) {
+        const category = appState.categories.find((c) => c.id === categoryId);
+        if (!category) return;
+
+        const updatedAttributes = JSON.parse(JSON.stringify(category.attributes));
+        const attributeToUpdate = updatedAttributes.find((attr) => attr.id === attrId);
+
+        if (attributeToUpdate && typeof attributeToUpdate.options === 'object') {
+          if (!attributeToUpdate.options[productName]) {
+            attributeToUpdate.options[productName] = [];
+          }
+          // Evitar duplicados
+          if (!attributeToUpdate.options[productName].includes(newOptionValue)) {
+            attributeToUpdate.options[productName].push(newOptionValue);
+            await updateData('categories', categoryId, { attributes: updatedAttributes });
+            openEditProductOptionsModal(categoryId, productName); // Refresca el modal
+          } else {
+            input.value = ''; // Limpiar si ya existe
+          }
+        }
+      }
+      return;
+    }
+    // =================================================================================
+    // FIN DE MODIFICACIÓN
+    // =================================================================================
+=======
     const loadMoreButton = target.closest('.load-more-btn');
     if (loadMoreButton) {
         const listKey = loadMoreButton.dataset.listKey;
@@ -1486,6 +2057,7 @@ export function setupEventListeners() {
         }
         return;
     }
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
     const element = target.closest(
       'button, a, div[data-client], div[data-stock], div[data-category-id], i#edit-business-name-icon, .product-search-result'
@@ -1566,7 +2138,15 @@ export function setupEventListeners() {
     if (target.closest('.reservation-client-result')) {
       const client = JSON.parse(target.closest('.reservation-client-result').dataset.client);
       setState({
+<<<<<<< HEAD
+        reservationForm: {
+          ...appState.reservationForm,
+          selectedClient: client,
+          clientSearchTerm: '',
+        },
+=======
         reservationForm: { ...appState.reservationForm, selectedClient: client, clientSearchTerm: '' },
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       });
       openReservationModal(appState);
       return;
@@ -1654,10 +2234,14 @@ export function setupEventListeners() {
       'logout-button': () => signOut(auth),
       'manage-subscription-btn': () => {
         showModal(
+<<<<<<< HEAD
+          `Para gestionar tu suscripción (cambiar método de pago, cancelar, etc.), por favor revisa el email de confirmación que recibiste de <b>Gumroad</b>.<br><br>Allí encontrarás un enlace para administrar tu compra y ver tus facturas.`,
+=======
           `Para gestionar tu suscripción (cambiar método de pago, cancelar, etc.), por favor sigue estos pasos:<br><br>
           1. Ingresa a tu cuenta de <b>Mercado Pago</b>.<br>
           2. Ve a la sección "<b>Suscripciones</b>".<br>
           3. Busca la suscripción de <b>iFlow</b> y selecciona "<b>Cancelar suscripción</b>".`,
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           'Gestionar Suscripción'
         );
       },
@@ -1739,10 +2323,19 @@ export function setupEventListeners() {
         const name = prompt('Nombre de la nueva categoría:');
         if (name && name.trim()) {
           const newId = name.trim().toLowerCase().replace(/\s+/g, '-');
+<<<<<<< HEAD
+          const mainProductAttrName = prompt(
+            '¿Cómo se llama el atributo principal de esta categoría? (Ej: Producto, Modelo, Título)'
+          );
+          if (!mainProductAttrName || !mainProductAttrName.trim()) {
+            showModal('Se requiere un nombre para el atributo principal.', 'Error');
+            return;
+=======
           const mainProductAttrName = prompt('¿Cómo se llama el atributo principal de esta categoría? (Ej: Producto, Modelo, Título)');
           if (!mainProductAttrName || !mainProductAttrName.trim()) {
               showModal('Se requiere un nombre para el atributo principal.', 'Error');
               return;
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           }
           const newCategoryData = {
             name: name.trim(),
@@ -1801,14 +2394,38 @@ export function setupEventListeners() {
       },
       'add-salesperson-btn': () => openAddSalespersonModal(),
       'add-provider-btn': () => openAddProviderModal(),
+<<<<<<< HEAD
+      'back-to-salespeople-list': () =>
+        setState({ ui: { ...appState.ui, selectedSalespersonId: null } }),
+      'load-more-history': () => {
+        const currentPage = appState.ui.capitalHistoryPage || 1;
+        setState({ ui: { ...appState.ui, capitalHistoryPage: currentPage + 1 } });
+      },
+      'add-new-product-to-category-btn': async () => {
+        const { selectedCategoryId } = appState.categoryManager;
+        const category = appState.categories.find((c) => c.id === selectedCategoryId);
+=======
       'back-to-salespeople-list': () => setState({ ui: { ...appState.ui, selectedSalespersonId: null } }),
       'add-new-product-to-category-btn': async () => {
         const { selectedCategoryId } = appState.categoryManager;
         const category = appState.categories.find(c => c.id === selectedCategoryId);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         if (!category) return;
 
         const newProductName = prompt(`Añadir nuevo producto a la categoría "${category.name}":`);
         if (newProductName && newProductName.trim()) {
+<<<<<<< HEAD
+          const productAttribute = category.attributes.find(
+            (attr) => attr.id.startsWith('attr-product-') || attr.name === 'Producto'
+          );
+          if (productAttribute && Array.isArray(productAttribute.options)) {
+            const updatedOptions = [...productAttribute.options, newProductName.trim()];
+            const updatedAttributes = category.attributes.map((attr) =>
+              attr.id === productAttribute.id ? { ...attr, options: updatedOptions } : attr
+            );
+            await updateData('categories', category.id, { attributes: updatedAttributes });
+          }
+=======
             const productAttribute = category.attributes.find(attr => attr.id.startsWith('attr-product-') || attr.name === 'Producto');
             if (productAttribute && Array.isArray(productAttribute.options)) {
                 const updatedOptions = [newProductName.trim(), ...productAttribute.options];
@@ -1817,6 +2434,7 @@ export function setupEventListeners() {
                 );
                 await updateData('categories', category.id, { attributes: updatedAttributes });
             }
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         }
       },
     };
@@ -1826,6 +2444,26 @@ export function setupEventListeners() {
     }
 
     const classActionMap = {
+<<<<<<< HEAD
+      // =================================================================================
+      // INICIO DE MODIFICACIÓN: Se añade el manejador para los botones de vista de deudas
+      // =================================================================================
+      'debt-view-btn': () => {
+        const { hub, view } = dataset;
+        if (hub === 'operaciones-deudas') {
+          setState({ ui: { ...appState.ui, activeOperacionesDebtsTab: view } });
+        } else if (hub === 'clientes-deudas') {
+          setState({ ui: { ...appState.ui, activeClientesDebtsTab: view } });
+        }
+      },
+      // =================================================================================
+      // FIN DE MODIFICACIÓN
+      // =================================================================================
+      'edit-product-options-btn': () => {
+        const { productName } = dataset;
+        const { selectedCategoryId } = appState.categoryManager;
+        openEditProductOptionsModal(selectedCategoryId, productName);
+=======
       'debt-view-btn': () => {
           const { hub, view } = dataset;
           if (hub === 'operaciones-deudas') {
@@ -1838,10 +2476,40 @@ export function setupEventListeners() {
           const { productName } = dataset;
           const { selectedCategoryId } = appState.categoryManager;
           openEditProductOptionsModal(selectedCategoryId, productName);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       },
       'delete-product-from-category-btn': async () => {
         const { productName } = dataset;
         const { selectedCategoryId } = appState.categoryManager;
+<<<<<<< HEAD
+        const category = appState.categories.find((c) => c.id === selectedCategoryId);
+        if (!category) return;
+
+        openConfirmModal(
+          `¿Seguro que quieres eliminar el producto "${productName}" de la lista? Esto no afectará a los items ya registrados en stock.`,
+          async () => {
+            const productAttribute = category.attributes.find(
+              (attr) => attr.id.startsWith('attr-product-') || attr.name === 'Producto'
+            );
+            if (productAttribute && Array.isArray(productAttribute.options)) {
+              const updatedOptions = productAttribute.options.filter((opt) => opt !== productName);
+              const updatedAttributes = category.attributes.map((attr) => {
+                if (attr.id === productAttribute.id) {
+                  return { ...attr, options: updatedOptions };
+                }
+                if (attr.dependsOn === productAttribute.id && typeof attr.options === 'object') {
+                  const newDependentOptions = { ...attr.options };
+                  delete newDependentOptions[productName];
+                  return { ...attr, options: newDependentOptions };
+                }
+                return attr;
+              });
+              await updateData('categories', category.id, { attributes: updatedAttributes });
+            }
+          }
+        );
+      },
+=======
         const category = appState.categories.find(c => c.id === selectedCategoryId);
         if (!category) return;
 
@@ -1867,14 +2535,21 @@ export function setupEventListeners() {
       // ===============================================================
       // INICIO DE MODIFICACIÓN: Se corrige el manejador de los filtros de fecha
       // ===============================================================
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       'filter-btn': () => {
         const { hub, period } = dataset;
         if (hub === 'dashboard') {
             setState({ ui: { ...appState.ui, dashboard: { ...appState.ui.dashboard, dashboardPeriod: period } } });
         } else if (hub === 'analysis') {
+<<<<<<< HEAD
+          setState({ ui: { analysis: { analysisPeriod: period } } });
+        } else if (hub === 'capital') {
+          setState({ ui: { capital: { capitalPeriod: period } } });
+=======
             setState({ ui: { ...appState.ui, analysis: { ...appState.ui.analysis, analysisPeriod: period } } });
         } else if (hub === 'capital') {
             setState({ ui: { ...appState.ui, capital: { ...appState.ui.capital, capitalPeriod: period } } });
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         }
       },
       // ===============================================================
@@ -2023,7 +2698,10 @@ export function setupEventListeners() {
         }
 
         openConfirmModal(message, async () => {
+<<<<<<< HEAD
+=======
           setGlobalLoading(true);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           try {
             await runBatch(async (batch, db, userId) => {
               const reservationRef = doc(db, `users/${userId}/reservations`, reservationId);
@@ -2047,8 +2725,11 @@ export function setupEventListeners() {
           } catch (error) {
             console.error('Error al cancelar la reserva:', error);
             showModal(`Ocurrió un error al cancelar la reserva: ${error.message}`, 'Error');
+<<<<<<< HEAD
+=======
           } finally {
             setGlobalLoading(false);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           }
         });
       },
@@ -2198,9 +2879,16 @@ export function setupEventListeners() {
       'stock-search-input-sale': () => setState({ sale: { stockSearchTerm: target.value } }),
       'stock-search-input': () => setState({ stockSearchTerm: target.value }),
       'client-search-input': () => setState({ clientSearchTerm: target.value }),
+<<<<<<< HEAD
+      'sales-search-input': () => setState({ salesSearchTerm: target.value }),
+      'expenses-search-input': () => setState({ expensesSearchTerm: target.value }),
+      'notes-search-input': () => setState({ notesSearchTerm: target.value }),
+      'sales-analysis-search': () => renderSalesAnalysis(appState),
+=======
       'sales-search-input': () => setState({ salesSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, sales: 1 } } }),
       'expenses-search-input': () => setState({ expensesSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, dailyExpenses: 1 } } }),
       'notes-search-input': () => setState({ notesSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, notes: 1 } } }),
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       'public-providers-search-input': () => setState({ providersSearchTerm: target.value }),
       'user-providers-search-input': () => setState({ userProvidersSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, userProviders: 1 } } }),
       'salespeople-search-input': () => setState({ salespeopleSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, salespeople: 1 } } }),
@@ -2212,6 +2900,8 @@ export function setupEventListeners() {
   document.body.addEventListener('change', (e) => {
     const target = e.target;
 
+<<<<<<< HEAD
+=======
     if (target.id === 'analysis-area-selector') {
         const newArea = target.value;
         setState({ 
@@ -2237,10 +2927,64 @@ export function setupEventListeners() {
         return;
     }
 
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     if (target.id === 'salesperson-selector') {
       const salespersonId = target.value;
       setState({ sale: { ...appState.sale, salespersonId: salespersonId || null } });
       updateSaleBalance(appState);
+<<<<<<< HEAD
+      return;
+    }
+
+    if (target.closest('#trade-in-details')) {
+      renderTradeInAttributes();
+      return;
+    }
+
+    if (target.id === 'reservation-has-deposit') {
+      const detailsEl = document.getElementById('reservation-deposit-details');
+      if (detailsEl) {
+        detailsEl.classList.toggle('hidden', !target.checked);
+      }
+    }
+
+    if (target.closest('#stock-form-register')) {
+      renderAddStockForm(appState);
+    }
+
+    if (target.closest('#edit-stock-form')) {
+      const form = target.closest('#edit-stock-form');
+      const item = appState.stock.find((s) => s.id === form.dataset.id);
+
+      if (item) {
+        const currentValues = {};
+        form.querySelectorAll('select, input, textarea').forEach((el) => {
+          if (el.id) currentValues[el.id] = el.value;
+        });
+        openEditStockModal(item, appState, currentValues);
+      }
+    }
+
+    if (target.classList.contains('currency-select')) {
+      const formType = target.dataset.formType;
+      const amountInput = document.querySelector(`.currency-input[data-form-type="${formType}"]`);
+      const currencySelect = document.querySelector(
+        `.currency-select[data-form-type="${formType}"]`
+      );
+      const conversionEl = document.getElementById(`${formType}-conversion`);
+
+      if (!amountInput || !currencySelect || !conversionEl) return;
+
+      const amount = parseFloat(amountInput.value) || 0;
+      const currency = currencySelect.value;
+      const { exchangeRate } = appState;
+      if (currency === 'ARS' && amount > 0) {
+        conversionEl.textContent = `~ ${formatCurrency(amount / exchangeRate, 'USD')}`;
+      } else {
+        conversionEl.textContent = '';
+      }
+=======
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       return;
     }
 
@@ -2249,6 +2993,8 @@ export function setupEventListeners() {
         return;
     }
 
+<<<<<<< HEAD
+=======
     if (target.id === 'reservation-has-deposit') {
       const detailsEl = document.getElementById('reservation-deposit-details');
       if (detailsEl) {
@@ -2294,6 +3040,7 @@ export function setupEventListeners() {
       return;
     }
     
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     if (target.id === 'stock-category-modal' || target.id === 'edit-stock-category') {
       const allCategories = [...(appState.categories || []), ...DEFAULT_CATEGORIES];
       const selectedCategory = allCategories.find((c) => c.name === target.value);
@@ -2355,10 +3102,24 @@ export function setupEventListeners() {
       e.preventDefault();
       document.getElementById('save-category-name-btn')?.click();
     }
+<<<<<<< HEAD
+    // =================================================================================
+    // INICIO DE MODIFICACIÓN: AÑADIR OPCIÓN AL PRESIONAR ENTER
+    // =================================================================================
+    if (e.target.matches('.add-option-input') && e.key === 'Enter') {
+      e.preventDefault();
+      const button = e.target.nextElementSibling;
+      if (button) button.click();
+    }
+    // =================================================================================
+    // FIN DE MODIFICACIÓN
+    // =================================================================================
+=======
     if (e.target.matches('.add-option-input') && e.key === 'Enter') {
         e.preventDefault();
         const button = e.target.nextElementSibling;
         if (button) button.click();
     }
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   });
 }

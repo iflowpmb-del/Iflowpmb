@@ -1,6 +1,8 @@
 import { charts, appState } from '../state.js';
 import { formatCurrency, escapeHTML } from './utils.js';
 
+<<<<<<< HEAD
+=======
 // ===============================================================
 // INICIO DE MODIFICACIÓN: Se añade la configuración del nuevo módulo
 // ===============================================================
@@ -330,13 +332,18 @@ export function renderIntelligentAnalysisSection(state) {
 // ===============================================================
 
 
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 /**
  * Renderiza las sub-secciones de la pestaña de Reportes.
  * @param {object} state El estado actual de la aplicación.
  */
 export function renderReportsSections(state) {
   renderDashboardSection(state);
+<<<<<<< HEAD
+  renderSalesAnalysis(state);
+=======
   // La llamada a renderIntelligentAnalysisSection se hace desde el orquestador principal (ui.js)
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 }
 
 /**
@@ -430,10 +437,17 @@ function renderDashboardSection(state) {
     return sum + (s.total - itemsCost);
   }, 0);
   const dailyCosts = dailyExpensesInPeriod.reduce((sum, e) => sum + (e.amountUSD || 0), 0);
+<<<<<<< HEAD
+  const totalExpenses = dailyCosts;
+
+  const totalCommissions = salesInPeriod.reduce((sum, s) => sum + (s.commissionUSD || 0), 0);
+  const netProfit = grossProfit - totalExpenses - totalCommissions;
+=======
   
   const totalCommissions = salesInPeriod.reduce((sum, s) => sum + (s.commissionUSD || 0), 0);
   const totalExpenses = dailyCosts + totalCommissions; // Ahora las comisiones son parte de los gastos totales
   const netProfit = grossProfit - totalExpenses;
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
   const summarySalesEl = document.getElementById('summary-sales');
   if (summarySalesEl) summarySalesEl.textContent = formatCurrency(totalSales, 'USD');
@@ -457,15 +471,276 @@ function renderDashboardSection(state) {
   const executedFixedExpenses = dailyExpensesInPeriod
     .filter((e) => e.isFixedPayment)
     .reduce((sum, e) => sum + e.amountUSD, 0);
+<<<<<<< HEAD
+  const pureDailyExpenses = dailyCosts - executedFixedExpenses;
+  renderExpenseBreakdownChart(0, executedFixedExpenses, pureDailyExpenses);
+=======
   
   const pureDailyExpenses = dailyCosts - executedFixedExpenses;
   
   renderExpenseBreakdownChart(totalCommissions, executedFixedExpenses, pureDailyExpenses);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   renderNetProfitCategoryChart(salesInPeriod);
   renderSalesMetricsChart(salesInPeriod);
 }
 
+<<<<<<< HEAD
+/**
+ * Renderiza la sección de Análisis con sus filtros y resultados.
+ * @param {object} state El estado actual de la aplicación.
+ */
+export function renderSalesAnalysis(state) {
+  const { sales, stock, clients, ui } = state;
+  const { analysisPeriod, analysisCustomStartDate, analysisCustomEndDate } = ui.analysis;
+  const container = document.getElementById('analysis-results-container');
+  const selector = document.getElementById('analysis-selector');
+  if (!container || !selector || !sales || !stock || !clients) return;
+
+  document
+    .querySelectorAll('.filter-btn[data-hub="analysis"]')
+    .forEach((btn) =>
+      btn.classList.toggle('filter-btn-active', btn.dataset.period === analysisPeriod)
+    );
+  const customControls = document.getElementById('analysis-custom-date-range-controls');
+  if (customControls) customControls.classList.toggle('hidden', analysisPeriod !== 'custom');
+
+  const now = new Date();
+  let startDate, endDate;
+  switch (analysisPeriod) {
+    case 'today':
+      startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'week':
+      const day = now.getDay();
+      startDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - day + (day === 0 ? -6 : 1)
+      );
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'month':
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'year':
+      startDate = new Date(now.getFullYear(), 0, 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), 11, 31);
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'custom':
+      startDate = analysisCustomStartDate
+        ? new Date(analysisCustomStartDate + 'T00:00:00')
+        : new Date(0);
+
+      endDate = analysisCustomEndDate ? new Date(analysisCustomEndDate + 'T23:59:59') : new Date();
+
+      break;
+    default:
+      startDate = new Date(0);
+      endDate = new Date();
+  }
+
+  const salesInPeriod = sales.filter((s) => {
+    const saleDate = s.soldAt?.toDate() || new Date(s.saleDate + 'T12:00:00Z');
+    return saleDate >= startDate && saleDate <= endDate;
+  });
+  const analysisType = selector.value;
+  let contentHTML = '';
+
+  switch (analysisType) {
+    case 'sales':
+      if (salesInPeriod.length === 0) {
+        contentHTML =
+          '<p class="text-center text-gray-500">No hay ventas en el período seleccionado.</p>';
+        break;
+      }
+      const totalRevenue = salesInPeriod.reduce((sum, s) => sum + s.total, 0);
+      const totalNetProfit = salesInPeriod.reduce((sum, s) => {
+        const itemsCost = (s.items || []).reduce((cost, i) => cost + (i.phoneCost || 0), 0);
+        return sum + (s.total - itemsCost);
+      }, 0);
+      const salesByCategory = salesInPeriod
+        .flatMap((s) => s.items)
+        .reduce((acc, item) => {
+          const category = item.category || 'Sin Categoría';
+          if (!acc[category]) {
+            acc[category] = { count: 0, revenue: 0 };
+          }
+          acc[category].count++;
+          acc[category].revenue += item.salePrice || 0;
+
+          return acc;
+        }, {});
+      contentHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Ventas Totales</p><p class="text-2xl font-bold">${
+                      salesInPeriod.length
+                    }</p></div>
+                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Facturación Total</p><p class="text-2xl font-bold">${formatCurrency(
+                      totalRevenue,
+                      'USD'
+                    )}</p></div>
+                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Ganancia Neta Total</p><p class="text-2xl font-bold text-green-600">${formatCurrency(
+                      totalNetProfit,
+                      'USD'
+                    )}</p></div>
+                </div>
+                <h4 class="text-lg font-semibold mb-2">Ventas por Categoría</h4>
+                <div class="overflow-x-auto"><table class="min-w-full text-sm">
+                    <thead class="bg-gray-100"><tr>
+                        <th class="p-2 text-left">Categoría</th><th class="p-2 text-center">Unidades</th><th class="p-2 text-right">Facturación</th>
+                    </tr></thead>
+                    <tbody>${Object.entries(salesByCategory)
+                      .map(
+                        ([cat, data]) => `
+                        <tr class="border-b"><td class="p-2 font-semibold">${cat}</td><td class="p-2 text-center">${
+                          data.count
+                        }</td><td class="p-2 text-right">${formatCurrency(
+                          data.revenue,
+                          'USD'
+                        )}</td></tr>
+                    `
+                      )
+                      .join('')}</tbody>
+                </table></div>
+            `;
+      break;
+
+    case 'stock':
+      const totalStockValue = stock.reduce((sum, item) => sum + (item.phoneCost || 0), 0);
+      const stockByCategory = stock.reduce((acc, item) => {
+        const category = item.category || 'Sin Categoría';
+        if (!acc[category]) {
+          acc[category] = { count: 0, value: 0 };
+        }
+        acc[category].count++;
+        acc[category].value += item.phoneCost || 0;
+        return acc;
+      }, {});
+      contentHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Unidades en Stock</p><p class="text-2xl font-bold">${
+                      stock.length
+                    }</p></div>
+                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Valor Total del Stock</p><p class="text-2xl font-bold text-blue-600">${formatCurrency(
+                      totalStockValue,
+                      'USD'
+                    )}</p></div>
+                </div>
+                <h4 class="text-lg font-semibold mb-2">Stock por Categoría</h4>
+                <div class="overflow-x-auto"><table class="min-w-full text-sm">
+                    <thead class="bg-gray-100"><tr>
+                        <th class="p-2 text-left">Categoría</th><th class="p-2 text-center">Unidades</th><th class="p-2 text-right">Valor (USD)</th>
+                    </tr></thead>
+                    <tbody>${Object.entries(stockByCategory)
+                      .map(
+                        ([cat, data]) => `
+                        <tr class="border-b"><td class="p-2 font-semibold">${cat}</td><td class="p-2 text-center">${
+                          data.count
+                        }</td><td class="p-2 text-right">${formatCurrency(
+                          data.value,
+                          'USD'
+                        )}</td></tr>
+                    `
+                      )
+                      .join('')}</tbody>
+                </table></div>
+            `;
+      break;
+
+    case 'clients':
+      if (salesInPeriod.length === 0) {
+        contentHTML =
+          '<p class="text-center text-gray-500">No hay datos de clientes para el período seleccionado.</p>';
+        break;
+      }
+      const salesByClient = salesInPeriod.reduce((acc, sale) => {
+        const id = sale.clientId;
+        if (!acc[id]) {
+          acc[id] = { name: sale.customerName, count: 0, totalProfit: 0 };
+        }
+        const itemsCost = (sale.items || []).reduce((cost, i) => cost + (i.phoneCost || 0), 0);
+        acc[id].count++;
+        acc[id].totalProfit += sale.total - itemsCost;
+
+        return acc;
+      }, {});
+      const repeatClients = Object.values(salesByClient)
+        .filter((c) => c.count > 1)
+        .sort((a, b) => b.count - a.count);
+      const topClients = Object.values(salesByClient)
+        .sort((a, b) => b.totalProfit - a.totalProfit)
+        .slice(0, 10);
+      contentHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Clientes Únicos (Período)</p><p class="text-2xl font-bold">${
+                      Object.keys(salesByClient).length
+                    }</p></div>
+                    <div class="card p-4 text-center"><p class="text-sm text-gray-500">Clientes Recurrentes (Período)</p><p class="text-2xl font-bold">${
+                      repeatClients.length
+                    }</p></div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="text-lg font-semibold mb-2">Clientes con Más Compras (Período)</h4>
+                        <div class="overflow-x-auto"><table class="min-w-full text-sm">
+                            <thead class="bg-gray-100"><tr><th class="p-2 text-left">Nombre</th><th class="p-2 text-center">Compras</th></tr></thead>
+                            <tbody>${
+                              repeatClients.length > 0
+                                ? repeatClients
+                                    .map(
+                                      (c) =>
+                                        `<tr class="border-b"><td class="p-2">${escapeHTML(
+                                          c.name
+                                        )}</td><td class="p-2 text-center">${c.count}</td></tr>`
+                                    )
+                                    .join('')
+                                : '<tr><td colspan="2" class="text-center p-4 text-gray-500">Ninguno</td></tr>'
+                            }</tbody>
+                        </table></div>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-semibold mb-2">Top 10 Clientes por Ganancia (Período)</h4>
+                        <div class="overflow-x-auto"><table class="min-w-full text-sm">
+                            <thead class="bg-gray-100"><tr><th class="p-2 text-left">Nombre</th><th class="p-2 text-right">Ganancia Generada</th></tr></thead>
+                            <tbody>${
+                              topClients.length > 0
+                                ? topClients
+                                    .map(
+                                      (c) =>
+                                        `<tr class="border-b"><td class="p-2">${escapeHTML(
+                                          c.name
+                                        )}</td><td class="p-2 text-right font-semibold text-green-600">${formatCurrency(
+                                          c.totalProfit,
+                                          'USD'
+                                        )}</td></tr>`
+                                    )
+                                    .join('')
+                                : '<tr><td colspan="2" class="text-center p-4 text-gray-500">Sin datos</td></tr>'
+                            }</tbody>
+                        </table></div>
+                    </div>
+                </div>
+            `;
+      break;
+  }
+
+  container.innerHTML = contentHTML;
+}
+
+// --- Funciones de Gráficos ---
+=======
 // --- Funciones de Gráficos (SIN CAMBIOS) ---
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
 /**
  * Renderiza el gráfico de rendimiento (Ingresos vs Gastos).
@@ -504,7 +779,10 @@ function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate,
         income: 0,
         expenses: 0,
         grossProfit: 0,
+<<<<<<< HEAD
+=======
         commissions: 0, // Añadido para acumular comisiones
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
         date: new Date(currentDate),
       };
     }
@@ -524,7 +802,10 @@ function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate,
       groupedData[key].income += sale.total || 0;
       const itemsCost = (sale.items || []).reduce((sum, i) => sum + (i.phoneCost || 0), 0);
       groupedData[key].grossProfit += (sale.total || 0) - itemsCost;
+<<<<<<< HEAD
+=======
       groupedData[key].commissions += sale.commissionUSD || 0;
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     }
   });
   dailyExpensesInPeriod.forEach((expense) => {
@@ -564,7 +845,11 @@ function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate,
         },
         {
           label: 'Ganancia Neta',
+<<<<<<< HEAD
+          data: sortedGroups.map((g) => g.grossProfit - g.expenses),
+=======
           data: sortedGroups.map((g) => g.grossProfit - g.expenses - g.commissions),
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           borderColor: '#5856d6',
           borderWidth: 2,
           type: 'line',
@@ -584,11 +869,19 @@ function renderPerformanceChart(salesInPeriod, dailyExpensesInPeriod, startDate,
 
 /**
  * Renderiza el gráfico de desglose de gastos.
+<<<<<<< HEAD
+ * @param {number} saleCosts Costo total de ventas.
+ * @param {number} executedFixed Gastos fijos pagados.
+ * @param {number} daily Gastos diarios.
+ */
+function renderExpenseBreakdownChart(saleCosts, executedFixed, daily) {
+=======
  * @param {number} commissions Comisiones totales de vendedores.
  * @param {number} executedFixed Gastos fijos pagados.
  * @param {number} daily Gastos diarios.
  */
 function renderExpenseBreakdownChart(commissions, executedFixed, daily) {
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   const chartContainer = document.getElementById('expense-chart-container');
   if (!chartContainer) return;
 
@@ -596,7 +889,11 @@ function renderExpenseBreakdownChart(commissions, executedFixed, daily) {
   const ctxEl = document.getElementById('expense-breakdown-chart');
   if (!ctxEl) return;
 
+<<<<<<< HEAD
+  const totalExpenses = executedFixed + daily;
+=======
   const totalExpenses = commissions + executedFixed + daily;
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   if (totalExpenses === 0) {
     if (charts.expenseBreakdown) {
       charts.expenseBreakdown.destroy();
@@ -616,11 +913,19 @@ function renderExpenseBreakdownChart(commissions, executedFixed, daily) {
   charts.expenseBreakdown = new Chart(ctxEl.getContext('2d'), {
     type: 'doughnut',
     data: {
+<<<<<<< HEAD
+      labels: ['Pagos Fijos', 'Gastos Diarios'],
+      datasets: [
+        {
+          data: [executedFixed, daily],
+          backgroundColor: ['#ff3b30', '#ffcc00'],
+=======
       labels: ['Comisiones', 'Pagos Fijos', 'Gastos Diarios'],
       datasets: [
         {
           data: [commissions, executedFixed, daily],
           backgroundColor: ['#5856d6', '#ff3b30', '#ffcc00'], // Color añadido para comisiones
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           borderColor: '#ffffff',
           borderWidth: 2,
         },
@@ -641,10 +946,13 @@ function renderExpenseBreakdownChart(commissions, executedFixed, daily) {
     summaryContainer.innerHTML = `
             <ul class="space-y-2 text-sm">
                 <li class="flex justify-between items-center py-1">
+<<<<<<< HEAD
+=======
                     <span><i class="fas fa-circle mr-2" style="color: #5856d6;"></i>Comisiones</span>
                     <span class="font-semibold">${formatCurrency(commissions, 'USD')}</span>
                 </li>
                 <li class="flex justify-between items-center py-1">
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                     <span><i class="fas fa-circle mr-2" style="color: #ff3b30;"></i>Pagos Fijos</span>
                     <span class="font-semibold">${formatCurrency(executedFixed, 'USD')}</span>
                 </li>

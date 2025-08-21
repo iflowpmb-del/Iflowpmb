@@ -55,7 +55,10 @@ async function logCapitalState(reason) {
   }
 }
 
+<<<<<<< HEAD
+=======
 
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 async function fetchAndSetDolarData() {
   let marketSellRate = null;
   let marketBuyRate = null;
@@ -66,7 +69,11 @@ async function fetchAndSetDolarData() {
       throw new Error(`API error: ${response.status}`);
     }
     const data = await response.json();
+<<<<<<< HEAD
+
+=======
     
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     const sellPrice = data.venta;
     const buyPrice = data.compra;
 
@@ -76,9 +83,17 @@ async function fetchAndSetDolarData() {
     if (buyPrice && typeof buyPrice === 'number' && buyPrice > 0) {
       marketBuyRate = buyPrice;
     }
+<<<<<<< HEAD
+  } catch (error) {
+    console.error(
+      'Error al obtener la cotización del dólar. Se usará el último valor guardado.',
+      error
+    );
+=======
 
   } catch (error) {
     console.error('Error al obtener la cotización del dólar. Se usará el último valor guardado.', error);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   }
 
   const userProfile = appState.profile;
@@ -88,17 +103,28 @@ async function fetchAndSetDolarData() {
   const effectiveRate = lastKnownMarketRate + userOffset;
 
   if (marketSellRate && userProfile?.marketRate && marketSellRate !== userProfile.marketRate) {
+<<<<<<< HEAD
+    logCapitalState(`Actualización de Dólar API: ${marketSellRate}`);
+  }
+
+  setState({
+=======
       logCapitalState(`Actualización de Dólar API: ${marketSellRate}`);
   }
   
   setState({ 
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     exchangeRate: effectiveRate,
     profile: {
       ...userProfile,
       marketRate: lastKnownMarketRate,
       marketBuyRate: lastKnownMarketBuyRate,
       dolarOffset: userOffset,
+<<<<<<< HEAD
+    },
+=======
     }
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   });
 
   if ((marketSellRate !== null || marketBuyRate !== null) && appState.user?.uid) {
@@ -109,7 +135,10 @@ async function fetchAndSetDolarData() {
   }
 }
 
+<<<<<<< HEAD
+=======
 
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 export function loadAllData(userId) {
   if (!userId) return;
 
@@ -120,7 +149,17 @@ export function loadAllData(userId) {
     profile: {
       type: 'doc',
       path: `users/${userId}/profile/main`,
+<<<<<<< HEAD
+      default: {
+        businessName: 'Mi Negocio',
+        subscriptionStatus: 'none',
+        dolarOffset: 0,
+        marketRate: 1000,
+        marketBuyRate: 1000,
+      },
+=======
       default: { businessName: 'Mi Negocio', subscriptionStatus: 'none', dolarOffset: 0, marketRate: 1000, marketBuyRate: 1000 },
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     },
     capital: {
       type: 'doc',
@@ -158,7 +197,15 @@ export function loadAllData(userId) {
   };
 
   let initialLoadsPending = Object.keys(collectionsToLoad).length + 2; // +2 for sales and debts
+<<<<<<< HEAD
+  let initialLoadFlags = {
+    ...Object.keys(collectionsToLoad).reduce((acc, key) => ({ ...acc, [key]: true }), {}),
+    sales: true,
+    debts: true,
+  };
+=======
   let initialLoadFlags = { ...Object.keys(collectionsToLoad).reduce((acc, key) => ({ ...acc, [key]: true }), {}), sales: true, debts: true };
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   let profileLoaded = false;
 
   const onInitialLoad = async (collectionName, error = null) => {
@@ -167,8 +214,13 @@ export function loadAllData(userId) {
     }
 
     if (collectionName === 'profile') {
+<<<<<<< HEAD
+      profileLoaded = true;
+      await fetchAndSetDolarData();
+=======
         profileLoaded = true;
         await fetchAndSetDolarData();
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     }
 
     if (initialLoadFlags[collectionName]) {
@@ -189,8 +241,15 @@ export function loadAllData(userId) {
   // 1. Cargar Ventas y luego sus sub-colecciones de pagos
   const salesQuery = query(collection(db, `users/${userId}/sales`));
   let allClientPayments = {}; // Usamos un objeto para evitar duplicados y manejar actualizaciones
+<<<<<<< HEAD
+  const salesUnsubscribe = onSnapshot(
+    salesQuery,
+    (salesSnapshot) => {
+      const salesData = salesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+=======
   const salesUnsubscribe = onSnapshot(salesQuery, (salesSnapshot) => {
       const salesData = salesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       salesData.sort((a, b) => (b.soldAt?.toMillis() || 0) - (a.soldAt?.toMillis() || 0));
       setState({ sales: salesData });
 
@@ -198,6 +257,28 @@ export function loadAllData(userId) {
         setState({ clientDebtPayments: [] });
       }
 
+<<<<<<< HEAD
+      salesSnapshot.docs.forEach((saleDoc) => {
+        const paymentsQuery = query(collection(db, saleDoc.ref.path, 'payments'));
+        const paymentsUnsubscribe = onSnapshot(paymentsQuery, (paymentsSnapshot) => {
+          allClientPayments[saleDoc.id] = paymentsSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+            parentId: saleDoc.id,
+          }));
+          const flattenedPayments = Object.values(allClientPayments).flat();
+          setState({ clientDebtPayments: flattenedPayments });
+        });
+        addFirebaseListener(paymentsUnsubscribe);
+      });
+      onInitialLoad('sales');
+    },
+    (error) => {
+      onInitialLoad('sales', error);
+      setState({ sales: [], clientDebtPayments: [] });
+    }
+  );
+=======
       salesSnapshot.docs.forEach(saleDoc => {
           const paymentsQuery = query(collection(db, saleDoc.ref.path, 'payments'));
           const paymentsUnsubscribe = onSnapshot(paymentsQuery, (paymentsSnapshot) => {
@@ -216,11 +297,44 @@ export function loadAllData(userId) {
       onInitialLoad('sales', error);
       setState({ sales: [], clientDebtPayments: [] });
   });
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   addFirebaseListener(salesUnsubscribe);
 
   // 2. Cargar Deudas y luego sus sub-colecciones de pagos
   const debtsQuery = query(collection(db, `users/${userId}/debts`));
   let allProviderPayments = {};
+<<<<<<< HEAD
+  const debtsUnsubscribe = onSnapshot(
+    debtsQuery,
+    (debtsSnapshot) => {
+      const debtsData = debtsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setState({ debts: debtsData });
+
+      if (debtsSnapshot.docs.length === 0) {
+        setState({ providerDebtPayments: [] });
+      }
+
+      debtsSnapshot.docs.forEach((debtDoc) => {
+        const paymentsQuery = query(collection(db, debtDoc.ref.path, 'payments'));
+        const paymentsUnsubscribe = onSnapshot(paymentsQuery, (paymentsSnapshot) => {
+          allProviderPayments[debtDoc.id] = paymentsSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+            parentId: debtDoc.id,
+          }));
+          const flattenedPayments = Object.values(allProviderPayments).flat();
+          setState({ providerDebtPayments: flattenedPayments });
+        });
+        addFirebaseListener(paymentsUnsubscribe);
+      });
+      onInitialLoad('debts');
+    },
+    (error) => {
+      onInitialLoad('debts', error);
+      setState({ debts: [], providerDebtPayments: [] });
+    }
+  );
+=======
   const debtsUnsubscribe = onSnapshot(debtsQuery, (debtsSnapshot) => {
       const debtsData = debtsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setState({ debts: debtsData });
@@ -247,6 +361,7 @@ export function loadAllData(userId) {
       onInitialLoad('debts', error);
       setState({ debts: [], providerDebtPayments: [] });
   });
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   addFirebaseListener(debtsUnsubscribe);
   // --- FIN DE LA MODIFICACIÓN ---
 
@@ -312,7 +427,12 @@ export function loadAllData(userId) {
       continue;
     }
 
+<<<<<<< HEAD
+    let queryRef =
+      config.type === 'doc' ? doc(db, config.path) : query(collection(db, config.path));
+=======
     let queryRef = config.type === 'doc' ? doc(db, config.path) : query(collection(db, config.path));
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     const unsubscribe = onSnapshot(
       queryRef,
       (snapshot) => {

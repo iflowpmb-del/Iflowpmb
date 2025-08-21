@@ -21,9 +21,15 @@ export function formatCurrency(number, currency = 'ARS') {
   } catch (e) {
     // Fallback para entornos donde 'es-AR' podría no ser soportado
     return new Intl.NumberFormat('en-US', {
+<<<<<<< HEAD
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+=======
         style: 'currency',
         currency: currency,
         minimumFractionDigits: 2,
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
     }).format(num);
   }
 }

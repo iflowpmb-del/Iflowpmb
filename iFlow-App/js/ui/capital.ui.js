@@ -1,11 +1,18 @@
+<<<<<<< HEAD
+import { WALLET_CONFIG, setState, appState } from '../state.js';
+=======
 import { WALLET_CONFIG, setState, appState, charts } from '../state.js';
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 import { formatCurrency, formatDateTime, escapeHTML } from './utils.js';
 import { showModal } from './modales.js';
 
 // --- CONSTANTE PARA PAGINACIÓN ---
 const ITEMS_PER_PAGE = 15;
 
+<<<<<<< HEAD
+=======
 
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 /**
  * Renderiza la sección completa de Capital, incluyendo los totales,
  * las billeteras, las deudas y el historial filtrado por fecha.
@@ -23,7 +30,11 @@ export function renderCapitalSection(state) {
     .forEach((btn) =>
       btn.classList.toggle('filter-btn-active', btn.dataset.period === capitalPeriod)
     );
+<<<<<<< HEAD
+
+=======
   
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   const customControls = document.getElementById('capital-custom-date-range-controls');
   if (customControls) {
     customControls.classList.toggle('hidden', capitalPeriod !== 'custom');
@@ -40,14 +51,26 @@ export function renderCapitalSection(state) {
       break;
     case 'week':
       const day = now.getDay();
+<<<<<<< HEAD
+      startDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - day + (day === 0 ? -6 : 1)
+      );
+=======
       startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + (day === 0 ? -6 : 1));
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       startDate.setHours(0, 0, 0, 0);
       endDate = new Date();
       endDate.setHours(23, 59, 59, 999);
       break;
     case 'month':
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+<<<<<<< HEAD
+      startDate.setHours(0, 0, 0, 0);
+=======
        startDate.setHours(0, 0, 0, 0);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       endDate = new Date();
       endDate.setHours(23, 59, 59, 999);
       break;
@@ -58,7 +81,13 @@ export function renderCapitalSection(state) {
       endDate.setHours(23, 59, 59, 999);
       break;
     case 'custom':
+<<<<<<< HEAD
+      startDate = capitalCustomStartDate
+        ? new Date(capitalCustomStartDate + 'T00:00:00')
+        : new Date(0);
+=======
       startDate = capitalCustomStartDate ? new Date(capitalCustomStartDate + 'T00:00:00') : new Date(0);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       endDate = capitalCustomEndDate ? new Date(capitalCustomEndDate + 'T23:59:59') : new Date();
       break;
     default:
@@ -66,6 +95,14 @@ export function renderCapitalSection(state) {
       endDate = new Date();
   }
 
+<<<<<<< HEAD
+  const filteredHistory = capitalHistory.filter((entry) => {
+    if (!entry.timestamp || !entry.timestamp.toDate) return false;
+    const entryDate = entry.timestamp.toDate();
+    return entryDate >= startDate && entryDate <= endDate;
+  });
+
+=======
   const filteredHistory = capitalHistory.filter(entry => {
       if (!entry.timestamp || !entry.timestamp.toDate) return false;
       const entryDate = entry.timestamp.toDate();
@@ -73,11 +110,15 @@ export function renderCapitalSection(state) {
   });
 
 
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   // --- Cálculos de Capital ---
   const stockValueUSD = stock.reduce(
     (sum, item) => sum + (item.phoneCost || 0) * (item.quantity || 1),
     0
   );
+<<<<<<< HEAD
+  const totalDebtUSD = debts.reduce((sum, debt) => sum + (debt.amount || 0), 0);
+=======
   // =================================================================================
   // INICIO DE MODIFICACIÓN: Se filtran las deudas para no incluir las saldadas en el total
   // =================================================================================
@@ -86,6 +127,7 @@ export function renderCapitalSection(state) {
   // =================================================================================
   // FIN DE MODIFICACIÓN
   // =================================================================================
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
   const arsWalletsUSD = ((capital.ars || 0) + (capital.mp || 0)) / exchangeRate;
   const usdWallets = (capital.usd || 0) + (capital.usdt || 0);
   const totalCapital =
@@ -106,7 +148,11 @@ export function renderCapitalSection(state) {
   const walletsGridEl = document.getElementById('wallets-grid');
   if (walletsGridEl)
     walletsGridEl.innerHTML = Object.entries(WALLET_CONFIG)
+<<<<<<< HEAD
+      .filter(([k, c]) => !c.type)
+=======
       .filter(([k, c]) => !c.type) 
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       .map(
         ([key, config]) =>
           `<div class="bg-gray-50 p-4 rounded-lg border"><p class="text-sm text-gray-500 flex items-center"><i class="${
@@ -127,7 +173,11 @@ export function renderCapitalSection(state) {
   const debtsGridEl = document.getElementById('debts-grid');
   if (debtsGridEl)
     debtsGridEl.innerHTML = Object.entries(WALLET_CONFIG)
+<<<<<<< HEAD
+      .filter(([k, c]) => c.type)
+=======
       .filter(([k, c]) => c.type) 
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
       .map(
         ([key, config]) =>
           `<div class="bg-gray-50 p-4 rounded-lg border"><p class="text-sm text-gray-500 flex items-center"><i class="${
@@ -140,11 +190,18 @@ export function renderCapitalSection(state) {
 
   // --- Renderizado de Listas Detalladas ---
   renderClientDebtsList(state);
+<<<<<<< HEAD
+  renderOurDebtsList(state);
+
+  // --- Renderizado de Historial ---
+  renderCapitalHistoryList(state, filteredHistory);
+=======
   renderOurDebtsList(state, pendingDebts); // Se pasa la lista ya filtrada
   
   // --- Renderizado de Historial y Gráfico ---
   renderCapitalHistoryList(state, filteredHistory);
   renderCapitalEvolutionChart(filteredHistory);
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 }
 
 /**
@@ -153,6 +210,23 @@ export function renderCapitalSection(state) {
  * @param {Array} filteredHistory El historial ya filtrado por fecha.
  */
 function renderCapitalHistoryList(state, filteredHistory) {
+<<<<<<< HEAD
+  const container = document.getElementById('capital-history-list-container');
+  const noHistoryMessage = document.getElementById('no-capital-history-message');
+
+  if (!container || !noHistoryMessage) return;
+
+  const page = state.ui?.capitalHistoryPage || 1;
+  const totalItemsToShow = page * ITEMS_PER_PAGE;
+
+  noHistoryMessage.classList.toggle('hidden', filteredHistory.length > 0);
+  container.classList.toggle('hidden', filteredHistory.length === 0);
+
+  if (filteredHistory.length > 0) {
+    const visibleHistory = filteredHistory.slice(0, totalItemsToShow);
+
+    container.innerHTML = `
+=======
     const container = document.getElementById('capital-history-list-container');
     const noHistoryMessage = document.getElementById('no-capital-history-message');
 
@@ -168,6 +242,7 @@ function renderCapitalHistoryList(state, filteredHistory) {
         const visibleHistory = filteredHistory.slice(0, totalItemsToShow);
 
         container.innerHTML = `
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead class="bg-gray-100">
@@ -178,6 +253,24 @@ function renderCapitalHistoryList(state, filteredHistory) {
                         </tr>
                     </thead>
                     <tbody>
+<<<<<<< HEAD
+                        ${visibleHistory
+                          .map(
+                            (entry) => `
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="p-3 whitespace-nowrap">${formatDateTime(
+                                  entry.timestamp
+                                )}</td>
+                                <td class="p-3">${escapeHTML(entry.reason)}</td>
+                                <td class="p-3 text-right font-semibold">${formatCurrency(
+                                  entry.totalCapital,
+                                  'USD'
+                                )}</td>
+                            </tr>
+                        `
+                          )
+                          .join('')}
+=======
                         ${visibleHistory.map(entry => `
                             <tr class="border-b hover:bg-gray-50">
                                 <td class="p-3 whitespace-nowrap">${formatDateTime(entry.timestamp)}</td>
@@ -185,20 +278,31 @@ function renderCapitalHistoryList(state, filteredHistory) {
                                 <td class="p-3 text-right font-semibold">${formatCurrency(entry.totalCapital, 'USD')}</td>
                             </tr>
                         `).join('')}
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                     </tbody>
                 </table>
             </div>
             ${
               filteredHistory.length > totalItemsToShow
                 ? `<div class="mt-6 text-center">
+<<<<<<< HEAD
+                     <button id="load-more-history" class="btn-secondary py-2 px-6">Mostrar más</button>
+=======
                      <button class="load-more-btn btn-secondary py-2 px-6" data-list-key="capitalHistory">Mostrar más</button>
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                    </div>`
                 : ''
             }
         `;
+<<<<<<< HEAD
+  } else {
+    container.innerHTML = '';
+  }
+=======
     } else {
         container.innerHTML = '';
     }
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 }
 
 /**
@@ -257,6 +361,16 @@ function renderClientDebtsList(state) {
 /**
  * Renderiza la lista detallada de deudas a proveedores.
  * @param {object} state El estado actual de la aplicación.
+<<<<<<< HEAD
+ */
+function renderOurDebtsList(state) {
+  const ourDebtsListEl = document.getElementById('our-debts-list');
+  if (!ourDebtsListEl || !state.debts) return;
+  ourDebtsListEl.innerHTML =
+    state.debts.length === 0
+      ? `<p class="text-gray-500 text-center py-4">No hay deudas a proveedores.</p>`
+      : state.debts
+=======
  * @param {Array} pendingDebts La lista de deudas pendientes ya filtrada.
  */
 function renderOurDebtsList(state, pendingDebts) {
@@ -270,6 +384,7 @@ function renderOurDebtsList(state, pendingDebts) {
     pendingDebts.length === 0
       ? `<p class="text-gray-500 text-center py-4">No hay deudas a proveedores.</p>`
       : pendingDebts
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
           .map(
             (debt) => `
             <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center border">
@@ -286,9 +401,12 @@ function renderOurDebtsList(state, pendingDebts) {
             </div>`
           )
           .join('');
+<<<<<<< HEAD
+=======
   // =================================================================================
   // FIN DE MODIFICACIÓN
   // =================================================================================
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 }
 
 /**
@@ -296,6 +414,22 @@ function renderOurDebtsList(state, pendingDebts) {
  * @param {object} state El estado actual de la aplicación.
  */
 export function openAdjustCapitalModal(state) {
+<<<<<<< HEAD
+  const content = `
+        <form id="adjust-capital-form" class="space-y-4">
+            ${Object.entries(WALLET_CONFIG)
+              .filter(([k, c]) => !c.type || k === 'clientDebt')
+              .map(
+                ([key, config]) =>
+                  `<div>
+                            <label class="block text-sm">${config.name}</label>
+                            <input type="number" step="any" id="adjust-${key}" class="form-input w-full" value="${
+                    state.capital[key] || 0
+                  }">
+                        </div>`
+              )
+              .join('')}
+=======
     const content = `
         <form id="adjust-capital-form" class="space-y-4">
             ${Object.entries(WALLET_CONFIG)
@@ -308,12 +442,21 @@ export function openAdjustCapitalModal(state) {
                         </div>`
                 )
                 .join('')}
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
             <div>
                 <label class="block text-sm font-medium text-gray-700">Motivo del Ajuste</label>
                 <textarea id="adjust-capital-reason" class="form-textarea w-full mt-1" rows="3" placeholder="Ej: Corrección de caja, inversión inicial..." required></textarea>
             </div>
         </form>
     `;
+<<<<<<< HEAD
+  const footer = `
+        <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
+        <button type="submit" form="adjust-capital-form" class="btn-primary px-4 py-2">Guardar</button>
+    `;
+  showModal(content, 'Ajustar Saldos', footer);
+}
+=======
     const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="adjust-capital-form" class="btn-primary px-4 py-2">Guardar</button>
@@ -432,3 +575,4 @@ function renderCapitalEvolutionChart(filteredHistory) {
 // ===============================================================
 // FIN DE MODIFICACIÓN
 // ===============================================================
+>>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
