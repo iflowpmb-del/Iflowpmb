@@ -121,14 +121,7 @@ function renderClientDebtsSection(state) {
                         (p) => `
                         <div class="bg-gray-100 p-2 rounded-md text-xs">
                             <div class="flex justify-between">
-<<<<<<< HEAD
-                                <span class="font-medium">${formatCurrency(
-                                  p.amountUSD,
-                                  'USD'
-                                )}</span>
-=======
                                 <span class="font-medium">${formatCurrency(p.amountUSD, 'USD')}</span>
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                                 <span class="text-gray-500">${formatDateTime(p.createdAt)}</span>
                             </div>
                         </div>
@@ -140,27 +133,16 @@ function renderClientDebtsSection(state) {
         `
           : '';
 
-<<<<<<< HEAD
-      const buttonText =
-        payments.length > 0 ? `Ver Pagos (${payments.length})` : '0 Pagos Registrados';
-=======
       const buttonText = payments.length > 0 ? `Ver Pagos (${payments.length})` : '0 Pagos Registrados';
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 
       return `
             <div class="debt-card-container card p-4">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="font-bold text-lg">${escapeHTML(debt.customerName)}</p>
-<<<<<<< HEAD
-                        <p class="text-sm text-gray-500">Origen: Venta de ${(debt.items || [])
-                          .map((i) => i.model)
-                          .join(', ')}</p>
-=======
                         <p class="text-sm text-gray-500">Origen: Venta de ${
                           (debt.items || []).map((i) => i.model).join(', ')
                         }</p>
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                         <p class="text-xs text-gray-400">Fecha Venta: ${formatDate(
                           debt.saleDate
                         )}</p>
@@ -192,10 +174,7 @@ function renderClientDebtsSection(state) {
     .join('');
 }
 
-<<<<<<< HEAD
-=======
 
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 // =================================================================================
 // INICIO DE MODIFICACIÓN: Nueva función para renderizar el historial de deudas de clientes
 // =================================================================================
@@ -204,54 +183,6 @@ function renderClientDebtsSection(state) {
  * @param {object} state El estado actual de la aplicación.
  */
 function renderClientDebtsHistory(state) {
-<<<<<<< HEAD
-  const container = document.getElementById('client-debts-history-container');
-  const noMessage = document.getElementById('no-client-debts-history-message');
-  if (!container || !noMessage || !state.sales) return;
-
-  const settledClientDebts = state.sales
-    .map((sale) => {
-      const payments = sale.paymentBreakdownUSD || {};
-      let totalPaidExcludingDebt = 0;
-      for (const method in payments) {
-        if (method !== 'clientDebt' && method !== 'debtSettled') {
-          totalPaidExcludingDebt += payments[method];
-        }
-      }
-      totalPaidExcludingDebt += sale.tradeInValueUSD || 0;
-      const debtAmount = sale.total - totalPaidExcludingDebt;
-      const settledAmount = sale.debtSettled || 0;
-      const outstandingBalance = debtAmount - settledAmount;
-
-      // Una deuda se considera saldada si tuvo un monto de deuda y ahora su balance es cero (o casi cero)
-      if (debtAmount > 0.01 && outstandingBalance < 0.01) {
-        return { ...sale, debtAmount };
-      }
-      return null;
-    })
-    .filter(Boolean); // Filtra los nulos
-
-  noMessage.classList.toggle('hidden', settledClientDebts.length > 0);
-  if (settledClientDebts.length === 0) {
-    container.innerHTML = '';
-    return;
-  }
-
-  container.innerHTML = settledClientDebts
-    .sort((a, b) => (b.soldAt?.toMillis() || 0) - (a.soldAt?.toMillis() || 0)) // Ordenar por fecha de venta
-    .map(
-      (debt) => `
-            <div class="card p-4 bg-gray-50 opacity-80">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="font-bold text-lg text-gray-700">${escapeHTML(
-                          debt.customerName
-                        )}</p>
-                        <p class="text-sm text-gray-500">Deuda original de ${formatCurrency(
-                          debt.debtAmount,
-                          'USD'
-                        )}</p>
-=======
     const container = document.getElementById('client-debts-history-container');
     const noMessage = document.getElementById('no-client-debts-history-message');
     if (!container || !noMessage || !state.sales) return;
@@ -292,7 +223,6 @@ function renderClientDebtsHistory(state) {
                     <div>
                         <p class="font-bold text-lg text-gray-700">${escapeHTML(debt.customerName)}</p>
                         <p class="text-sm text-gray-500">Deuda original de ${formatCurrency(debt.debtAmount, 'USD')}</p>
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
                     </div>
                     <div class="text-right">
                         <p class="font-semibold text-lg text-green-600">Saldada</p>
@@ -300,22 +230,13 @@ function renderClientDebtsHistory(state) {
                     </div>
                 </div>
             </div>
-<<<<<<< HEAD
-        `
-    )
-    .join('');
-=======
         `).join('');
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 }
 // =================================================================================
 // FIN DE MODIFICACIÓN
 // =================================================================================
 
-<<<<<<< HEAD
-=======
 
->>>>>>> e8ee4cbf113bf0ffb5bd2efdd5d375534974e94b
 // --- Modales Específicos de Clientes ---
 
 /**

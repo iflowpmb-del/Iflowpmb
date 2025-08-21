@@ -55,6 +55,7 @@ async function logCapitalState(reason) {
   }
 }
 
+
 async function fetchAndSetDolarData() {
   let marketSellRate = null;
   let marketBuyRate = null;
@@ -65,7 +66,7 @@ async function fetchAndSetDolarData() {
       throw new Error(`API error: ${response.status}`);
     }
     const data = await response.json();
-
+    
     const sellPrice = data.venta;
     const buyPrice = data.compra;
 
@@ -75,11 +76,9 @@ async function fetchAndSetDolarData() {
     if (buyPrice && typeof buyPrice === 'number' && buyPrice > 0) {
       marketBuyRate = buyPrice;
     }
+
   } catch (error) {
-    console.error(
-      'Error al obtener la cotización del dólar. Se usará el último valor guardado.',
-      error
-    );
+    console.error('Error al obtener la cotización del dólar. Se usará el último valor guardado.', error);
   }
 
   const userProfile = appState.profile;
@@ -89,17 +88,17 @@ async function fetchAndSetDolarData() {
   const effectiveRate = lastKnownMarketRate + userOffset;
 
   if (marketSellRate && userProfile?.marketRate && marketSellRate !== userProfile.marketRate) {
-    logCapitalState(`Actualización de Dólar API: ${marketSellRate}`);
+      logCapitalState(`Actualización de Dólar API: ${marketSellRate}`);
   }
-
-  setState({
+  
+  setState({ 
     exchangeRate: effectiveRate,
     profile: {
       ...userProfile,
       marketRate: lastKnownMarketRate,
       marketBuyRate: lastKnownMarketBuyRate,
       dolarOffset: userOffset,
-    },
+    }
   });
 
   if ((marketSellRate !== null || marketBuyRate !== null) && appState.user?.uid) {
@@ -109,6 +108,7 @@ async function fetchAndSetDolarData() {
     setData('profile', 'main', dataToUpdate, true);
   }
 }
+
 
 export function loadAllData(userId) {
   if (!userId) return;
@@ -120,13 +120,7 @@ export function loadAllData(userId) {
     profile: {
       type: 'doc',
       path: `users/${userId}/profile/main`,
-      default: {
-        businessName: 'Mi Negocio',
-        subscriptionStatus: 'none',
-        dolarOffset: 0,
-        marketRate: 1000,
-        marketBuyRate: 1000,
-      },
+      default: { businessName: 'Mi Negocio', subscriptionStatus: 'none', dolarOffset: 0, marketRate: 1000, marketBuyRate: 1000 },
     },
     capital: {
       type: 'doc',
@@ -164,11 +158,7 @@ export function loadAllData(userId) {
   };
 
   let initialLoadsPending = Object.keys(collectionsToLoad).length + 2; // +2 for sales and debts
-  let initialLoadFlags = {
-    ...Object.keys(collectionsToLoad).reduce((acc, key) => ({ ...acc, [key]: true }), {}),
-    sales: true,
-    debts: true,
-  };
+  let initialLoadFlags = { ...Object.keys(collectionsToLoad).reduce((acc, key) => ({ ...acc, [key]: true }), {}), sales: true, debts: true };
   let profileLoaded = false;
 
   const onInitialLoad = async (collectionName, error = null) => {
@@ -177,8 +167,8 @@ export function loadAllData(userId) {
     }
 
     if (collectionName === 'profile') {
-      profileLoaded = true;
-      await fetchAndSetDolarData();
+        profileLoaded = true;
+        await fetchAndSetDolarData();
     }
 
     if (initialLoadFlags[collectionName]) {
@@ -199,10 +189,8 @@ export function loadAllData(userId) {
   // 1. Cargar Ventas y luego sus sub-colecciones de pagos
   const salesQuery = query(collection(db, `users/${userId}/sales`));
   let allClientPayments = {}; // Usamos un objeto para evitar duplicados y manejar actualizaciones
-  const salesUnsubscribe = onSnapshot(
-    salesQuery,
-    (salesSnapshot) => {
-      const salesData = salesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  const salesUnsubscribe = onSnapshot(salesQuery, (salesSnapshot) => {
+      const salesData = salesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       salesData.sort((a, b) => (b.soldAt?.toMillis() || 0) - (a.soldAt?.toMillis() || 0));
       setState({ sales: salesData });
 
@@ -210,61 +198,55 @@ export function loadAllData(userId) {
         setState({ clientDebtPayments: [] });
       }
 
-      salesSnapshot.docs.forEach((saleDoc) => {
-        const paymentsQuery = query(collection(db, saleDoc.ref.path, 'payments'));
-        const paymentsUnsubscribe = onSnapshot(paymentsQuery, (paymentsSnapshot) => {
-          allClientPayments[saleDoc.id] = paymentsSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-            parentId: saleDoc.id,
-          }));
-          const flattenedPayments = Object.values(allClientPayments).flat();
-          setState({ clientDebtPayments: flattenedPayments });
-        });
-        addFirebaseListener(paymentsUnsubscribe);
+      salesSnapshot.docs.forEach(saleDoc => {
+          const paymentsQuery = query(collection(db, saleDoc.ref.path, 'payments'));
+          const paymentsUnsubscribe = onSnapshot(paymentsQuery, (paymentsSnapshot) => {
+              allClientPayments[saleDoc.id] = paymentsSnapshot.docs.map(doc => ({
+                  id: doc.id,
+                  ...doc.data(),
+                  parentId: saleDoc.id
+              }));
+              const flattenedPayments = Object.values(allClientPayments).flat();
+              setState({ clientDebtPayments: flattenedPayments });
+          });
+          addFirebaseListener(paymentsUnsubscribe);
       });
       onInitialLoad('sales');
-    },
-    (error) => {
+  }, (error) => {
       onInitialLoad('sales', error);
       setState({ sales: [], clientDebtPayments: [] });
-    }
-  );
+  });
   addFirebaseListener(salesUnsubscribe);
 
   // 2. Cargar Deudas y luego sus sub-colecciones de pagos
   const debtsQuery = query(collection(db, `users/${userId}/debts`));
   let allProviderPayments = {};
-  const debtsUnsubscribe = onSnapshot(
-    debtsQuery,
-    (debtsSnapshot) => {
-      const debtsData = debtsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  const debtsUnsubscribe = onSnapshot(debtsQuery, (debtsSnapshot) => {
+      const debtsData = debtsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setState({ debts: debtsData });
 
       if (debtsSnapshot.docs.length === 0) {
-        setState({ providerDebtPayments: [] });
+          setState({ providerDebtPayments: [] });
       }
 
-      debtsSnapshot.docs.forEach((debtDoc) => {
-        const paymentsQuery = query(collection(db, debtDoc.ref.path, 'payments'));
-        const paymentsUnsubscribe = onSnapshot(paymentsQuery, (paymentsSnapshot) => {
-          allProviderPayments[debtDoc.id] = paymentsSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-            parentId: debtDoc.id,
-          }));
-          const flattenedPayments = Object.values(allProviderPayments).flat();
-          setState({ providerDebtPayments: flattenedPayments });
-        });
-        addFirebaseListener(paymentsUnsubscribe);
+      debtsSnapshot.docs.forEach(debtDoc => {
+          const paymentsQuery = query(collection(db, debtDoc.ref.path, 'payments'));
+          const paymentsUnsubscribe = onSnapshot(paymentsQuery, (paymentsSnapshot) => {
+              allProviderPayments[debtDoc.id] = paymentsSnapshot.docs.map(doc => ({
+                  id: doc.id,
+                  ...doc.data(),
+                  parentId: debtDoc.id
+              }));
+              const flattenedPayments = Object.values(allProviderPayments).flat();
+              setState({ providerDebtPayments: flattenedPayments });
+          });
+          addFirebaseListener(paymentsUnsubscribe);
       });
       onInitialLoad('debts');
-    },
-    (error) => {
+  }, (error) => {
       onInitialLoad('debts', error);
       setState({ debts: [], providerDebtPayments: [] });
-    }
-  );
+  });
   addFirebaseListener(debtsUnsubscribe);
   // --- FIN DE LA MODIFICACIÓN ---
 
@@ -285,35 +267,35 @@ export function loadAllData(userId) {
             await batch.commit();
           } else {
             let data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
+            
             // =================================================================================
             // INICIO DE LA MODIFICACIÓN: Lógica de migración para la categoría "Otro"
             // =================================================================================
-            const oldCategoryIndex = data.findIndex((cat) => cat.id === 'other');
+            const oldCategoryIndex = data.findIndex(cat => cat.id === 'other');
             if (oldCategoryIndex > -1) {
-              console.log("Migrando categoría 'other' a 'universal'...");
-              const newUniversalCategory = DEFAULT_CATEGORIES.find((cat) => cat.id === 'universal');
+                console.log("Migrando categoría 'other' a 'universal'...");
+                const newUniversalCategory = DEFAULT_CATEGORIES.find(cat => cat.id === 'universal');
+                
+                if (newUniversalCategory) {
+                    const batch = writeBatch(db);
+                    
+                    // Borrar el documento viejo
+                    const oldDocRef = doc(db, `users/${userId}/categories`, 'other');
+                    batch.delete(oldDocRef);
+                    
+                    // Crear el documento nuevo
+                    const newDocRef = doc(db, `users/${userId}/categories`, 'universal');
+                    const { id, ...categoryData } = newUniversalCategory;
+                    batch.set(newDocRef, categoryData);
+                    
+                    await batch.commit();
+                    console.log("Migración completada en la base de datos.");
 
-              if (newUniversalCategory) {
-                const batch = writeBatch(db);
-
-                // Borrar el documento viejo
-                const oldDocRef = doc(db, `users/${userId}/categories`, 'other');
-                batch.delete(oldDocRef);
-
-                // Crear el documento nuevo
-                const newDocRef = doc(db, `users/${userId}/categories`, 'universal');
-                const { id, ...categoryData } = newUniversalCategory;
-                batch.set(newDocRef, categoryData);
-
-                await batch.commit();
-                console.log('Migración completada en la base de datos.');
-
-                // No es necesario actualizar `data` aquí, porque el onSnapshot se
-                // disparará de nuevo automáticamente con los datos actualizados de Firestore.
-              }
+                    // No es necesario actualizar `data` aquí, porque el onSnapshot se
+                    // disparará de nuevo automáticamente con los datos actualizados de Firestore.
+                }
             } else {
-              setState({ categories: data });
+                setState({ categories: data });
             }
             // =================================================================================
             // FIN DE LA MODIFICACIÓN
@@ -330,8 +312,7 @@ export function loadAllData(userId) {
       continue;
     }
 
-    let queryRef =
-      config.type === 'doc' ? doc(db, config.path) : query(collection(db, config.path));
+    let queryRef = config.type === 'doc' ? doc(db, config.path) : query(collection(db, config.path));
     const unsubscribe = onSnapshot(
       queryRef,
       (snapshot) => {

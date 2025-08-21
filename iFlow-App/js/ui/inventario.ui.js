@@ -9,6 +9,7 @@ import { updateData } from '../api.js';
 // FIN DE MODIFICACIÓN
 // ===============================================================
 
+
 /**
  * Renderiza todas las sub-secciones de la pestaña de Inventario.
  * @param {object} state El estado actual de la aplicación.
@@ -58,13 +59,12 @@ function renderStockSection(state) {
     )}".</p>`;
     return;
   }
-
+  
   if (sortedCategories.length > 0) {
     stockListContainer.innerHTML = sortedCategories
       .map((category) => {
         // --- HTML para la vista de tarjetas (móvil) ---
-        const cardsHTML = groupedStock[category]
-          .map((item) => {
+        const cardsHTML = groupedStock[category].map((item) => {
             const isReserved = item.status === 'reservado';
             const cardClass = isReserved ? 'opacity-60 bg-yellow-50' : 'bg-white';
             const reservedTag = isReserved
@@ -85,9 +85,7 @@ function renderStockSection(state) {
               : '';
 
             const providerHtml = item.providerName
-              ? `<p class="text-xs text-gray-500 mt-1"><i class="fas fa-truck mr-1"></i> ${escapeHTML(
-                  item.providerName
-                )}</p>`
+              ? `<p class="text-xs text-gray-500 mt-1"><i class="fas fa-truck mr-1"></i> ${escapeHTML(item.providerName)}</p>`
               : '';
 
             return `
@@ -112,32 +110,23 @@ function renderStockSection(state) {
                     </div>
                     <div>
                         <p class="text-xs text-gray-500">P. Sugerido</p>
-                        <p class="font-semibold text-green-600">${formatCurrency(
-                          item.suggestedSalePrice || 0,
-                          'USD'
-                        )}</p>
+                        <p class="font-semibold text-green-600">${formatCurrency(item.suggestedSalePrice || 0, 'USD')}</p>
                     </div>
                 </div>
                 <div class="absolute top-2 right-2 flex items-center gap-2">
-                    <button class="edit-stock-btn text-blue-500 hover:text-blue-700 p-2" data-id="${
-                      item.id
-                    }"><i class="fas fa-edit"></i></button>
-                    <button class="delete-stock-btn text-red-500 hover:text-red-700 p-2" data-id="${
-                      item.id
-                    }"><i class="fas fa-trash-alt"></i></button>
+                    <button class="edit-stock-btn text-blue-500 hover:text-blue-700 p-2" data-id="${item.id}"><i class="fas fa-edit"></i></button>
+                    <button class="delete-stock-btn text-red-500 hover:text-red-700 p-2" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button>
                 </div>
             </div>`;
-          })
-          .join('');
+        }).join('');
 
         // --- HTML para la vista de tabla (escritorio) ---
-        const rowsHTML = groupedStock[category]
-          .map((item) => {
+        const rowsHTML = groupedStock[category].map((item) => {
             const isReserved = item.status === 'reservado';
-            const reservedDesktopTag = isReserved
-              ? '<span class="text-xs bg-yellow-200 text-yellow-800 px-2 rounded-full ml-2">Reservado</span>'
-              : '';
-
+            const reservedDesktopTag = isReserved 
+                ? '<span class="text-xs bg-yellow-200 text-yellow-800 px-2 rounded-full ml-2">Reservado</span>' 
+                : '';
+            
             const attributesHtml = item.attributes
               ? Object.entries(item.attributes)
                   .filter(([key, value]) => value)
@@ -154,28 +143,18 @@ function renderStockSection(state) {
                 </td>
                 <td class="text-center">${item.quantity || 1}</td>
                 <td class="text-center">${formatCurrency(item.phoneCost, 'USD')}</td>
-                <td class="text-center text-green-600 font-semibold">${formatCurrency(
-                  item.suggestedSalePrice || 0,
-                  'USD'
-                )}</td>
+                <td class="text-center text-green-600 font-semibold">${formatCurrency(item.suggestedSalePrice || 0, 'USD')}</td>
                 <td class="text-right whitespace-nowrap">
-                    <button class="edit-stock-btn text-blue-500 hover:text-blue-700 p-2" data-id="${
-                      item.id
-                    }"><i class="fas fa-edit"></i></button>
-                    <button class="delete-stock-btn text-red-500 hover:text-red-700 p-2" data-id="${
-                      item.id
-                    }"><i class="fas fa-trash-alt"></i></button>
+                    <button class="edit-stock-btn text-blue-500 hover:text-blue-700 p-2" data-id="${item.id}"><i class="fas fa-edit"></i></button>
+                    <button class="delete-stock-btn text-red-500 hover:text-red-700 p-2" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>
             `;
-          })
-          .join('');
+        }).join('');
 
         return `
         <div class="category-group">
-            <h4 class="text-xl font-bold text-gray-700 mb-3 pb-2 border-b">${escapeHTML(
-              category
-            )}</h4>
+            <h4 class="text-xl font-bold text-gray-700 mb-3 pb-2 border-b">${escapeHTML(category)}</h4>
             
             <!-- Contenedor para vista móvil (Tarjetas) -->
             <div class="stock-list-grid">
@@ -199,14 +178,14 @@ function renderStockSection(state) {
             </table>
         </div>
         `;
-      })
-      .join('');
+      }).join('');
   } else if (state.stock.length > 0) {
     stockListContainer.innerHTML = `<p class="text-center text-gray-500 py-8">No se encontraron productos que coincidan con la búsqueda.</p>`;
   } else {
     stockListContainer.innerHTML = '';
   }
 }
+
 
 /**
  * Renderiza el formulario para añadir un nuevo producto al stock.
@@ -221,13 +200,13 @@ export function renderAddStockForm(state) {
 
   const allCategories = [...DEFAULT_CATEGORIES];
   const userCategories = categories || [];
-  userCategories.forEach((uc) => {
-    const existingIndex = allCategories.findIndex((dc) => dc.id === uc.id);
-    if (existingIndex > -1) {
-      allCategories[existingIndex] = uc;
-    } else {
-      allCategories.push(uc);
-    }
+  userCategories.forEach(uc => {
+      const existingIndex = allCategories.findIndex(dc => dc.id === uc.id);
+      if (existingIndex > -1) {
+          allCategories[existingIndex] = uc;
+      } else {
+          allCategories.push(uc);
+      }
   });
 
   const currentValues = {};
@@ -235,8 +214,7 @@ export function renderAddStockForm(state) {
     if (el.id) currentValues[el.id] = el.value;
   });
 
-  const selectedCategoryName =
-    autofillData?.category || currentValues['stock-category-reg'] || 'iPhone';
+  const selectedCategoryName = autofillData?.category || currentValues['stock-category-reg'] || 'iPhone';
   const selectedCategory = allCategories.find((c) => c.name === selectedCategoryName);
 
   const searchInput = document.getElementById('product-search-reg');
@@ -267,9 +245,11 @@ export function renderAddStockForm(state) {
                 (r) =>
                   `<div class="p-3 hover:bg-gray-100 cursor-pointer product-search-result" data-category="${escapeHTML(
                     r.category
-                  )}" data-product="${escapeHTML(r.product)}">${escapeHTML(
+                  )}" data-product="${escapeHTML(
                     r.product
-                  )} <span class="text-xs text-gray-500">(${escapeHTML(r.category)})</span></div>`
+                  )}">${escapeHTML(r.product)} <span class="text-xs text-gray-500">(${escapeHTML(
+                    r.category
+                  )})</span></div>`
               )
               .join('')
           : '<div class="p-3 text-gray-500">No se encontraron productos.</div>';
@@ -281,20 +261,9 @@ export function renderAddStockForm(state) {
 
   const selectedProviderId = currentValues['stock-provider-reg'];
   const providerOptions = `
-        <option value="no-asignar" ${
-          selectedProviderId === 'no-asignar' ? 'selected' : ''
-        }>No Asignar</option>
-        <option value="parte-de-pago" ${
-          selectedProviderId === 'parte-de-pago' ? 'selected' : ''
-        }>Parte de pago/Otro</option>
-        ${(userProviders || [])
-          .map(
-            (p) =>
-              `<option value="${p.id}" ${
-                selectedProviderId === p.id ? 'selected' : ''
-              }>${escapeHTML(p.name)}</option>`
-          )
-          .join('')}
+        <option value="no-asignar" ${selectedProviderId === 'no-asignar' ? 'selected' : ''}>No Asignar</option>
+        <option value="parte-de-pago" ${selectedProviderId === 'parte-de-pago' ? 'selected' : ''}>Parte de pago/Otro</option>
+        ${(userProviders || []).map((p) => `<option value="${p.id}" ${selectedProviderId === p.id ? 'selected' : ''}>${escapeHTML(p.name)}</option>`).join('')}
     `;
 
   const formHTML = `
@@ -323,9 +292,7 @@ export function renderAddStockForm(state) {
         <div id="dynamic-attributes-container" class="space-y-4">
             ${
               selectedCategory?.attributes
-                ?.map((attr) =>
-                  generateAttributeInputHTML(attr, currentValues, 'reg', autofillData)
-                )
+                ?.map((attr) => generateAttributeInputHTML(attr, currentValues, 'reg', autofillData))
                 .join('') || ''
             }
         </div>
@@ -389,7 +356,8 @@ export function generateAttributeInputHTML(
 
   let isDisabled = false;
   if (id === 'battery') {
-    const gradeValue = autofillData?.grade || currentValues[`attr_grade_${formSuffix}`] || '';
+    const gradeValue =
+      autofillData?.grade || currentValues[`attr_grade_${formSuffix}`] || '';
     if (gradeValue === 'Caja Sellada') {
       isDisabled = true;
       value = 100;
@@ -399,21 +367,15 @@ export function generateAttributeInputHTML(
   let currentOptions = Array.isArray(options) ? options : [];
   if (dependsOn && typeof options === 'object') {
     const parentInput = document.getElementById(`attr_${dependsOn}_${formSuffix}`);
-    const parentValue = parentInput
-      ? parentInput.value
-      : autofillData?.[dependsOn] || currentValues[`attr_${dependsOn}_${formSuffix}`];
+    const parentValue = parentInput ? parentInput.value : (autofillData?.[dependsOn] || currentValues[`attr_${dependsOn}_${formSuffix}`]);
 
     if (parentValue && options[parentValue]) {
       currentOptions = options[parentValue];
     } else if (parentValue) {
       const fallbackInputId = `attr_${id}_${formSuffix}`;
       const fallbackValue = currentValues[fallbackInputId] || '';
-      const fallbackLabel = `<label for="${fallbackInputId}" class="block text-sm">${escapeHTML(
-        name
-      )}</label>`;
-      const fallbackInputHTML = `<input type="text" id="${fallbackInputId}" data-attr-id="${id}" data-attr-name="${name}" class="form-input w-full" value="${escapeHTML(
-        fallbackValue
-      )}" placeholder="Valor personalizado" ${required ? 'required' : ''}>`;
+      const fallbackLabel = `<label for="${fallbackInputId}" class="block text-sm">${escapeHTML(name)}</label>`;
+      const fallbackInputHTML = `<input type="text" id="${fallbackInputId}" data-attr-id="${id}" data-attr-name="${name}" class="form-input w-full" value="${escapeHTML(fallbackValue)}" placeholder="Valor personalizado" ${required ? 'required' : ''}>`;
       return `<div>${fallbackLabel}${fallbackInputHTML}</div>`;
     } else {
       const allCategories = [...(appState.categories || []), ...DEFAULT_CATEGORIES];
@@ -436,12 +398,7 @@ export function generateAttributeInputHTML(
       break;
     case 'select':
       const optionsHTML = currentOptions
-        .map(
-          (opt) =>
-            `<option value="${escapeHTML(opt)}" ${opt === value ? 'selected' : ''}>${escapeHTML(
-              opt
-            )}</option>`
-        )
+        .map((opt) => `<option value="${escapeHTML(opt)}" ${opt === value ? 'selected' : ''}>${escapeHTML(opt)}</option>`)
         .join('');
       inputHTML = `<select id="${inputId}" data-attr-id="${id}" data-attr-name="${name}" class="form-select w-full" ${requiredAttr} ${
         isDisabled ? 'disabled' : ''
@@ -510,75 +467,48 @@ function renderCategoryProductsAndAttributes(category) {
       )}">`
     : `<h3 class="text-2xl font-bold">${escapeHTML(category.name)}</h3>`;
 
-  const productAttribute = category.attributes.find(
-    (attr) => attr.id.startsWith('attr-product-') || attr.name === 'Producto'
-  );
+  const productAttribute = category.attributes.find(attr => attr.id.startsWith('attr-product-') || attr.name === 'Producto');
   const productList = productAttribute ? productAttribute.options : [];
 
   // ===============================================================
   // INICIO DE MODIFICACIÓN: Se añade el ícono de arrastre y el data-attribute
   // ===============================================================
-  const productListHTML =
-    productList.length > 0
-      ? productList
-          .map(
-            (productName) => `
-        <div class="product-list-item bg-white p-3 rounded-lg flex justify-between items-center border hover:shadow-sm" data-product-name="${escapeHTML(
-          productName
-        )}">
+  const productListHTML = productList.length > 0
+    ? productList.map(productName => `
+        <div class="product-list-item bg-white p-3 rounded-lg flex justify-between items-center border hover:shadow-sm" data-product-name="${escapeHTML(productName)}">
             <div class="flex items-center">
                 <i class="fas fa-grip-vertical drag-handle" title="Arrastrar para reordenar"></i>
                 <span class="font-medium">${escapeHTML(productName)}</span>
             </div>
             <div class="flex items-center gap-2">
-                <button class="edit-product-options-btn btn-secondary text-xs py-1 px-3" data-product-name="${escapeHTML(
-                  productName
-                )}">Editar Opciones</button>
-                <button class="delete-product-from-category-btn text-gray-400 hover:text-red-500" data-product-name="${escapeHTML(
-                  productName
-                )}"><i class="fas fa-trash"></i></button>
+                <button class="edit-product-options-btn btn-secondary text-xs py-1 px-3" data-product-name="${escapeHTML(productName)}">Editar Opciones</button>
+                <button class="delete-product-from-category-btn text-gray-400 hover:text-red-500" data-product-name="${escapeHTML(productName)}"><i class="fas fa-trash"></i></button>
             </div>
         </div>
-    `
-          )
-          .join('')
-      : '<p class="text-gray-400 text-center py-4">Aún no hay productos en esta categoría. ¡Añade uno!</p>';
+    `).join('')
+    : '<p class="text-gray-400 text-center py-4">Aún no hay productos en esta categoría. ¡Añade uno!</p>';
   // ===============================================================
   // FIN DE MODIFICACIÓN
   // ===============================================================
 
-  const generalAttributes = category.attributes.filter(
-    (attr) => !attr.dependsOn && attr.id !== productAttribute?.id
-  );
-  const generalAttributesHTML =
-    generalAttributes.length > 0
-      ? generalAttributes
-          .map(
-            (attr) => `
+  const generalAttributes = category.attributes.filter(attr => !attr.dependsOn && attr.id !== productAttribute?.id);
+  const generalAttributesHTML = generalAttributes.length > 0
+    ? generalAttributes.map(attr => `
         <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center border">
-            <p class="font-medium">${escapeHTML(attr.name)} <span class="text-xs text-gray-500">(${
-              attr.type
-            })</span></p>
+            <p class="font-medium">${escapeHTML(attr.name)} <span class="text-xs text-gray-500">(${attr.type})</span></p>
             <div class="flex items-center gap-2">
-                <button class="edit-attribute-btn text-blue-500 hover:text-blue-700" data-attr-id="${
-                  attr.id
-                }"><i class="fas fa-edit"></i></button>
-                <button class="delete-attribute-btn text-red-500 hover:text-red-700" data-attr-id="${
-                  attr.id
-                }"><i class="fas fa-times"></i></button>
+                <button class="edit-attribute-btn text-blue-500 hover:text-blue-700" data-attr-id="${attr.id}"><i class="fas fa-edit"></i></button>
+                <button class="delete-attribute-btn text-red-500 hover:text-red-700" data-attr-id="${attr.id}"><i class="fas fa-times"></i></button>
             </div>
         </div>
-    `
-          )
-          .join('')
-      : '<p class="text-gray-400 text-center py-4">No hay atributos generales.</p>';
+    `).join('')
+    : '<p class="text-gray-400 text-center py-4">No hay atributos generales.</p>';
 
   container.innerHTML = `
         <div class="flex justify-between items-start mb-6">
             <div class="flex items-center gap-3">
                 ${nameDisplay}
-                ${
-                  isEditingName
+                ${isEditingName
                     ? `<button id="save-category-name-btn" class="text-green-600 hover:text-green-800"><i class="fas fa-check-circle fa-lg"></i></button>`
                     : `<button id="edit-category-name-btn" class="text-gray-400 hover:text-gray-600"><i class="fas fa-pencil-alt"></i></button>`
                 }
@@ -589,9 +519,7 @@ function renderCategoryProductsAndAttributes(category) {
         <div class="space-y-6">
             <div>
                 <div class="flex justify-between items-center mb-3">
-                    <h4 class="font-semibold text-lg">Productos en "${escapeHTML(
-                      category.name
-                    )}"</h4>
+                    <h4 class="font-semibold text-lg">Productos en "${escapeHTML(category.name)}"</h4>
                     <button id="add-new-product-to-category-btn" class="btn-primary py-1 px-3 text-sm"><i class="fas fa-plus"></i> Añadir Producto</button>
                 </div>
                 <!-- =============================================================== -->
@@ -631,55 +559,51 @@ function renderCategoryProductsAndAttributes(category) {
         </div>
     `;
 
-  // ===============================================================
-  // INICIO DE MODIFICACIÓN: Se inicializa SortableJS en la lista
-  // ===============================================================
-  const productListContainer = document.getElementById('product-list-container');
-  if (productListContainer) {
-    new Sortable(productListContainer, {
-      handle: '.drag-handle', // El drag solo se inicia desde el ícono
-      animation: 150,
-      ghostClass: 'sortable-ghost', // Clase CSS para el elemento "fantasma"
-      onEnd: async (evt) => {
-        // Se ejecuta cuando el usuario suelta el elemento
-        const { categoryManager } = appState;
-        const selectedCategory = appState.categories.find(
-          (c) => c.id === categoryManager.selectedCategoryId
-        );
-        if (!selectedCategory) return;
+    // ===============================================================
+    // INICIO DE MODIFICACIÓN: Se inicializa SortableJS en la lista
+    // ===============================================================
+    const productListContainer = document.getElementById('product-list-container');
+    if (productListContainer) {
+        new Sortable(productListContainer, {
+            handle: '.drag-handle', // El drag solo se inicia desde el ícono
+            animation: 150,
+            ghostClass: 'sortable-ghost', // Clase CSS para el elemento "fantasma"
+            onEnd: async (evt) => {
+                // Se ejecuta cuando el usuario suelta el elemento
+                const { categoryManager } = appState;
+                const selectedCategory = appState.categories.find(c => c.id === categoryManager.selectedCategoryId);
+                if (!selectedCategory) return;
 
-        const productAttribute = selectedCategory.attributes.find(
-          (attr) => attr.id.startsWith('attr-product-') || attr.name === 'Producto'
-        );
-        if (!productAttribute) return;
+                const productAttribute = selectedCategory.attributes.find(attr => attr.id.startsWith('attr-product-') || attr.name === 'Producto');
+                if (!productAttribute) return;
 
-        // Se obtiene el nuevo orden de los elementos desde el DOM
-        const items = evt.target.querySelectorAll('.product-list-item');
-        const newOrder = Array.from(items).map((item) => item.dataset.productName);
+                // Se obtiene el nuevo orden de los elementos desde el DOM
+                const items = evt.target.querySelectorAll('.product-list-item');
+                const newOrder = Array.from(items).map(item => item.dataset.productName);
 
-        // Se crea una copia actualizada de los atributos con el nuevo orden
-        const updatedAttributes = selectedCategory.attributes.map((attr) => {
-          if (attr.id === productAttribute.id) {
-            return { ...attr, options: newOrder };
-          }
-          return attr;
+                // Se crea una copia actualizada de los atributos con el nuevo orden
+                const updatedAttributes = selectedCategory.attributes.map(attr => {
+                    if (attr.id === productAttribute.id) {
+                        return { ...attr, options: newOrder };
+                    }
+                    return attr;
+                });
+
+                // Se actualiza la base de datos con el nuevo orden
+                try {
+                    await updateData('categories', selectedCategory.id, { attributes: updatedAttributes });
+                } catch (error) {
+                    console.error("Error al guardar el nuevo orden:", error);
+                    showModal('No se pudo guardar el nuevo orden de los productos.', 'Error');
+                    // Opcional: revertir la UI al estado anterior si falla el guardado
+                    renderCategoryProductsAndAttributes(selectedCategory);
+                }
+            }
         });
-
-        // Se actualiza la base de datos con el nuevo orden
-        try {
-          await updateData('categories', selectedCategory.id, { attributes: updatedAttributes });
-        } catch (error) {
-          console.error('Error al guardar el nuevo orden:', error);
-          showModal('No se pudo guardar el nuevo orden de los productos.', 'Error');
-          // Opcional: revertir la UI al estado anterior si falla el guardado
-          renderCategoryProductsAndAttributes(selectedCategory);
-        }
-      },
-    });
-  }
-  // ===============================================================
-  // FIN DE MODIFICACIÓN
-  // ===============================================================
+    }
+    // ===============================================================
+    // FIN DE MODIFICACIÓN
+    // ===============================================================
 }
 
 // --- Modales Específicos de Inventario ---
@@ -695,13 +619,13 @@ export function openEditStockModal(item, state, formValues = null) {
 
   const allCategories = [...DEFAULT_CATEGORIES];
   const userCategories = categories || [];
-  userCategories.forEach((uc) => {
-    const existingIndex = allCategories.findIndex((dc) => dc.id === uc.id);
-    if (existingIndex > -1) {
-      allCategories[existingIndex] = uc;
-    } else {
-      allCategories.push(uc);
-    }
+  userCategories.forEach(uc => {
+      const existingIndex = allCategories.findIndex(dc => dc.id === uc.id);
+      if (existingIndex > -1) {
+          allCategories[existingIndex] = uc;
+      } else {
+          allCategories.push(uc);
+      }
   });
 
   const currentCategoryName = formValues ? formValues['edit-stock-category'] : item.category;
@@ -730,23 +654,9 @@ export function openEditStockModal(item, state, formValues = null) {
   }
 
   const providerOptions = `
-      <option value="no-asignar" ${
-        !currentValues['edit-stock-provider'] ||
-        currentValues['edit-stock-provider'] === 'no-asignar'
-          ? 'selected'
-          : ''
-      }>No Asignar</option>
-      <option value="parte-de-pago" ${
-        currentValues['edit-stock-provider'] === 'parte-de-pago' ? 'selected' : ''
-      }>Parte de pago/Otro</option>
-      ${(userProviders || [])
-        .map(
-          (p) =>
-            `<option value="${p.id}" ${
-              currentValues['edit-stock-provider'] === p.id ? 'selected' : ''
-            }>${escapeHTML(p.name)}</option>`
-        )
-        .join('')}
+      <option value="no-asignar" ${(!currentValues['edit-stock-provider'] || currentValues['edit-stock-provider'] === 'no-asignar') ? 'selected' : ''}>No Asignar</option>
+      <option value="parte-de-pago" ${currentValues['edit-stock-provider'] === 'parte-de-pago' ? 'selected' : ''}>Parte de pago/Otro</option>
+      ${(userProviders || []).map(p => `<option value="${p.id}" ${currentValues['edit-stock-provider'] === p.id ? 'selected' : ''}>${escapeHTML(p.name)}</option>`).join('')}
   `;
 
   const content = `
@@ -888,9 +798,7 @@ export function openEditAttributeModal(categoryId, attribute) {
             <div>
                 <label class="block text-sm">Tipo de Campo</label>
                 <select id="edit-attribute-type" class="form-select w-full">
-                    <option value="text" ${
-                      attribute.type === 'text' ? 'selected' : ''
-                    }>Texto</option>
+                    <option value="text" ${attribute.type === 'text' ? 'selected' : ''}>Texto</option>
                     <option value="number" ${
                       attribute.type === 'number' ? 'selected' : ''
                     }>Número</option>
@@ -920,34 +828,22 @@ export function openEditAttributeModal(categoryId, attribute) {
  * @param {string} productName El nombre del producto a editar.
  */
 export function openEditProductOptionsModal(categoryId, productName) {
-  const category = appState.categories.find((c) => c.id === categoryId);
-  if (!category) return;
+    const category = appState.categories.find(c => c.id === categoryId);
+    if (!category) return;
 
-  const productAttribute = category.attributes.find(
-    (attr) => attr.id.startsWith('attr-product-') || attr.name === 'Producto'
-  );
-  if (!productAttribute) return;
+    const productAttribute = category.attributes.find(attr => attr.id.startsWith('attr-product-') || attr.name === 'Producto');
+    if (!productAttribute) return;
 
-  const dependentAttributes = category.attributes.filter(
-    (attr) => attr.dependsOn === productAttribute.id
-  );
+    const dependentAttributes = category.attributes.filter(attr => attr.dependsOn === productAttribute.id);
 
-  // =================================================================================
-  // INICIO DE LA MODIFICACIÓN: Se cambia el renderizado de textarea a una lista interactiva.
-  // =================================================================================
-  const editorsHTML = dependentAttributes
-    .map((attr) => {
-      const currentOptions =
-        typeof attr.options === 'object' && attr.options[productName]
-          ? attr.options[productName]
-          : [];
-
-      const optionsListHTML = currentOptions
-        .map(
-          (opt) => `
-            <div class="attribute-option-item flex items-center justify-between bg-gray-100 p-2 rounded" data-option-value="${escapeHTML(
-              opt
-            )}">
+    // =================================================================================
+    // INICIO DE LA MODIFICACIÓN: Se cambia el renderizado de textarea a una lista interactiva.
+    // =================================================================================
+    const editorsHTML = dependentAttributes.map(attr => {
+        const currentOptions = (typeof attr.options === 'object' && attr.options[productName]) ? attr.options[productName] : [];
+        
+        const optionsListHTML = currentOptions.map(opt => `
+            <div class="attribute-option-item flex items-center justify-between bg-gray-100 p-2 rounded" data-option-value="${escapeHTML(opt)}">
                 <span>${escapeHTML(opt)}</span>
                 <button type="button" class="delete-attribute-option-btn text-red-500 hover:text-red-700" 
                         data-category-id="${categoryId}" 
@@ -957,18 +853,12 @@ export function openEditProductOptionsModal(categoryId, productName) {
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-        `
-        )
-        .join('');
+        `).join('');
 
-      return `
-            <div class="dependent-attribute-editor border p-3 rounded-lg bg-white" data-attr-id="${
-              attr.id
-            }">
+        return `
+            <div class="dependent-attribute-editor border p-3 rounded-lg bg-white" data-attr-id="${attr.id}">
                 <div class="flex justify-between items-center mb-2">
-                     <label class="block text-sm font-medium text-gray-700">${escapeHTML(
-                       attr.name
-                     )}</label>
+                     <label class="block text-sm font-medium text-gray-700">${escapeHTML(attr.name)}</label>
                      <button type="button" class="delete-dependent-attribute-btn text-gray-400 hover:text-red-600" title="Eliminar este atributo" 
                              data-category-id="${categoryId}" 
                              data-product-name="${escapeHTML(productName)}" 
@@ -988,26 +878,19 @@ export function openEditProductOptionsModal(categoryId, productName) {
                 </div>
             </div>
         `;
-    })
-    .join('');
-  // =================================================================================
-  // FIN DE MODIFICACIÓN
-  // =================================================================================
+    }).join('');
+    // =================================================================================
+    // FIN DE MODIFICACIÓN
+    // =================================================================================
 
-  const content = `
-        <form id="edit-product-options-form" class="space-y-4" data-category-id="${categoryId}" data-product-attribute-id="${
-    productAttribute.id
-  }" data-product-name="${escapeHTML(productName)}">
-            <p>Define las opciones disponibles para cada atributo cuando el producto seleccionado sea <strong>${escapeHTML(
-              productName
-            )}</strong>.</p>
+    const content = `
+        <form id="edit-product-options-form" class="space-y-4" data-category-id="${categoryId}" data-product-attribute-id="${productAttribute.id}" data-product-name="${escapeHTML(productName)}">
+            <p>Define las opciones disponibles para cada atributo cuando el producto seleccionado sea <strong>${escapeHTML(productName)}</strong>.</p>
             ${editorsHTML}
         </form>
         <div class="border-t pt-4 mt-4">
             <h4 class="font-semibold text-sm mb-2">Añadir Nuevo Atributo Dependiente</h4>
-            <form id="add-dependent-attribute-form" class="flex items-end gap-2" data-category-id="${categoryId}" data-product-attribute-id="${
-    productAttribute.id
-  }" data-product-name="${escapeHTML(productName)}">
+            <form id="add-dependent-attribute-form" class="flex items-end gap-2" data-category-id="${categoryId}" data-product-attribute-id="${productAttribute.id}" data-product-name="${escapeHTML(productName)}">
                 <div class="flex-grow">
                     <label class="block text-xs">Nombre del Atributo</label>
                     <input type="text" id="new-dependent-attr-name" class="form-input w-full p-2 text-sm" required>
@@ -1017,50 +900,50 @@ export function openEditProductOptionsModal(categoryId, productName) {
         </div>
     `;
 
-  const footer = `
+    const footer = `
         <button type="button" class="btn-secondary close-modal-btn px-4 py-2">Cancelar</button>
         <button type="submit" form="edit-product-options-form" class="btn-primary px-4 py-2">Guardar Opciones</button>
     `;
 
-  showModal(content, `Editar Opciones de ${productName}`, footer);
+    showModal(content, `Editar Opciones de ${productName}`, footer);
 
-  // =================================================================================
-  // INICIO DE MODIFICACIÓN: Se añade un event listener local para el botón de añadir opción.
-  // =================================================================================
-  const modal = document.getElementById('app-modal');
-  if (modal) {
-    modal.addEventListener('click', async (e) => {
-      if (e.target.closest('.add-attribute-option-btn')) {
-        const button = e.target.closest('.add-attribute-option-btn');
-        const { categoryId, productName, attrId } = button.dataset;
-        const input = button.previousElementSibling;
-        const newOptionValue = input.value.trim();
+    // =================================================================================
+    // INICIO DE MODIFICACIÓN: Se añade un event listener local para el botón de añadir opción.
+    // =================================================================================
+    const modal = document.getElementById('app-modal');
+    if (modal) {
+        modal.addEventListener('click', async (e) => {
+            if (e.target.closest('.add-attribute-option-btn')) {
+                const button = e.target.closest('.add-attribute-option-btn');
+                const { categoryId, productName, attrId } = button.dataset;
+                const input = button.previousElementSibling;
+                const newOptionValue = input.value.trim();
 
-        if (newOptionValue) {
-          const category = appState.categories.find((c) => c.id === categoryId);
-          if (!category) return;
+                if (newOptionValue) {
+                    const category = appState.categories.find(c => c.id === categoryId);
+                    if (!category) return;
 
-          const updatedAttributes = JSON.parse(JSON.stringify(category.attributes));
-          const attributeToUpdate = updatedAttributes.find((attr) => attr.id === attrId);
+                    const updatedAttributes = JSON.parse(JSON.stringify(category.attributes));
+                    const attributeToUpdate = updatedAttributes.find(attr => attr.id === attrId);
 
-          if (attributeToUpdate && typeof attributeToUpdate.options === 'object') {
-            if (!attributeToUpdate.options[productName]) {
-              attributeToUpdate.options[productName] = [];
+                    if (attributeToUpdate && typeof attributeToUpdate.options === 'object') {
+                        if (!attributeToUpdate.options[productName]) {
+                            attributeToUpdate.options[productName] = [];
+                        }
+                        // Evitar duplicados
+                        if (!attributeToUpdate.options[productName].includes(newOptionValue)) {
+                            attributeToUpdate.options[productName].push(newOptionValue);
+                            await updateData('categories', categoryId, { attributes: updatedAttributes });
+                            openEditProductOptionsModal(categoryId, productName); // Refresca el modal
+                        } else {
+                            input.value = ''; // Limpiar si ya existe
+                        }
+                    }
+                }
             }
-            // Evitar duplicados
-            if (!attributeToUpdate.options[productName].includes(newOptionValue)) {
-              attributeToUpdate.options[productName].push(newOptionValue);
-              await updateData('categories', categoryId, { attributes: updatedAttributes });
-              openEditProductOptionsModal(categoryId, productName); // Refresca el modal
-            } else {
-              input.value = ''; // Limpiar si ya existe
-            }
-          }
-        }
-      }
-    });
-  }
-  // =================================================================================
-  // FIN DE MODIFICACIÓN
-  // =================================================================================
+        });
+    }
+    // =================================================================================
+    // FIN DE MODIFICACIÓN
+    // =================================================================================
 }

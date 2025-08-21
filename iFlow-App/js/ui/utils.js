@@ -21,9 +21,9 @@ export function formatCurrency(number, currency = 'ARS') {
   } catch (e) {
     // Fallback para entornos donde 'es-AR' podría no ser soportado
     return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: 2,
     }).format(num);
   }
 }

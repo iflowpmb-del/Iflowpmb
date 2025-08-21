@@ -117,12 +117,12 @@ function handleManualDelete(collectionName, docId, entityName) {
   openConfirmModal(message, async () => {
     setGlobalLoading(true);
     try {
-      await deleteFromDb(collectionName, docId);
-      showModal(`${entityName} eliminado con éxito.`);
+        await deleteFromDb(collectionName, docId);
+        showModal(`${entityName} eliminado con éxito.`);
     } catch (error) {
-      showModal(`Error al eliminar: ${error.message}`, 'Error');
+        showModal(`Error al eliminar: ${error.message}`, 'Error');
     } finally {
-      setGlobalLoading(false);
+        setGlobalLoading(false);
     }
   });
 }
@@ -177,15 +177,21 @@ async function handleProcessPayment(form) {
 
           batch.update(saleRef, { debtSettled: newSettledAmount });
 
-          const paymentRecordRef = doc(
-            collection(db, `users/${userId}/sales/${targetId}/payments`)
-          );
+          const paymentRecordRef = doc(collection(db, `users/${userId}/sales/${targetId}/payments`));
           batch.set(paymentRecordRef, basePaymentRecord);
 
           for (const walletType in paymentBreakdownOriginal) {
             const paymentValue = paymentBreakdownOriginal[walletType];
             capitalUpdates[walletType] = (capital[walletType] || 0) + paymentValue;
           }
+          // ===============================================================
+          // INICIO DE LA CORRECCIÓN
+          // Se añade la lógica para restar el monto pagado del total de deudas de clientes.
+          // ===============================================================
+          capitalUpdates.clientDebt = (capital.clientDebt || 0) - totalPaidInUSD;
+          // ===============================================================
+          // FIN DE LA CORRECCIÓN
+          // ===============================================================
           batch.update(capitalRef, capitalUpdates);
           break;
         }
@@ -195,18 +201,16 @@ async function handleProcessPayment(form) {
           const debt = appState.debts.find((d) => d.id === debtId);
           const newAmount = debt.amount - totalPaidInUSD;
           if (newAmount < 0.01) {
-            batch.update(debtRef, {
-              amount: 0,
-              status: 'saldada',
-              settledAt: serverTimestamp(),
+            batch.update(debtRef, { 
+                amount: 0, 
+                status: 'saldada', 
+                settledAt: serverTimestamp() 
             });
           } else {
             batch.update(debtRef, { amount: newAmount });
           }
 
-          const paymentRecordRef = doc(
-            collection(db, `users/${userId}/debts/${targetId}/payments`)
-          );
+          const paymentRecordRef = doc(collection(db, `users/${userId}/debts/${targetId}/payments`));
           batch.set(paymentRecordRef, basePaymentRecord);
           for (const walletType in paymentBreakdownOriginal) {
             const paymentValue = paymentBreakdownOriginal[walletType];
@@ -219,7 +223,7 @@ async function handleProcessPayment(form) {
         case 'payFixedExpense': {
           const expense = fixedExpenses.find((exp) => exp.id === targetId);
           if (!expense) throw new Error('Gasto fijo no encontrado.');
-
+          
           const currentMonthID = `${new Date().getFullYear()}-${String(
             new Date().getMonth() + 1
           ).padStart(2, '0')}`;
@@ -245,20 +249,20 @@ async function handleProcessPayment(form) {
             capitalUpdates[walletType] = (capital[walletType] || 0) - paymentValue;
           }
           batch.update(capitalRef, capitalUpdates);
-
+          
           // 3. Verificar si el gasto del mes ya se completó con este pago
-          const expenseTotalInUSD =
-            expense.currency === 'ARS' ? expense.amount / exchangeRate : expense.amount;
-
-          const paymentsThisMonth = dailyExpenses.filter(
-            (p) => p.fixedExpenseParentId === targetId && p.date.startsWith(currentMonthID)
+          const expenseTotalInUSD = expense.currency === 'ARS' ? expense.amount / exchangeRate : expense.amount;
+          
+          const paymentsThisMonth = dailyExpenses.filter(p => 
+              p.fixedExpenseParentId === targetId && 
+              p.date.startsWith(currentMonthID)
           );
           const totalPaidBeforeThis = paymentsThisMonth.reduce((sum, p) => sum + p.amountUSD, 0);
           const newTotalPaid = totalPaidBeforeThis + totalPaidInUSD;
 
           if (newTotalPaid >= expenseTotalInUSD - 0.01) {
-            const fixedExpenseRef = doc(db, `users/${userId}/fixed_expenses`, targetId);
-            batch.update(fixedExpenseRef, { lastPaidMonth: currentMonthID });
+              const fixedExpenseRef = doc(db, `users/${userId}/fixed_expenses`, targetId);
+              batch.update(fixedExpenseRef, { lastPaidMonth: currentMonthID });
           }
           break;
         }
@@ -301,38 +305,37 @@ async function handleProcessPayment(form) {
 }
 
 async function handlePayFixedExpense(expenseId) {
-  const { fixedExpenses, dailyExpenses, exchangeRate, user } = appState;
-  const expense = fixedExpenses.find((exp) => exp.id === expenseId);
-  if (!expense) {
-    return showModal('No se pudo encontrar el gasto fijo seleccionado.', 'Error');
-  }
+    const { fixedExpenses, dailyExpenses, exchangeRate, user } = appState;
+    const expense = fixedExpenses.find((exp) => exp.id === expenseId);
+    if (!expense) {
+        return showModal('No se pudo encontrar el gasto fijo seleccionado.', 'Error');
+    }
 
-  const amountInUSD = expense.currency === 'ARS' ? expense.amount / exchangeRate : expense.amount;
-  const currentMonthID = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(
-    2,
-    '0'
-  )}`;
+    const amountInUSD = expense.currency === 'ARS' ? expense.amount / exchangeRate : expense.amount;
+    const currentMonthID = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    
+    // Filtrar los pagos ya realizados para este gasto en el mes actual
+    const paymentsThisMonth = dailyExpenses.filter(p => 
+        p.fixedExpenseParentId === expenseId && 
+        p.date.startsWith(currentMonthID)
+    );
 
-  // Filtrar los pagos ya realizados para este gasto en el mes actual
-  const paymentsThisMonth = dailyExpenses.filter(
-    (p) => p.fixedExpenseParentId === expenseId && p.date.startsWith(currentMonthID)
-  );
+    const totalPaidThisMonth = paymentsThisMonth.reduce((sum, p) => sum + p.amountUSD, 0);
+    const remainingAmount = amountInUSD - totalPaidThisMonth;
 
-  const totalPaidThisMonth = paymentsThisMonth.reduce((sum, p) => sum + p.amountUSD, 0);
-  const remainingAmount = amountInUSD - totalPaidThisMonth;
+    if (remainingAmount < 0.01) {
+        return showModal('Este gasto ya ha sido cubierto para el mes actual.', 'Información');
+    }
 
-  if (remainingAmount < 0.01) {
-    return showModal('Este gasto ya ha sido cubierto para el mes actual.', 'Información');
-  }
-
-  openPaymentModal({
-    paymentType: 'payFixedExpense',
-    targetId: expense.id,
-    totalAmount: remainingAmount,
-    entityName: `Gasto Fijo: ${expense.description}`,
-    allowPartial: true, // Permitir pagos parciales
-  });
+    openPaymentModal({
+        paymentType: 'payFixedExpense',
+        targetId: expense.id,
+        totalAmount: remainingAmount,
+        entityName: `Gasto Fijo: ${expense.description}`,
+        allowPartial: true, // Permitir pagos parciales
+    });
 }
+
 
 function handleSettleProviderDebt(debtId) {
   const debt = appState.debts.find((d) => d.id === debtId);
@@ -474,7 +477,7 @@ async function handleAnnulSale(saleId) {
       console.error('Error al anular la venta:', error);
       showModal(`Ocurrió un error al anular la venta: ${error.message}`, 'Error');
     } finally {
-      setGlobalLoading(false);
+        setGlobalLoading(false);
     }
   });
 }
@@ -536,11 +539,7 @@ function getStockItemDataFromForm(formElement, formSuffix) {
       let value = input.type === 'checkbox' ? input.checked : input.value.trim();
       if (value !== '' && value !== null && value !== false) {
         attributes[attrName] = value;
-        if (
-          ['Producto', 'Configuración', 'Especificación', 'Almacenamiento', 'RAM', 'Tipo'].includes(
-            attrName
-          )
-        ) {
+        if (['Producto', 'Configuración', 'Especificación', 'Almacenamiento', 'RAM', 'Tipo'].includes(attrName)) {
           modelParts.push(value);
         }
       }
@@ -550,48 +549,22 @@ function getStockItemDataFromForm(formElement, formSuffix) {
   const modelName = modelParts.length > 0 ? modelParts.join(' ') : 'Producto Personalizado';
 
   const stockItemData = {
-    category: formElement.querySelector(
-      `#stock-category-${formSuffix}, #edit-stock-category, #trade-in-category`
-    ).value,
+    category: formElement.querySelector(`#stock-category-${formSuffix}, #edit-stock-category, #trade-in-category`).value,
     model: modelName,
-    serialNumber: (
-      formElement.querySelector(`#stock-serial-${formSuffix}, #edit-stock-serial, #trade-in-serial`)
-        ?.value || ''
-    )
-      .trim()
-      .toUpperCase(),
-    phoneCost:
-      parseFloat(
-        formElement.querySelector(`#stock-cost-${formSuffix}, #edit-stock-cost, #trade-in-value`)
-          ?.value
-      ) || 0,
-    suggestedSalePrice:
-      parseFloat(
-        formElement.querySelector(
-          `#stock-price-${formSuffix}, #edit-stock-price, #trade-in-sug-price`
-        )?.value
-      ) || 0,
-    quantity:
-      parseInt(
-        formElement.querySelector(`#stock-quantity-${formSuffix}, #edit-stock-quantity`)?.value,
-        10
-      ) || 1,
-    details:
-      formElement
-        .querySelector(`#stock-details-${formSuffix}, #edit-stock-details, #trade-in-details-input`)
-        ?.value.trim() || '',
+    serialNumber: (formElement.querySelector(`#stock-serial-${formSuffix}, #edit-stock-serial, #trade-in-serial`)?.value || '').trim().toUpperCase(),
+    phoneCost: parseFloat(formElement.querySelector(`#stock-cost-${formSuffix}, #edit-stock-cost, #trade-in-value`)?.value) || 0,
+    suggestedSalePrice: parseFloat(formElement.querySelector(`#stock-price-${formSuffix}, #edit-stock-price, #trade-in-sug-price`)?.value) || 0,
+    quantity: parseInt(formElement.querySelector(`#stock-quantity-${formSuffix}, #edit-stock-quantity`)?.value, 10) || 1,
+    details: formElement.querySelector(`#stock-details-${formSuffix}, #edit-stock-details, #trade-in-details-input`)?.value.trim() || '',
     attributes: attributes,
-    providerId:
-      formElement.querySelector(`#stock-provider-${formSuffix}, #edit-stock-provider`)?.value ||
-      'no-asignar',
+    providerId: formElement.querySelector(`#stock-provider-${formSuffix}, #edit-stock-provider`)?.value || 'no-asignar',
   };
 
   if (stockItemData.providerId !== 'no-asignar' && stockItemData.providerId !== 'parte-de-pago') {
     const provider = appState.userProviders.find((p) => p.id === stockItemData.providerId);
     stockItemData.providerName = provider ? provider.name : '';
   } else {
-    stockItemData.providerName =
-      stockItemData.providerId === 'parte-de-pago' ? 'Parte de pago/Otro' : '';
+    stockItemData.providerName = stockItemData.providerId === 'parte-de-pago' ? 'Parte de pago/Otro' : '';
   }
 
   return stockItemData;
@@ -856,9 +829,7 @@ async function handleSaveSale() {
     totalPaid += tradeInValue;
 
     if (Math.abs(totalSalePrice - totalPaid) > 0.01) {
-      throw new Error(
-        'El balance debe ser cero para finalizar la venta. Ajusta los montos de pago.'
-      );
+      throw new Error('El balance debe ser cero para finalizar la venta. Ajusta los montos de pago.');
     }
 
     const salespersonId = document.getElementById('salesperson-selector').value;
@@ -907,16 +878,16 @@ async function handleSaveSale() {
         commissionUSD: commissionUSD,
         exchangeRateAtSale: exchangeRate,
       };
-
+      
       sale.items.forEach((item) => {
         const stockItemRef = doc(db, `users/${userId}/stock`, item.id);
         const originalStockItem = stock.find((s) => s.id === item.id);
         const currentQuantity = originalStockItem ? originalStockItem.quantity || 1 : 1;
 
         if (currentQuantity > 1) {
-          batch.update(stockItemRef, {
+          batch.update(stockItemRef, { 
             quantity: currentQuantity - 1,
-            status: 'disponible',
+            status: 'disponible'
           });
         } else {
           batch.delete(stockItemRef);
@@ -926,14 +897,14 @@ async function handleSaveSale() {
       if (document.getElementById('has-trade-in').checked && tradeInValue > 0) {
         const tradeInContainer = document.getElementById('trade-in-details');
         if (tradeInContainer) {
-          const tradeInItem = getStockItemDataFromForm(tradeInContainer, 'tradein');
-          tradeInItem.createdAt = serverTimestamp();
-          tradeInItem.providerId = 'parte-de-pago';
-          tradeInItem.providerName = 'Parte de pago/Otro';
+            const tradeInItem = getStockItemDataFromForm(tradeInContainer, 'tradein');
+            tradeInItem.createdAt = serverTimestamp();
+            tradeInItem.providerId = 'parte-de-pago';
+            tradeInItem.providerName = 'Parte de pago/Otro';
 
-          saleData.tradeIn = { ...tradeInItem };
-          saleData.tradeInValueUSD = tradeInItem.phoneCost;
-          batch.set(doc(collection(db, `users/${userId}/stock`)), tradeInItem);
+            saleData.tradeIn = { ...tradeInItem };
+            saleData.tradeInValueUSD = tradeInItem.phoneCost;
+            batch.set(doc(collection(db, `users/${userId}/stock`)), tradeInItem);
         }
       }
 
@@ -1316,132 +1287,127 @@ export function setupEventListeners() {
           break;
         }
         case 'reservation-form': {
-          const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-          setGlobalLoading(true, button, 'Guardando...');
-          try {
-            const { reservationForm, exchangeRate, capital } = appState;
-            if (!reservationForm.selectedClient || !reservationForm.selectedItem) {
-              throw new Error('Debes seleccionar un cliente y un producto.');
-            }
-
-            const paymentInputs = form.querySelectorAll('.payment-input-reservation');
-            const paymentBreakdownOriginal = {};
-            let totalDepositUSD = 0;
-
-            paymentInputs.forEach((input) => {
-              const value = parseFloat(input.value) || 0;
-              if (value > 0) {
-                const walletType = input.dataset.payment;
-                paymentBreakdownOriginal[walletType] = value;
-                const isArs = walletType === 'ars' || walletType === 'mp';
-                totalDepositUSD += isArs ? value / exchangeRate : value;
-              }
-            });
-
-            const hasDeposit = totalDepositUSD > 0;
-
-            const reservationData = {
-              clientId: reservationForm.selectedClient.id,
-              customerName: reservationForm.selectedClient.name,
-              itemId: reservationForm.selectedItem.id,
-              item: reservationForm.selectedItem,
-              hasDeposit,
-              depositAmountUSD: totalDepositUSD,
-              depositPaymentBreakdown: paymentBreakdownOriginal,
-              notes: form.querySelector('#reservation-notes').value.trim(),
-              createdAt: serverTimestamp(),
-              status: 'active',
-            };
-
-            await runBatch(async (batch, db, userId) => {
-              const reservationRef = doc(collection(db, `users/${userId}/reservations`));
-              batch.set(reservationRef, reservationData);
-
-              const stockItemRef = doc(
-                db,
-                `users/${userId}/stock`,
-                reservationForm.selectedItem.id
-              );
-              batch.update(stockItemRef, { status: 'reservado' });
-
-              if (hasDeposit) {
-                const capitalRef = doc(db, `users/${userId}/capital`, 'summary');
-                const capitalUpdates = {};
-                for (const walletType in paymentBreakdownOriginal) {
-                  const paymentValue = paymentBreakdownOriginal[walletType];
-                  capitalUpdates[walletType] = (capital[walletType] || 0) + paymentValue;
+            const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
+            setGlobalLoading(true, button, 'Guardando...');
+            try {
+                const { reservationForm, exchangeRate, capital } = appState;
+                if (!reservationForm.selectedClient || !reservationForm.selectedItem) {
+                    throw new Error('Debes seleccionar un cliente y un producto.');
                 }
-                batch.update(capitalRef, capitalUpdates);
-              }
-            });
 
-            await logCapitalState(`Reserva creada para ${reservationForm.selectedClient.name}`);
-            document.getElementById('modal-container').innerHTML = '';
-            showModal('Reserva creada con éxito.');
-          } catch (error) {
-            showModal(`Error al guardar la reserva: ${error.message}`, 'Error');
-          } finally {
-            setGlobalLoading(false, button);
-          }
-          break;
+                const paymentInputs = form.querySelectorAll('.payment-input-reservation');
+                const paymentBreakdownOriginal = {};
+                let totalDepositUSD = 0;
+
+                paymentInputs.forEach(input => {
+                    const value = parseFloat(input.value) || 0;
+                    if (value > 0) {
+                        const walletType = input.dataset.payment;
+                        paymentBreakdownOriginal[walletType] = value;
+                        const isArs = walletType === 'ars' || walletType === 'mp';
+                        totalDepositUSD += isArs ? value / exchangeRate : value;
+                    }
+                });
+
+                const hasDeposit = totalDepositUSD > 0;
+
+                const reservationData = {
+                    clientId: reservationForm.selectedClient.id,
+                    customerName: reservationForm.selectedClient.name,
+                    itemId: reservationForm.selectedItem.id,
+                    item: reservationForm.selectedItem,
+                    hasDeposit,
+                    depositAmountUSD: totalDepositUSD,
+                    depositPaymentBreakdown: paymentBreakdownOriginal,
+                    notes: form.querySelector('#reservation-notes').value.trim(),
+                    createdAt: serverTimestamp(),
+                    status: 'active',
+                };
+
+                await runBatch(async (batch, db, userId) => {
+                    const reservationRef = doc(collection(db, `users/${userId}/reservations`));
+                    batch.set(reservationRef, reservationData);
+
+                    const stockItemRef = doc(db, `users/${userId}/stock`, reservationForm.selectedItem.id);
+                    batch.update(stockItemRef, { status: 'reservado' });
+
+                    if (hasDeposit) {
+                        const capitalRef = doc(db, `users/${userId}/capital`, 'summary');
+                        const capitalUpdates = {};
+                        for (const walletType in paymentBreakdownOriginal) {
+                            const paymentValue = paymentBreakdownOriginal[walletType];
+                            capitalUpdates[walletType] = (capital[walletType] || 0) + paymentValue;
+                        }
+                        batch.update(capitalRef, capitalUpdates);
+                    }
+                });
+
+                await logCapitalState(`Reserva creada para ${reservationForm.selectedClient.name}`);
+                document.getElementById('modal-container').innerHTML = '';
+                showModal('Reserva creada con éxito.');
+
+            } catch (error) {
+                showModal(`Error al guardar la reserva: ${error.message}`, 'Error');
+            } finally {
+                setGlobalLoading(false, button);
+            }
+            break;
         }
         case 'edit-product-options-form': {
-          const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
-          setGlobalLoading(true, button);
-          try {
-            const { categoryId, productAttributeId, productName } = form.dataset;
-            const category = appState.categories.find((c) => c.id === categoryId);
-            if (!category) throw new Error('Categoría no encontrada.');
+            const button = document.querySelector(`button[type="submit"][form="${form.id}"]`);
+            setGlobalLoading(true, button);
+            try {
+                const { categoryId, productAttributeId, productName } = form.dataset;
+                const category = appState.categories.find(c => c.id === categoryId);
+                if (!category) throw new Error('Categoría no encontrada.');
 
-            const updatedAttributes = JSON.parse(JSON.stringify(category.attributes));
+                const updatedAttributes = JSON.parse(JSON.stringify(category.attributes));
 
-            form.querySelectorAll('.dependent-attribute-editor').forEach((editor) => {
-              const dependentAttrId = editor.dataset.attrId;
-              const newOptions = Array.from(editor.querySelectorAll('.attribute-option-item'))
-                .map((item) => item.dataset.optionValue)
-                .filter(Boolean);
+                form.querySelectorAll('.dependent-attribute-editor').forEach(editor => {
+                    const dependentAttrId = editor.dataset.attrId;
+                    const newOptions = Array.from(editor.querySelectorAll('.attribute-option-item'))
+                                            .map(item => item.dataset.optionValue)
+                                            .filter(Boolean);
 
-              const attributeToUpdate = updatedAttributes.find(
-                (attr) => attr.id === dependentAttrId
-              );
-              if (attributeToUpdate && typeof attributeToUpdate.options === 'object') {
-                attributeToUpdate.options[productName] = newOptions;
-              }
-            });
+                    const attributeToUpdate = updatedAttributes.find(attr => attr.id === dependentAttrId);
+                    if (attributeToUpdate && typeof attributeToUpdate.options === 'object') {
+                        attributeToUpdate.options[productName] = newOptions;
+                    }
+                });
 
-            await updateData('categories', categoryId, { attributes: updatedAttributes });
-            document.getElementById('modal-container').innerHTML = '';
-            showModal(`Opciones para "${productName}" actualizadas con éxito.`);
-          } catch (err) {
-            showModal(`Error al guardar las opciones: ${err.message}`);
-          } finally {
-            setGlobalLoading(false, button);
-          }
-          break;
+                await updateData('categories', categoryId, { attributes: updatedAttributes });
+                document.getElementById('modal-container').innerHTML = '';
+                showModal(`Opciones para "${productName}" actualizadas con éxito.`);
+            } catch (err) {
+                showModal(`Error al guardar las opciones: ${err.message}`);
+            } finally {
+                setGlobalLoading(false, button);
+            }
+            break;
         }
         case 'add-dependent-attribute-form': {
-          const { categoryId, productAttributeId, productName } = form.dataset;
-          const category = appState.categories.find((c) => c.id === categoryId);
-          if (!category) return;
+            const { categoryId, productAttributeId, productName } = form.dataset;
+            const category = appState.categories.find(c => c.id === categoryId);
+            if (!category) return;
 
-          const name = form.querySelector('#new-dependent-attr-name').value.trim();
-          if (!name) {
-            showModal('El nombre del atributo no puede estar vacío.', 'Error');
-            return;
-          }
+            const name = form.querySelector('#new-dependent-attr-name').value.trim();
+            if (!name) {
+                showModal('El nombre del atributo no puede estar vacío.', 'Error');
+                return;
+            }
 
-          const newAttribute = {
-            id: `attr-${Date.now()}`,
-            name: name,
-            type: 'select',
-            dependsOn: productAttributeId,
-            options: { [productName]: [] },
-          };
+            const newAttribute = {
+                id: `attr-${Date.now()}`,
+                name: name,
+                type: 'select',
+                dependsOn: productAttributeId,
+                options: { [productName]: [] }
+            };
 
-          const updatedAttributes = [...category.attributes, newAttribute];
-          await updateData('categories', categoryId, { attributes: updatedAttributes });
-          openEditProductOptionsModal(categoryId, productName);
-          break;
+            const updatedAttributes = [...category.attributes, newAttribute];
+            await updateData('categories', categoryId, { attributes: updatedAttributes });
+            openEditProductOptionsModal(categoryId, productName);
+            break;
         }
       }
     } catch (err) {
@@ -1454,90 +1420,79 @@ export function setupEventListeners() {
 
     const loadMoreButton = target.closest('.load-more-btn');
     if (loadMoreButton) {
-      const listKey = loadMoreButton.dataset.listKey;
-      if (listKey && appState.ui.pages[listKey]) {
-        const currentPage = appState.ui.pages[listKey];
-        setState({
-          ui: {
-            pages: {
-              ...appState.ui.pages,
-              [listKey]: currentPage + 1,
-            },
-          },
-        });
-      }
-      return;
+        const listKey = loadMoreButton.dataset.listKey;
+        if (listKey && appState.ui.pages[listKey]) {
+            const currentPage = appState.ui.pages[listKey];
+            setState({
+                ui: {
+                    pages: {
+                        ...appState.ui.pages,
+                        [listKey]: currentPage + 1,
+                    },
+                },
+            });
+        }
+        return;
     }
 
     if (target.closest('.delete-attribute-option-btn')) {
-      const button = target.closest('.delete-attribute-option-btn');
-      const { categoryId, productName, attrId, optionValue } = button.dataset;
-      const category = appState.categories.find((c) => c.id === categoryId);
-      if (!category) return;
-
-      const updatedAttributes = JSON.parse(JSON.stringify(category.attributes));
-      const attributeToUpdate = updatedAttributes.find((attr) => attr.id === attrId);
-
-      if (
-        attributeToUpdate &&
-        typeof attributeToUpdate.options === 'object' &&
-        attributeToUpdate.options[productName]
-      ) {
-        attributeToUpdate.options[productName] = attributeToUpdate.options[productName].filter(
-          (opt) => opt !== optionValue
-        );
-        await updateData('categories', categoryId, { attributes: updatedAttributes });
-        openEditProductOptionsModal(categoryId, productName);
-      }
-      return;
-    }
-
-    if (target.closest('.delete-dependent-attribute-btn')) {
-      const button = target.closest('.delete-dependent-attribute-btn');
-      const { categoryId, productName, attrIdToDelete } = button.dataset;
-      const category = appState.categories.find((c) => c.id === categoryId);
-      if (!category) return;
-
-      openConfirmModal(
-        `¿Seguro que quieres eliminar este atributo y todas sus opciones para este producto?`,
-        async () => {
-          const updatedAttributes = category.attributes.filter(
-            (attr) => attr.id !== attrIdToDelete
-          );
-          await updateData('categories', categoryId, { attributes: updatedAttributes });
-          openEditProductOptionsModal(categoryId, productName);
-        }
-      );
-      return;
-    }
-
-    if (target.closest('.add-attribute-option-btn')) {
-      const button = target.closest('.add-attribute-option-btn');
-      const { categoryId, productName, attrId } = button.dataset;
-      const input = button.previousElementSibling;
-      const newOptionValue = input.value.trim();
-
-      if (newOptionValue) {
-        const category = appState.categories.find((c) => c.id === categoryId);
+        const button = target.closest('.delete-attribute-option-btn');
+        const { categoryId, productName, attrId, optionValue } = button.dataset;
+        const category = appState.categories.find(c => c.id === categoryId);
         if (!category) return;
 
         const updatedAttributes = JSON.parse(JSON.stringify(category.attributes));
-        const attributeToUpdate = updatedAttributes.find((attr) => attr.id === attrId);
+        const attributeToUpdate = updatedAttributes.find(attr => attr.id === attrId);
 
-        if (attributeToUpdate && typeof attributeToUpdate.options === 'object') {
-          if (!attributeToUpdate.options[productName]) {
-            attributeToUpdate.options[productName] = [];
-          }
-          if (!attributeToUpdate.options[productName].includes(newOptionValue)) {
-            attributeToUpdate.options[productName].push(newOptionValue);
+        if (attributeToUpdate && typeof attributeToUpdate.options === 'object' && attributeToUpdate.options[productName]) {
+            attributeToUpdate.options[productName] = attributeToUpdate.options[productName].filter(opt => opt !== optionValue);
             await updateData('categories', categoryId, { attributes: updatedAttributes });
             openEditProductOptionsModal(categoryId, productName);
-          } else {
-            input.value = '';
-          }
         }
-      }
-      return;
+        return;
+    }
+
+    if (target.closest('.delete-dependent-attribute-btn')) {
+        const button = target.closest('.delete-dependent-attribute-btn');
+        const { categoryId, productName, attrIdToDelete } = button.dataset;
+        const category = appState.categories.find(c => c.id === categoryId);
+        if (!category) return;
+
+        openConfirmModal(`¿Seguro que quieres eliminar este atributo y todas sus opciones para este producto?`, async () => {
+            const updatedAttributes = category.attributes.filter(attr => attr.id !== attrIdToDelete);
+            await updateData('categories', categoryId, { attributes: updatedAttributes });
+            openEditProductOptionsModal(categoryId, productName);
+        });
+        return;
+    }
+    
+    if (target.closest('.add-attribute-option-btn')) {
+        const button = target.closest('.add-attribute-option-btn');
+        const { categoryId, productName, attrId } = button.dataset;
+        const input = button.previousElementSibling;
+        const newOptionValue = input.value.trim();
+
+        if (newOptionValue) {
+            const category = appState.categories.find(c => c.id === categoryId);
+            if (!category) return;
+
+            const updatedAttributes = JSON.parse(JSON.stringify(category.attributes));
+            const attributeToUpdate = updatedAttributes.find(attr => attr.id === attrId);
+
+            if (attributeToUpdate && typeof attributeToUpdate.options === 'object') {
+                if (!attributeToUpdate.options[productName]) {
+                    attributeToUpdate.options[productName] = [];
+                }
+                if (!attributeToUpdate.options[productName].includes(newOptionValue)) {
+                    attributeToUpdate.options[productName].push(newOptionValue);
+                    await updateData('categories', categoryId, { attributes: updatedAttributes });
+                    openEditProductOptionsModal(categoryId, productName);
+                } else {
+                    input.value = '';
+                }
+            }
+        }
+        return;
     }
 
     const element = target.closest(
@@ -1619,11 +1574,7 @@ export function setupEventListeners() {
     if (target.closest('.reservation-client-result')) {
       const client = JSON.parse(target.closest('.reservation-client-result').dataset.client);
       setState({
-        reservationForm: {
-          ...appState.reservationForm,
-          selectedClient: client,
-          clientSearchTerm: '',
-        },
+        reservationForm: { ...appState.reservationForm, selectedClient: client, clientSearchTerm: '' },
       });
       openReservationModal(appState);
       return;
@@ -1751,12 +1702,7 @@ export function setupEventListeners() {
 
         document.getElementById('modal-container').innerHTML = '';
         setGlobalLoading(true, button, 'Redirigiendo...');
-        await setData(
-          'profile',
-          'main',
-          { subscriptionStatus: 'pending_payment_validation' },
-          true
-        );
+        await setData('profile', 'main', { subscriptionStatus: 'pending_payment_validation' }, true);
         setGlobalLoading(false, button);
       },
       'toggle-sale-form-btn': () =>
@@ -1801,12 +1747,10 @@ export function setupEventListeners() {
         const name = prompt('Nombre de la nueva categoría:');
         if (name && name.trim()) {
           const newId = name.trim().toLowerCase().replace(/\s+/g, '-');
-          const mainProductAttrName = prompt(
-            '¿Cómo se llama el atributo principal de esta categoría? (Ej: Producto, Modelo, Título)'
-          );
+          const mainProductAttrName = prompt('¿Cómo se llama el atributo principal de esta categoría? (Ej: Producto, Modelo, Título)');
           if (!mainProductAttrName || !mainProductAttrName.trim()) {
-            showModal('Se requiere un nombre para el atributo principal.', 'Error');
-            return;
+              showModal('Se requiere un nombre para el atributo principal.', 'Error');
+              return;
           }
           const newCategoryData = {
             name: name.trim(),
@@ -1823,8 +1767,7 @@ export function setupEventListeners() {
           await setData('categories', newId, newCategoryData);
         }
       },
-      'edit-category-name-btn': () =>
-        setState({ categoryManager: { isEditingCategoryName: true } }),
+      'edit-category-name-btn': () => setState({ categoryManager: { isEditingCategoryName: true } }),
       'save-category-name-btn': async () => {
         const { selectedCategoryId } = appState.categoryManager;
         const newName = document.getElementById('edit-category-name-input')?.value.trim();
@@ -1866,25 +1809,22 @@ export function setupEventListeners() {
       },
       'add-salesperson-btn': () => openAddSalespersonModal(),
       'add-provider-btn': () => openAddProviderModal(),
-      'back-to-salespeople-list': () =>
-        setState({ ui: { ...appState.ui, selectedSalespersonId: null } }),
+      'back-to-salespeople-list': () => setState({ ui: { ...appState.ui, selectedSalespersonId: null } }),
       'add-new-product-to-category-btn': async () => {
         const { selectedCategoryId } = appState.categoryManager;
-        const category = appState.categories.find((c) => c.id === selectedCategoryId);
+        const category = appState.categories.find(c => c.id === selectedCategoryId);
         if (!category) return;
 
         const newProductName = prompt(`Añadir nuevo producto a la categoría "${category.name}":`);
         if (newProductName && newProductName.trim()) {
-          const productAttribute = category.attributes.find(
-            (attr) => attr.id.startsWith('attr-product-') || attr.name === 'Producto'
-          );
-          if (productAttribute && Array.isArray(productAttribute.options)) {
-            const updatedOptions = [newProductName.trim(), ...productAttribute.options];
-            const updatedAttributes = category.attributes.map((attr) =>
-              attr.id === productAttribute.id ? { ...attr, options: updatedOptions } : attr
-            );
-            await updateData('categories', category.id, { attributes: updatedAttributes });
-          }
+            const productAttribute = category.attributes.find(attr => attr.id.startsWith('attr-product-') || attr.name === 'Producto');
+            if (productAttribute && Array.isArray(productAttribute.options)) {
+                const updatedOptions = [newProductName.trim(), ...productAttribute.options];
+                const updatedAttributes = category.attributes.map(attr =>
+                    attr.id === productAttribute.id ? { ...attr, options: updatedOptions } : attr
+                );
+                await updateData('categories', category.id, { attributes: updatedAttributes });
+            }
         }
       },
     };
@@ -1895,47 +1835,42 @@ export function setupEventListeners() {
 
     const classActionMap = {
       'debt-view-btn': () => {
-        const { hub, view } = dataset;
-        if (hub === 'operaciones-deudas') {
-          setState({ ui: { ...appState.ui, activeOperacionesDebtsTab: view } });
-        } else if (hub === 'clientes-deudas') {
-          setState({ ui: { ...appState.ui, activeClientesDebtsTab: view } });
-        }
+          const { hub, view } = dataset;
+          if (hub === 'operaciones-deudas') {
+              setState({ ui: { ...appState.ui, activeOperacionesDebtsTab: view } });
+          } else if (hub === 'clientes-deudas') {
+              setState({ ui: { ...appState.ui, activeClientesDebtsTab: view } });
+          }
       },
       'edit-product-options-btn': () => {
-        const { productName } = dataset;
-        const { selectedCategoryId } = appState.categoryManager;
-        openEditProductOptionsModal(selectedCategoryId, productName);
+          const { productName } = dataset;
+          const { selectedCategoryId } = appState.categoryManager;
+          openEditProductOptionsModal(selectedCategoryId, productName);
       },
       'delete-product-from-category-btn': async () => {
         const { productName } = dataset;
         const { selectedCategoryId } = appState.categoryManager;
-        const category = appState.categories.find((c) => c.id === selectedCategoryId);
+        const category = appState.categories.find(c => c.id === selectedCategoryId);
         if (!category) return;
 
-        openConfirmModal(
-          `¿Seguro que quieres eliminar el producto "${productName}" de la lista? Esto no afectará a los items ya registrados en stock.`,
-          async () => {
-            const productAttribute = category.attributes.find(
-              (attr) => attr.id.startsWith('attr-product-') || attr.name === 'Producto'
-            );
+        openConfirmModal(`¿Seguro que quieres eliminar el producto "${productName}" de la lista? Esto no afectará a los items ya registrados en stock.`, async () => {
+            const productAttribute = category.attributes.find(attr => attr.id.startsWith('attr-product-') || attr.name === 'Producto');
             if (productAttribute && Array.isArray(productAttribute.options)) {
-              const updatedOptions = productAttribute.options.filter((opt) => opt !== productName);
-              const updatedAttributes = category.attributes.map((attr) => {
-                if (attr.id === productAttribute.id) {
-                  return { ...attr, options: updatedOptions };
-                }
-                if (attr.dependsOn === productAttribute.id && typeof attr.options === 'object') {
-                  const newDependentOptions = { ...attr.options };
-                  delete newDependentOptions[productName];
-                  return { ...attr, options: newDependentOptions };
-                }
-                return attr;
-              });
-              await updateData('categories', category.id, { attributes: updatedAttributes });
+                const updatedOptions = productAttribute.options.filter(opt => opt !== productName);
+                const updatedAttributes = category.attributes.map(attr => {
+                    if (attr.id === productAttribute.id) {
+                        return { ...attr, options: updatedOptions };
+                    }
+                    if (attr.dependsOn === productAttribute.id && typeof attr.options === 'object') {
+                        const newDependentOptions = { ...attr.options };
+                        delete newDependentOptions[productName];
+                        return { ...attr, options: newDependentOptions };
+                    }
+                    return attr;
+                });
+                await updateData('categories', category.id, { attributes: updatedAttributes });
             }
-          }
-        );
+        });
       },
       // ===============================================================
       // INICIO DE MODIFICACIÓN: Se corrige el manejador de los filtros de fecha
@@ -1943,20 +1878,11 @@ export function setupEventListeners() {
       'filter-btn': () => {
         const { hub, period } = dataset;
         if (hub === 'dashboard') {
-          setState({
-            ui: {
-              ...appState.ui,
-              dashboard: { ...appState.ui.dashboard, dashboardPeriod: period },
-            },
-          });
+            setState({ ui: { ...appState.ui, dashboard: { ...appState.ui.dashboard, dashboardPeriod: period } } });
         } else if (hub === 'analysis') {
-          setState({
-            ui: { ...appState.ui, analysis: { ...appState.ui.analysis, analysisPeriod: period } },
-          });
+            setState({ ui: { ...appState.ui, analysis: { ...appState.ui.analysis, analysisPeriod: period } } });
         } else if (hub === 'capital') {
-          setState({
-            ui: { ...appState.ui, capital: { ...appState.ui.capital, capitalPeriod: period } },
-          });
+            setState({ ui: { ...appState.ui, capital: { ...appState.ui.capital, capitalPeriod: period } } });
         }
       },
       // ===============================================================
@@ -2020,10 +1946,10 @@ export function setupEventListeners() {
         openConfirmModal('¿Seguro que quieres eliminar este item del stock?', async () => {
           setGlobalLoading(true);
           try {
-            await deleteFromDb('stock', dataset.id);
-            await logCapitalState(`Stock eliminado: ${itemName}`);
+              await deleteFromDb('stock', dataset.id);
+              await logCapitalState(`Stock eliminado: ${itemName}`);
           } finally {
-            setGlobalLoading(false);
+              setGlobalLoading(false);
           }
         });
       },
@@ -2280,37 +2206,13 @@ export function setupEventListeners() {
       'stock-search-input-sale': () => setState({ sale: { stockSearchTerm: target.value } }),
       'stock-search-input': () => setState({ stockSearchTerm: target.value }),
       'client-search-input': () => setState({ clientSearchTerm: target.value }),
-      'sales-search-input': () =>
-        setState({
-          salesSearchTerm: target.value,
-          ui: { pages: { ...appState.ui.pages, sales: 1 } },
-        }),
-      'expenses-search-input': () =>
-        setState({
-          expensesSearchTerm: target.value,
-          ui: { pages: { ...appState.ui.pages, dailyExpenses: 1 } },
-        }),
-      'notes-search-input': () =>
-        setState({
-          notesSearchTerm: target.value,
-          ui: { pages: { ...appState.ui.pages, notes: 1 } },
-        }),
+      'sales-search-input': () => setState({ salesSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, sales: 1 } } }),
+      'expenses-search-input': () => setState({ expensesSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, dailyExpenses: 1 } } }),
+      'notes-search-input': () => setState({ notesSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, notes: 1 } } }),
       'public-providers-search-input': () => setState({ providersSearchTerm: target.value }),
-      'user-providers-search-input': () =>
-        setState({
-          userProvidersSearchTerm: target.value,
-          ui: { pages: { ...appState.ui.pages, userProviders: 1 } },
-        }),
-      'salespeople-search-input': () =>
-        setState({
-          salespeopleSearchTerm: target.value,
-          ui: { pages: { ...appState.ui.pages, salespeople: 1 } },
-        }),
-      'reservations-search-input': () =>
-        setState({
-          reservationsSearchTerm: target.value,
-          ui: { pages: { ...appState.ui.pages, reservations: 1 } },
-        }),
+      'user-providers-search-input': () => setState({ userProvidersSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, userProviders: 1 } } }),
+      'salespeople-search-input': () => setState({ salespeopleSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, salespeople: 1 } } }),
+      'reservations-search-input': () => setState({ reservationsSearchTerm: target.value, ui: { pages: { ...appState.ui.pages, reservations: 1 } } }),
     };
     if (actionMap[target.id]) actionMap[target.id]();
   });
@@ -2319,28 +2221,28 @@ export function setupEventListeners() {
     const target = e.target;
 
     if (target.id === 'analysis-area-selector') {
-      const newArea = target.value;
-      setState({
-        ui: {
-          analysis: {
-            ...appState.ui.analysis,
-            analysisArea: newArea,
-            analysisGroupby: null,
-            analysisMetric: null,
-          },
-        },
-      });
-      return;
+        const newArea = target.value;
+        setState({ 
+            ui: { 
+                analysis: { 
+                    ...appState.ui.analysis, 
+                    analysisArea: newArea,
+                    analysisGroupby: null, 
+                    analysisMetric: null, 
+                } 
+            } 
+        });
+        return;
     }
 
     if (target.id === 'analysis-groupby-selector') {
-      setState({ ui: { analysis: { ...appState.ui.analysis, analysisGroupby: target.value } } });
-      return;
+        setState({ ui: { analysis: { ...appState.ui.analysis, analysisGroupby: target.value } } });
+        return;
     }
 
     if (target.id === 'analysis-metric-selector') {
-      setState({ ui: { analysis: { ...appState.ui.analysis, analysisMetric: target.value } } });
-      return;
+        setState({ ui: { analysis: { ...appState.ui.analysis, analysisMetric: target.value } } });
+        return;
     }
 
     if (target.id === 'salesperson-selector') {
@@ -2351,8 +2253,8 @@ export function setupEventListeners() {
     }
 
     if (target.closest('#trade-in-details')) {
-      renderTradeInAttributes();
-      return;
+        renderTradeInAttributes();
+        return;
     }
 
     if (target.id === 'reservation-has-deposit') {
@@ -2399,7 +2301,7 @@ export function setupEventListeners() {
       }
       return;
     }
-
+    
     if (target.id === 'stock-category-modal' || target.id === 'edit-stock-category') {
       const allCategories = [...(appState.categories || []), ...DEFAULT_CATEGORIES];
       const selectedCategory = allCategories.find((c) => c.name === target.value);
@@ -2441,17 +2343,6 @@ export function setupEventListeners() {
     }
   });
 
-  document.body.addEventListener('focusout', (e) => {
-    if (e.target.id === 'business-name-input') {
-      handleSaveBusinessName();
-    }
-    if (e.target.id === 'exchange-rate-input') {
-      handleSaveExchangeRate();
-    }
-    if (e.target.id === 'edit-category-name-input') {
-      // Logic to save on blur, could be added later if needed
-    }
-  });
   document.body.addEventListener('keydown', (e) => {
     if (e.target.id === 'business-name-input' && e.key === 'Enter') {
       e.preventDefault();
@@ -2462,9 +2353,9 @@ export function setupEventListeners() {
       document.getElementById('save-category-name-btn')?.click();
     }
     if (e.target.matches('.add-option-input') && e.key === 'Enter') {
-      e.preventDefault();
-      const button = e.target.nextElementSibling;
-      if (button) button.click();
+        e.preventDefault();
+        const button = e.target.nextElementSibling;
+        if (button) button.click();
     }
   });
 }

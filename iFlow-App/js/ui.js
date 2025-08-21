@@ -4,18 +4,31 @@
 
 // --- Importaciones de Módulos de UI ---
 import { renderCapitalSection } from './ui/capital.ui.js';
-import {
-  renderSalesSection,
-  renderSalesHistory,
-  renderReservationsSection,
-  renderSalespeopleSection,
-  updateSaleBalance,
+import { 
+    renderSalesSection, 
+    renderSalesHistory, 
+    renderReservationsSection, 
+    renderSalespeopleSection,
+    updateSaleBalance
 } from './ui/ventas.ui.js';
-import { renderInventorySections, renderAddStockForm } from './ui/inventario.ui.js';
-import { renderClientsSections } from './ui/clientes.ui.js';
-import { renderOperationsSections } from './ui/operaciones.ui.js';
-import { renderReportsSections, renderIntelligentAnalysisSection } from './ui/reportes.ui.js';
-import { renderPublicProvidersSection, renderUserProvidersSection } from './ui/proveedores.ui.js';
+import { 
+    renderInventorySections, 
+    renderAddStockForm
+} from './ui/inventario.ui.js';
+import { 
+    renderClientsSections
+} from './ui/clientes.ui.js';
+import { 
+    renderOperationsSections
+} from './ui/operaciones.ui.js';
+import { 
+    renderReportsSections,
+    renderIntelligentAnalysisSection
+} from './ui/reportes.ui.js';
+import { 
+    renderPublicProvidersSection, 
+    renderUserProvidersSection
+} from './ui/proveedores.ui.js';
 
 // --- Importaciones de Estado y Configuración ---
 import { setState, appState } from './state.js';
@@ -30,8 +43,8 @@ import { formatCurrency } from './ui/utils.js'; // Importamos formatCurrency par
  * @param {object} state El estado actual de la aplicación.
  */
 function renderGlobalLoading(state) {
-  const { isGlobalLoading } = state;
-  document.body.classList.toggle('is-loading', isGlobalLoading);
+    const { isGlobalLoading } = state;
+    document.body.classList.toggle('is-loading', isGlobalLoading);
 }
 
 /**
@@ -103,18 +116,14 @@ function renderHeader(state) {
 
   if (marketRateEl && offsetInputEl && effectiveRateEl && statusEl && profile) {
     // Mostrar la tasa de mercado (Venta)
-    marketRateEl.textContent = profile.marketRate
-      ? formatCurrency(profile.marketRate, 'ARS')
-      : '$ --';
-
+    marketRateEl.textContent = profile.marketRate ? formatCurrency(profile.marketRate, 'ARS') : '$ --';
+    
     // Mostrar la tasa de mercado (Compra)
-    marketBuyRateEl.textContent = profile.marketBuyRate
-      ? formatCurrency(profile.marketBuyRate, 'ARS')
-      : '$ --';
+    marketBuyRateEl.textContent = profile.marketBuyRate ? formatCurrency(profile.marketBuyRate, 'ARS') : '$ --';
 
     // Rellenar el input de ajuste con el valor guardado del usuario
     if (offsetInputEl.value !== (profile.dolarOffset || 0).toString()) {
-      offsetInputEl.value = profile.dolarOffset || 0;
+        offsetInputEl.value = profile.dolarOffset || 0;
     }
 
     // Mostrar la tasa final que usará la aplicación
@@ -122,18 +131,19 @@ function renderHeader(state) {
 
     // Actualizar el estado visual del widget
     if (profile.marketRate) {
-      statusEl.innerHTML = `
+        statusEl.innerHTML = `
             <i class="fas fa-circle text-green-500"></i>
             <span>Actualizado</span>
         `;
     } else {
-      statusEl.innerHTML = `
+         statusEl.innerHTML = `
             <i class="fas fa-circle text-red-500"></i>
             <span>Error API</span>
         `;
     }
   }
 }
+
 
 /**
  * Llama a las funciones de renderizado para cada sección de la aplicación.
@@ -151,7 +161,7 @@ function renderAllSections(state) {
   renderInventorySections(state);
   renderClientsSections(state);
   renderOperationsSections(state);
-  renderReportsSections(state);
+  renderReportsSections(state); 
   renderIntelligentAnalysisSection(state);
   renderPublicProvidersSection(state);
   renderUserProvidersSection(state);
@@ -782,25 +792,17 @@ export function switchSubTab(hubKey, activeKey) {
  * @param {string} activeView La vista a activar ('pendientes' o 'historial').
  */
 export function switchDebtView(hubKey, activeView) {
-  // Actualiza el estilo de los botones
-  document.querySelectorAll(`.debt-view-btn[data-hub="${hubKey}"]`).forEach((btn) => {
-    btn.classList.toggle('sub-tab-btn-active', btn.dataset.view === activeView);
-  });
+    // Actualiza el estilo de los botones
+    document.querySelectorAll(`.debt-view-btn[data-hub="${hubKey}"]`).forEach(btn => {
+        btn.classList.toggle('sub-tab-btn-active', btn.dataset.view === activeView);
+    });
 
-  // Muestra u oculta los contenedores de contenido
-  if (hubKey === 'clientes-deudas') {
-    document
-      .getElementById('client-debts-pendientes-view')
-      ?.classList.toggle('hidden', activeView !== 'pendientes');
-    document
-      .getElementById('client-debts-historial-view')
-      ?.classList.toggle('hidden', activeView !== 'historial');
-  } else if (hubKey === 'operaciones-deudas') {
-    document
-      .getElementById('provider-debts-pendientes-view')
-      ?.classList.toggle('hidden', activeView !== 'pendientes');
-    document
-      .getElementById('provider-debts-historial-view')
-      ?.classList.toggle('hidden', activeView !== 'historial');
-  }
+    // Muestra u oculta los contenedores de contenido
+    if (hubKey === 'clientes-deudas') {
+        document.getElementById('client-debts-pendientes-view')?.classList.toggle('hidden', activeView !== 'pendientes');
+        document.getElementById('client-debts-historial-view')?.classList.toggle('hidden', activeView !== 'historial');
+    } else if (hubKey === 'operaciones-deudas') {
+        document.getElementById('provider-debts-pendientes-view')?.classList.toggle('hidden', activeView !== 'pendientes');
+        document.getElementById('provider-debts-historial-view')?.classList.toggle('hidden', activeView !== 'historial');
+    }
 }
